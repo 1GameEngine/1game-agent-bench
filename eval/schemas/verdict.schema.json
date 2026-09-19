@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.verdict/1",
+  "title": "eval.verdict/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "suite_id",
+    "report_id",
+    "headline_track",
+    "p0_in_headline",
+    "comparable_to_godot",
+    "notice",
+    "npm_train",
+    "passed_tasks",
+    "task_count",
+    "dimensions",
+    "tasks"
+  ],
+  "properties": {
+    "schema": { "const": "eval.verdict/1" },
+    "suite_id": { "const": "eval-spec/1" },
+    "report_id": { "type": "string", "pattern": "^P0_" },
+    "headline_track": { "const": "none" },
+    "p0_in_headline": { "const": false },
+    "comparable_to_godot": { "const": false },
+    "notice": { "type": "string" },
+    "npm_train": { "const": "1.21.0" },
+    "passed_tasks": { "type": "integer", "minimum": 0 },
+    "task_count": { "const": 4 },
+    "dimensions": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "create_ok" },
+        { "const": "replay_ok" },
+        { "const": "store_match" },
+        { "const": "argv_ok" },
+        { "const": "hygiene_ok" }
+      ],
+      "items": false,
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "primary",
+          "create_ok",
+          "replay_ok",
+          "store_match",
+          "argv_ok",
+          "hygiene_ok"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "primary": {
+            "enum": [
+              "PASS",
+              "CREATE_FAIL",
+              "BINDSTORE_EMPTY",
+              "REPLAY_FAIL",
+              "STORE_MISMATCH",
+              "ARGV_VIOLATION",
+              "HYGIENE_FAIL",
+              "TIMEOUT",
+              "SPEC_VIOLATION",
+              "EVAL_INTERNAL"
+            ]
+          },
+          "create_ok": { "enum": [0, 1] },
+          "replay_ok": { "enum": [0, 1] },
+          "store_match": { "enum": [0, 1] },
+          "argv_ok": { "enum": [0, 1] },
+          "hygiene_ok": { "enum": [0, 1] },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "overall": false,
+    "total_score": false,
+    "vlm_score": false
+  }
+}

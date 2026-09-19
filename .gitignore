@@ -1,0 +1,8 @@
+node_modules/
+work/
+*.log
+.DS_Store
+eval/pipeline/node_modules/
+eval/pipeline/.test-work/
+*.1gamerecord
+*.1gamerecord.swp

@@ -1,0 +1,11 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "store:state",
+  "init": { "phase": "ready", "score": 0 },
+  "final": { "phase": "playing", "score": 3 },
+  "mid": [],
+  "compare": {
+    "mode": "subset_scalar_or_listed_array",
+    "remainMs_lte": null
+  }
+}

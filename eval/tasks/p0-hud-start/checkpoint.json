@@ -1,0 +1,13 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "store:state",
+  "init": { "phase": "ready" },
+  "final": { "phase": "playing" },
+  "mid": [
+    { "after": "dead", "match": { "phase": "ready" } }
+  ],
+  "compare": {
+    "mode": "subset_scalar_or_listed_array",
+    "remainMs_lte": null
+  }
+}

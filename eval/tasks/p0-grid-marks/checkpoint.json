@@ -1,0 +1,11 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "store:state",
+  "init": { "cells": ["", "", ""], "turn": "X" },
+  "final": { "cells": ["X", "O", "X"], "turn": "O" },
+  "mid": [],
+  "compare": {
+    "mode": "subset_scalar_or_listed_array",
+    "remainMs_lte": null
+  }
+}

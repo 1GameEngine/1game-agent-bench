@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.checkpoint/1",
+  "title": "eval.checkpoint/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "select", "init", "final", "mid", "compare"],
+  "properties": {
+    "schema": { "const": "eval.checkpoint/1" },
+    "select": { "const": "store:state" },
+    "init": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "integer", "boolean", "array", "null"]
+      }
+    },
+    "final": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "integer", "boolean", "array", "null"]
+      }
+    },
+    "mid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["after", "match"],
+        "properties": {
+          "after": { "type": "string", "minLength": 1 },
+          "match": {
+            "type": "object",
+            "additionalProperties": {
+              "type": ["string", "integer", "boolean", "array", "null"]
+            }
+          }
+        }
+      }
+    },
+    "compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "remainMs_lte"],
+      "properties": {
+        "mode": { "const": "subset_scalar_or_listed_array" },
+        "remainMs_lte": { "type": ["integer", "null"] }
+      }
+    }
+  }
+}

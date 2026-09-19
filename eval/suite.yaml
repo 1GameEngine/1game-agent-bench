@@ -1,0 +1,21 @@
+suite_id: eval-spec/1
+headline_track: none          # P0 禁止 headline；P1 改为 COMPARE_SCALAR
+p0_in_headline: false
+clock:
+  dt_ms: 16
+  wait_means: N_ticks         # 禁止墙钟；禁止单次超长 dt 冒充多帧
+  max_dt_ms: 16
+physics: forbidden
+rng: forbidden
+engines:
+  onegame:
+    npm_train: "1.21.0"
+    paint: napi-canvas
+  godot:                      # P1
+    version: "4.4.x"
+    render: headless
+    inject: EvalProbe
+tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
+scoring:
+  dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
+  overall: forbidden

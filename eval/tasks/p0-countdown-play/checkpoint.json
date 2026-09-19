@@ -1,0 +1,11 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "store:state",
+  "init": { "phase": "countdown", "remainMs": 3000 },
+  "final": { "phase": "playing" },
+  "mid": [],
+  "compare": {
+    "mode": "subset_scalar_or_listed_array",
+    "remainMs_lte": 0
+  }
+}
