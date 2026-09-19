@@ -108,6 +108,10 @@ test('report forbids overall/total_score/vlm_*', () => {
 test('primary mapping', () => {
   assert.equal(primaryOf({ create_ok: 0, replay_ok: 0, store_match: 0, argv_ok: 1, hygiene_ok: 1 }), 'CREATE_FAIL');
   assert.equal(
+    primaryOf({ create_ok: 0, bindstore_empty: true, replay_ok: 0, store_match: 0, argv_ok: 1, hygiene_ok: 1 }),
+    'BINDSTORE_EMPTY',
+  );
+  assert.equal(
     primaryOf({ create_ok: 1, bindstore_empty: true, replay_ok: 0, store_match: 0, argv_ok: 1, hygiene_ok: 1 }),
     'BINDSTORE_EMPTY',
   );

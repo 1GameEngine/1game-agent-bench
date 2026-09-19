@@ -58,6 +58,8 @@ pnpm exec 1game-skill activate --cursor --force
 **禁止**为通过检查而 `mv .cursor`。init **不会** `git init`。  
 正确顺序：空目录 → `init` → `pnpm install` → `activate --cursor --force` → **再写入** `instruction.md`。
 
+npm train `1.21.0` 在缺少 `options.bindStore` 时 **create 直接失败**。流水线把该错误映射为 `BINDSTORE_EMPTY`（与「create 后 `store:state` 非对象」同一 primary）。
+
 激活默认全部 `1game-*`。不要 `--skill` 子集。不要第二次 `init`。instruction **覆盖** skill Quick Start。
 
 ## 评测仓命令

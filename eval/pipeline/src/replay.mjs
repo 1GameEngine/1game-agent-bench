@@ -48,6 +48,13 @@ export function replayAndJudge({ gameDir, bundle }) {
       else notes.push('create JSON not ok/command=create');
     } else {
       notes.push(`create exit ${proc.status}: ${(proc.stderr || proc.stdout).slice(0, 400)}`);
+      try {
+        const failed = parseCliJson(proc.stdout);
+        const msg = `${failed.message ?? ''} ${proc.stderr ?? ''}`;
+        if (/bindStore/i.test(msg)) bindstore_empty = true;
+      } catch {
+        if (/bindStore/i.test(proc.stderr || proc.stdout || '')) bindstore_empty = true;
+      }
     }
   } catch (err) {
     if (err.primary === 'TIMEOUT') timeout = true;

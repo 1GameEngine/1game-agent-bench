@@ -29,6 +29,7 @@ function Cell(props: { id: 0 | 1 | 2; x: number; y: number }) {
   const active = useNodeActive(node);
   return (
     <group
+      key={`cell-${props.id}`}
       x={props.x}
       y={props.y}
       width={80}
@@ -79,9 +80,9 @@ function App() {
         textColor="#ffffff"
         textSize={16}
       />
-      <Cell id={0} x={CELLS[0].x} y={CELLS[0].y} />
-      <Cell id={1} x={CELLS[1].x} y={CELLS[1].y} />
-      <Cell id={2} x={CELLS[2].x} y={CELLS[2].y} />
+      <Cell key="cell-0" id={0} x={CELLS[0].x} y={CELLS[0].y} />
+      <Cell key="cell-1" id={1} x={CELLS[1].x} y={CELLS[1].y} />
+      <Cell key="cell-2" id={2} x={CELLS[2].x} y={CELLS[2].y} />
     </scene>
   );
 }

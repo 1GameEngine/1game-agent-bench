@@ -6,6 +6,7 @@ import { loadSuite, loadTaskBundle, loadArgvRules, loadYaml } from './load.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { replayJudgeHygiene } from './replay.mjs';
 import { buildReport, writeReport } from './report.mjs';
+import { primaryOf } from './verdict.mjs';
 import { auditPlayplanStep, allowedClickCenters } from './argv-audit.mjs';
 
 function argValue(argv, name) {
@@ -95,11 +96,7 @@ export function runNegatives(suiteRunId) {
     argv_issues: argvAudit.issues,
     overall_rejected: overallRejected,
     bindstore_empty: nobind.bindstore_empty === true,
-    bindstore_row: {
-      create_ok: nobind.create_ok,
-      argv_ok: nobind.argv_ok,
-      notes: nobind.notes,
-    },
+    bindstore_primary: primaryOf(nobind),
     hygiene_ok: hyg.hygiene_ok,
     hygiene_notes: hyg.notes,
   };
@@ -126,7 +123,12 @@ export async function main(argv = process.argv.slice(2)) {
     if (cmd === 'test-negatives') {
       const out = runNegatives(argValue(argv, '--run-id') ?? `neg-${Date.now()}`);
       process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
-      const ok = out.argv_ms3008_rejected && out.overall_rejected && out.bindstore_empty && out.hygiene_ok === 0;
+      const ok =
+        out.argv_ms3008_rejected &&
+        out.overall_rejected &&
+        out.bindstore_empty &&
+        out.bindstore_primary === 'BINDSTORE_EMPTY' &&
+        out.hygiene_ok === 0;
       process.exitCode = ok ? 0 : 1;
       return;
     }

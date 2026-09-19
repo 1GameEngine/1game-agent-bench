@@ -58,21 +58,23 @@ export function scanHygiene({ gameDir, builderLog, env = process.env }) {
   }
 
   const srcFiles = walkFiles(path.join(gameDir, 'src'));
-  const instruction = fs.existsSync(path.join(gameDir, 'instruction.md'))
-    ? fs.readFileSync(path.join(gameDir, 'instruction.md'), 'utf8')
-    : '';
-  const texts = [
-    instruction,
-    ...srcFiles.filter((f) => /\.(tsx?|jsx?|md)$/.test(f)).map((f) => fs.readFileSync(f, 'utf8')),
-  ];
-  const blob = texts.join('\n');
-  if (/@1game\/solid-ui|@1game\/game-store|runtime\/physics|from ['"]@1game\/physics/.test(blob)) {
+  const srcBlob = srcFiles.filter((f) => /\.(tsx?|jsx?)$/.test(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+  const mdFiles = [
+    path.join(gameDir, 'instruction.md'),
+    path.join(gameDir, 'README.md'),
+    path.join(gameDir, 'AGENTS.md'),
+  ].filter((f) => fs.existsSync(f));
+  const mdBlob = mdFiles.map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+  if (/@1game\/solid-ui|@1game\/game-store|runtime\/physics|from ['"]@1game\/physics/.test(srcBlob)) {
     issues.push('P0 forbids extra @1game/* / physics imports');
   }
-  if (/\bMath\.random\b|\bDate\.now\b/.test(blob)) {
+  if (/\bMath\.random\b|\bDate\.now\b/.test(srcBlob)) {
     issues.push('P0 forbids Math.random / Date.now as gameplay input');
   }
-  if (/docs\/.+\.md/.test(blob) || /1game-engine/.test(blob)) {
+  if (/docs\/[^\s)]+\.md/.test(srcBlob) || /1game-engine/.test(srcBlob)) {
+    issues.push('must not link engine docs/ or 1game-engine sources');
+  }
+  if (/https?:\/\/\S*docs\/.+\.md/.test(mdBlob) || /1game-engine\/(docs|packages|apps)/.test(mdBlob)) {
     issues.push('must not link engine docs/ or 1game-engine sources');
   }
 

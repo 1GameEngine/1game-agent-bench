@@ -25,4 +25,4 @@ function App() {
   );
 }
 
-renderGame(() => <App />);
+renderGame(() => <App />, {});
