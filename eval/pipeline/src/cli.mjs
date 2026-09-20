@@ -131,7 +131,17 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     if (cmd === 'run-product-100') {
-      const { report, out } = await runProduct100(argValue(argv, '--run-id') ?? `p100-${Date.now()}`);
+      const runId = argValue(argv, '--run-id') ?? `p100-${Date.now()}`;
+      const phase = hasFlag(argv, '--looks') ? 'looks' : hasFlag(argv, '--mech') ? 'mech' : 'all';
+      if (phase !== 'looks' && process.env.EVAL_LOOKS_ALLOW_WORKER !== '1') {
+        process.env.EVAL_LOOKS_REQUIRE_EXTERNAL = process.env.EVAL_LOOKS_REQUIRE_EXTERNAL || '1';
+      }
+      const { report, out, mechPath, looksJobs } = await runProduct100(runId, { phase });
+      if (phase === 'mech') {
+        process.stdout.write(`${JSON.stringify({ phase: 'mech', mechPath, looks_jobs: looksJobs?.length ?? 0 }, null, 2)}\n`);
+        process.stderr.write(`wrote ${mechPath}\n`);
+        return;
+      }
       process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, winner_sentence: report.winner_sentence }, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       process.exitCode = 0;

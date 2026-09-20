@@ -110,7 +110,9 @@ test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', asyn
 
 test('looks-job worker scores stills when no external invoker', async () => {
   const prev = process.env.EVAL_LOOKS_BACKEND;
+  const prevAllow = process.env.EVAL_LOOKS_ALLOW_WORKER;
   process.env.EVAL_LOOKS_BACKEND = 'subagent';
+  process.env.EVAL_LOOKS_ALLOW_WORKER = '1';
   setLooksInvoker(null);
   try {
     const w = 1280;
@@ -143,12 +145,14 @@ test('looks-job worker scores stills when no external invoker', async () => {
       taskId: 'p1-signal-desk',
     });
     assert.equal(vis.looks_status, 'OK');
-    assert.equal(vis.source, 'subagent');
+    assert.equal(vis.source, 'worker');
     assert.ok(vis.V >= 0.5);
     fs.unlinkSync(tmp);
   } finally {
     if (prev === undefined) delete process.env.EVAL_LOOKS_BACKEND;
     else process.env.EVAL_LOOKS_BACKEND = prev;
+    if (prevAllow === undefined) delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+    else process.env.EVAL_LOOKS_ALLOW_WORKER = prevAllow;
     setLooksInvoker(null);
   }
 });

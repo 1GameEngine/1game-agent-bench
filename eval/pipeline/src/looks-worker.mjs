@@ -138,7 +138,7 @@ export function scoreLooksWorker(job, stills) {
       A: 0,
       D_visual: hasDepth ? 0 : undefined,
       looks_status: 'CAPTURE_FAIL',
-      source: 'subagent',
+      source: 'worker',
     };
   }
   const avgItems = {};
@@ -146,5 +146,5 @@ export function scoreLooksWorker(job, stills) {
     avgItems[id] = quantizeLooks(itemSets.reduce((a, it) => a + (it[id] ?? 0), 0) / itemSets.length);
   }
   const agg = aggregateLooks(avgItems, { hasDepth });
-  return { ...agg, looks_status: 'OK', source: 'subagent', looks_runner: 'looks-job-worker' };
+  return { ...agg, looks_status: 'OK', source: 'worker', looks_runner: 'looks-job-worker' };
 }

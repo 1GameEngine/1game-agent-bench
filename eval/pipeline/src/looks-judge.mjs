@@ -129,7 +129,10 @@ export async function judgeLooksJob(job, stills) {
     }
     if (text == null) text = readVerdictFile(job);
     if (text == null) text = invokeCmd(job);
-    if (text == null && process.env.EVAL_LOOKS_REQUIRE_EXTERNAL === '1') {
+    if (text == null && process.env.EVAL_LOOKS_ALLOW_WORKER === '1') {
+      return scoreLooksWorker(job, stills);
+    }
+    if (text == null) {
       return {
         V: 0,
         A: 0,
@@ -137,9 +140,6 @@ export async function judgeLooksJob(job, stills) {
         looks_status: 'SUBAGENT_UNAVAILABLE',
         source: 'subagent',
       };
-    }
-    if (text == null) {
-      return scoreLooksWorker(job, stills);
     }
     const parsed =
       typeof text === 'object'

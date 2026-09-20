@@ -35,7 +35,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | 只 `1gameplay frame query --select store:state`；不读图；不用 Chromium |
 | Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；**视窗锁死 1280×720**（`--width 1280 --height 720`）。Capture **不是** Judge。 |
-| Looks（V/A） | 独立 looks-job：读 1280×720 静帧 + 该帧 dump。默认跑内置 looks-job worker（`looks_source=subagent`）。可用 `EVAL_LOOKS_CMD` 换成外部 VLM。`EVAL_LOOKS_REQUIRE_EXTERNAL=1` 且无外部执行器 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。 |
+| Looks（V/A） | 独立 looks-job：读 1280×720 静帧 + 该帧 dump。**跑分必须用真实 looks subagent**（写 `looks-verdict.json` 或 `EVAL_LOOKS_CMD` / `setLooksInvoker`）。内置 looks-job worker 只在 `EVAL_LOOKS_ALLOW_WORKER=1` 时调试，且 `looks_source=worker`，**不得当 headline**。无外部评委 → `SUBAGENT_UNAVAILABLE`，不可比。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。 |
 | Replay | `child_process.execFile`；整条赛道禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
@@ -80,8 +80,10 @@ pnpm test                 # 合同/审计/Judge 子集/报表禁令
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # 3 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
-pnpm run run-product-100  # 3 题 × 两引擎 → PRODUCT_100.json（胜负）
-# 观感：默认 looks-job worker 打 V/A。EVAL_LOOKS_CMD 可换成外部 VLM。EVAL_LOOKS_BACKEND=heuristic 仅调试。
+pnpm run run-product-100 -- --run-id <id> --mech   # 机械 + 静帧 + 写出 looks-job（不打 V/A）
+# 真实 looks subagent 写入各 jobDir/looks-verdict.json 后：
+pnpm run run-product-100 -- --run-id <id> --looks  # 读裁决 → PRODUCT_100.json（胜负）
+# 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
 node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 ```
@@ -90,7 +92,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。M 来自官方 dump。V/A 来自 **同一 looks-job** 打冻结静帧。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。启发式不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。M 来自官方 dump。V/A 来自 **同一真实 looks subagent** 打冻结静帧（不是内置 worker）。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

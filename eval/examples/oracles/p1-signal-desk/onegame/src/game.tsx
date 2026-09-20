@@ -27,7 +27,7 @@ function Btn(props: { x: number; y: number; w: number; h: number; label: string;
   const active = useNodeActive(node);
   const bg = () => (props.lit ? '#fbbf24' : active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb');
   return (
-    <group x={props.x} y={props.y} width={props.w} height={props.h} clickable virtualNodeRef={setNode} onClick={props.onPress}>
+    <group key={props.label} x={props.x} y={props.y} width={props.w} height={props.h} clickable virtualNodeRef={setNode} onClick={props.onPress}>
       <node x={0} y={0} width={props.w} height={props.h} shape="roundedRect(32 32 32 32)" backgroundColor={bg()} />
       <text x={0} y={32} width={props.w} height={96} text={props.label} textAlign="center" textSize={48} textColor="#ffffff" />
     </group>
