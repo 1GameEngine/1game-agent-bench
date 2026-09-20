@@ -34,7 +34,8 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 场景 | 恰好 1 个 `<scene>`，320×180 |
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | 只 `1gameplay frame query --select store:state`；不读图；不用 Chromium |
-| Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；320×180 最近邻 4× → 1280×720 |
+| Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；320×180 最近邻 4× → 1280×720。Capture **不是** Judge。 |
+| Looks（V/A） | 独立 subagent：读 1280×720 静帧 + 该帧 dump。默认 **不是** 像素启发式。缺 invoker → `SUBAGENT_UNAVAILABLE`（V=A=0）。 |
 | Replay | `child_process.execFile`；整条赛道禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
@@ -80,13 +81,17 @@ pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # 10 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
 pnpm run run-product-100  # 14 题 × 两引擎 → PRODUCT_100.json（胜负）
+# 观感：run-product-100 写出 work/<run>/looks/looks-request.json 与 looks-prompt.txt
+# 把 looks-verdict.json 放回同目录，或设 EVAL_LOOKS_CMD / EVAL_LOOKS_BACKEND=heuristic（仅调试）
+node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
+node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 ```
 
 不要打开本仓当 Builder 工作区。Oracle 只用于验收流水线。
 
 ## 计分
 
-**胜负：`product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\)（启动/卫生失败）则该题 0，仍占 1/14。M 来自官方 dump/checkpoint；V/A 来自冻结静帧（默认启发式像素分；平涂美术 A 最高 0.5）。允许 0 / 0.5 / 1。更好看的引擎在机制同分时总分更高。
+**胜负：`product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\)（启动/卫生失败）则该题 0，仍占 1/14。M 来自官方 dump/checkpoint（脚本）。V（能否看清、控件位置、**图是否对得上该帧 dump**）与 A（好看）来自 **subagent** 对冻结静帧打 0 / 0.5 / 1（条目 V1–V4、A1–A4；有变体区时 D1）。单元测试在 `NODE_TEST_CONTEXT` 下仍走启发式，**套件胜负默认不走启发式**。更好看且图文一致的引擎在机制同分时总分更高。
 
 过程：每题五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 P1 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

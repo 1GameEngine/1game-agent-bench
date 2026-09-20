@@ -9,7 +9,8 @@ import { runOnegamePlayplan } from './p1-onegame.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
 import { scanHygiene } from './hygiene.mjs';
 import { primaryOf } from './verdict.mjs';
-import { scoreVisuals } from './looks.mjs';
+import { loadP1Task } from './p1-load.mjs';
+import { scoreVisuals } from './looks-judge.mjs';
 import {
   P0_TASKS,
   P1_TASKS,
@@ -31,16 +32,24 @@ function mergePlanResults(pos, neg) {
   return { primary: 'CHECKPOINTS_OK', g0_ok: 1, notes: [] };
 }
 
-async function visualsFor(taskId, geometry, stills) {
+async function visualsFor({ taskId, engine, instruction, geometry, stills, jobDir }) {
   const keys = DEPTH_TASKS[taskId];
   const depthKeys = Array.isArray(keys) && keys.length ? keys : undefined;
   const okStills = (stills ?? []).filter((s) => s.ok);
-  const vis = await scoreVisuals({ stills: okStills, geometry, depthKeys });
+  const vis = await scoreVisuals({
+    stills: okStills,
+    geometry,
+    depthKeys,
+    instruction,
+    taskId,
+    engine,
+    jobDir,
+  });
   let D;
   if (hasDepth(taskId)) {
     D = depthKeys ? vis.D_visual ?? 0 : vis.V;
   }
-  return { V: vis.V, A: vis.A, D, looks_status: vis.looks_status };
+  return { V: vis.V, A: vis.A, D, looks_status: vis.looks_status, looks_source: vis.source };
 }
 
 export async function scoreP0Onegame(taskId, runId) {
@@ -62,7 +71,16 @@ export async function scoreP0Onegame(taskId, runId) {
     result.argv_ok === 1 &&
     result.hygiene_ok === 1 &&
     !result.bindstore_empty;
-  const vis = G ? await visualsFor(taskId, bundle.geometry, result.stills) : { V: 0, A: 0, D: 0, looks_status: 'SKIP' };
+  const vis = G
+    ? await visualsFor({
+        taskId,
+        engine: 'onegame',
+        instruction: bundle.instruction,
+        geometry: bundle.geometry,
+        stills: result.stills,
+        jobDir: path.join(WORK_DIR, runId, 'looks'),
+      })
+    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
   const row = scoreAttempt({
     id: taskId,
     engine: 'onegame',
@@ -74,6 +92,7 @@ export async function scoreP0Onegame(taskId, runId) {
     primary: primaryOf(result),
     g0_ok: result.create_ok === 1 && !result.bindstore_empty ? 1 : 0,
     looks_status: vis.looks_status,
+    looks_source: vis.looks_source,
     stills: result.stills,
   });
   return { row, mechanical: result };
@@ -106,7 +125,16 @@ export async function scoreP0Godot(taskId, runId) {
     judged.notes = job.notes;
   }
   const G = judged.g0_ok === 1;
-  const vis = G ? await visualsFor(taskId, bundle.geometry, judged.stills) : { V: 0, A: 0, D: 0, looks_status: 'SKIP' };
+  const vis = G
+    ? await visualsFor({
+        taskId,
+        engine: 'godot',
+        instruction: bundle.instruction,
+        geometry: bundle.geometry,
+        stills: judged.stills,
+        jobDir: path.join(outDir, 'looks'),
+      })
+    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
   return scoreAttempt({
     id: taskId,
     engine: 'godot',
@@ -118,6 +146,7 @@ export async function scoreP0Godot(taskId, runId) {
     primary: judged.primary,
     g0_ok: judged.g0_ok,
     looks_status: vis.looks_status,
+    looks_source: vis.looks_source,
     stills: judged.stills,
   });
 }
@@ -145,7 +174,16 @@ export async function scoreP1Onegame(taskId, runId) {
   });
   const merged = mergePlanResults(pos, neg);
   const G = pos.g0_ok === 1 && hyg.ok;
-  const vis = G ? await visualsFor(taskId, bundle.geometry, pos.stills) : { V: 0, A: 0, D: 0, looks_status: 'SKIP' };
+  const vis = G
+    ? await visualsFor({
+        taskId,
+        engine: 'onegame',
+        instruction: bundle.instruction,
+        geometry: bundle.geometry,
+        stills: pos.stills,
+        jobDir: path.join(WORK_DIR, `${runId}-og`, 'looks'),
+      })
+    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
   const row = scoreAttempt({
     id: taskId,
     engine: 'onegame',
@@ -158,6 +196,7 @@ export async function scoreP1Onegame(taskId, runId) {
     primary: hyg.ok ? merged.primary : 'HYGIENE_FAIL',
     g0_ok: pos.g0_ok,
     looks_status: vis.looks_status,
+    looks_source: vis.looks_source,
     stills: pos.stills,
   });
   return { row, attempt: { id: taskId, engine: 'onegame', ...merged, pos, neg, g0_ok: pos.g0_ok } };
@@ -199,7 +238,16 @@ export async function scoreP1Godot(taskId, runId) {
   const neg = judgeGodotEvents(negJob.events || [], bundle, 'neg');
   const merged = mergePlanResults(pos, neg);
   const G = pos.g0_ok === 1;
-  const vis = G ? await visualsFor(taskId, bundle.geometry, pos.stills) : { V: 0, A: 0, D: 0, looks_status: 'SKIP' };
+  const vis = G
+    ? await visualsFor({
+        taskId,
+        engine: 'godot',
+        instruction: bundle.instruction,
+        geometry: bundle.geometry,
+        stills: pos.stills,
+        jobDir: path.join(outDir, 'looks'),
+      })
+    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
   const row = scoreAttempt({
     id: taskId,
     engine: 'godot',
@@ -212,6 +260,7 @@ export async function scoreP1Godot(taskId, runId) {
     primary: merged.primary,
     g0_ok: pos.g0_ok,
     looks_status: vis.looks_status,
+    looks_source: vis.looks_source,
     stills: pos.stills,
   });
   return { row, attempt: { id: taskId, engine: 'godot', ...merged, pos, neg, g0_ok: pos.g0_ok } };

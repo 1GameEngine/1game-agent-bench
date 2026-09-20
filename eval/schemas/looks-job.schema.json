@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.looks-job/1",
+  "title": "Looks subagent job (V/A/D stills, not mechanical Judge)",
+  "type": "object",
+  "required": ["schema", "taskId", "stills"],
+  "properties": {
+    "schema": { "const": "eval.looks-job/1" },
+    "taskId": { "type": "string" },
+    "instruction": { "type": "string" },
+    "labels": { "type": "object" },
+    "regions": { "type": "object" },
+    "variant_regions": { "type": "array", "items": { "type": "string" } },
+    "stills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "dump": { "type": "object" },
+          "dump_ok": { "type": "number" }
+        }
+      }
+    }
+  }
+}

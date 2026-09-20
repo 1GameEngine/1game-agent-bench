@@ -77,7 +77,7 @@ export function replayAndJudge({ gameDir, bundle, stillsDir }) {
     'full',
   ];
 
-  function captureSlice(id, dumpOk) {
+  function captureSlice(id, dumpOk, dump) {
     if (!stillsDir) return;
     const cap = captureOnegameStill({
       gameDir,
@@ -85,7 +85,7 @@ export function replayAndJudge({ gameDir, bundle, stillsDir }) {
       rules: bundle.rules,
       allowedClicks: bundle.allowedClicks,
     });
-    stills.push({ id, dump_ok: dumpOk ? 1 : 0, ...cap });
+    stills.push({ id, dump_ok: dumpOk ? 1 : 0, dump: dump ?? null, ...cap });
   }
 
   function queryStore() {
@@ -126,7 +126,7 @@ export function replayAndJudge({ gameDir, bundle, stillsDir }) {
       );
       storeErrors.push(...initErrs);
       sliceScores.push(initErrs.length ? 0 : 1);
-      captureSlice('init', initErrs.length === 0);
+      captureSlice('init', initErrs.length === 0, store.value);
     }
   }
 
@@ -174,7 +174,7 @@ export function replayAndJudge({ gameDir, bundle, stillsDir }) {
             });
             storeErrors.push(...midErrs);
             sliceScores.push(midErrs.length ? 0 : 1);
-            captureSlice(mid.after, midErrs.length === 0);
+            captureSlice(mid.after, midErrs.length === 0, st.value);
           }
         }
       } catch (err) {
@@ -205,7 +205,7 @@ export function replayAndJudge({ gameDir, bundle, stillsDir }) {
       );
       storeErrors.push(...finalErrs);
       sliceScores.push(finalErrs.length ? 0 : 1);
-      captureSlice('final', finalErrs.length === 0);
+      captureSlice('final', finalErrs.length === 0, st.value);
     }
   }
 

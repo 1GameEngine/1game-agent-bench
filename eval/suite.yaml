@@ -32,3 +32,5 @@ scoring:
   overall: forbidden
   product_100: required
   headline: product_100
+  looks: subagent
+  looks_items: [V1, V2, V3, V4, A1, A2, A3, A4, D1]

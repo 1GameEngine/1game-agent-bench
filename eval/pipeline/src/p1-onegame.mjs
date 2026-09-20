@@ -106,7 +106,7 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
           rules,
           allowedClicks: clicks,
         });
-        stills.push({ id: step.checkpoint, dump_ok: dumpOk ? 1 : 0, ...cap });
+        stills.push({ id: step.checkpoint, dump_ok: dumpOk ? 1 : 0, dump: proj.dump, ...cap });
       }
       continue;
     }

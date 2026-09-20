@@ -99,7 +99,14 @@ export function buildProduct100({ runId, rows }) {
     headline_track: 'product_100',
     winner: true,
     looks_included: true,
-    still: { width: 1280, height: 720, video: false, onegame_scale: 4 },
+    still: {
+      width: 1280,
+      height: 720,
+      video: false,
+      onegame_scale: 4,
+      looks: 'subagent',
+      looks_items: ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1'],
+    },
     weights: { ...WEIGHTS },
     task_count: 14,
     task_ids: [...SUITE_TASKS],
@@ -133,6 +140,7 @@ export function zeroRow(id, engine, primary) {
     A: 0,
     product_100: 0,
     looks_status: 'SKIP',
+    looks_source: 'none',
     g0_ok: 0,
   };
 }
@@ -149,6 +157,7 @@ export function scoreAttempt({
   primary,
   g0_ok,
   looks_status,
+  looks_source,
   stills,
 }) {
   const pos = mean(sliceScores?.length ? sliceScores : [0]);
@@ -169,6 +178,7 @@ export function scoreAttempt({
     A: A ?? 0,
     product_100,
     looks_status: looks_status ?? 'SKIP',
+    looks_source: looks_source ?? 'none',
   };
   if (hasD) row.D = d;
   if (stills?.length) {

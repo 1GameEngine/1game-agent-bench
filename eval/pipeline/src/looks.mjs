@@ -104,7 +104,7 @@ export function average01(vals) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-export async function scoreVisuals({ stills, geometry, depthKeys }) {
+export function scoreVisualsHeuristic({ stills, geometry, depthKeys }) {
   if (!stills?.length) {
     return { V: 0, A: 0, D: depthKeys ? 0 : undefined, looks_status: 'CAPTURE_FAIL', source: 'none' };
   }

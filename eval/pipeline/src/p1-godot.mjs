@@ -143,9 +143,9 @@ export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
     const rawPath = stillsDir ? path.join(stillsDir, `${ev.id}.png`) : ev.path;
     if (rawPath && fs.existsSync(rawPath)) {
       const cap = finalizeStill(rawPath);
-      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, ...cap });
+      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, dump: ev.dump, ...cap });
     } else {
-      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, ok: false, status: 'CAPTURE_FAIL' });
+      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, dump: ev.dump, ok: false, status: 'CAPTURE_FAIL' });
     }
   }
   return { primary, notes, g0_ok: 1, playplanKind, sliceScores, stills };

@@ -10,6 +10,7 @@ import { primaryOf } from './verdict.mjs';
 import { auditPlayplanStep, allowedClickCenters } from './argv-audit.mjs';
 import { runP1Compare } from './p1-run.mjs';
 import { runProduct100 } from './product-run.mjs';
+import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -136,6 +137,22 @@ export async function main(argv = process.argv.slice(2)) {
       process.exitCode = 0;
       return;
     }
+    if (cmd === 'looks-prompt') {
+      const jobPath = argValue(argv, '--job');
+      if (!jobPath) throw new EvalError('EVAL_INTERNAL', '--job required');
+      const job = JSON.parse(fs.readFileSync(jobPath, 'utf8'));
+      process.stdout.write(`${buildLooksUserPrompt(job)}\n`);
+      return;
+    }
+    if (cmd === 'apply-looks') {
+      const verdictPath = argValue(argv, '--verdict');
+      if (!verdictPath) throw new EvalError('EVAL_INTERNAL', '--verdict required');
+      const parsed = parseLooksVerdict(fs.readFileSync(verdictPath, 'utf8'));
+      const hasDepth = !hasFlag(argv, '--no-depth');
+      const agg = aggregateLooks(parsed.scores, { hasDepth });
+      process.stdout.write(`${JSON.stringify({ scores: parsed.scores, ...agg }, null, 2)}\n`);
+      return;
+    }
     if (cmd === 'test-negatives') {
       const out = runNegatives(argValue(argv, '--run-id') ?? `neg-${Date.now()}`);
       process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
@@ -149,7 +166,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {
