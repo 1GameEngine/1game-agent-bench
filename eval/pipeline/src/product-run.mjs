@@ -4,7 +4,7 @@ import { WORK_DIR, oracleGodot } from './paths.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { loadTaskBundle } from './load.mjs';
 import { replayJudgeHygiene } from './replay.mjs';
-import { loadP1Task } from './p1-load.mjs';
+import { loadP0GodotTask } from './p0-godot.mjs';
 import { runOnegamePlayplan } from './p1-onegame.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
 import { scanHygiene } from './hygiene.mjs';
@@ -79,12 +79,47 @@ export async function scoreP0Onegame(taskId, runId) {
   return { row, mechanical: result };
 }
 
-export function scoreP0Godot(taskId) {
+export async function scoreP0Godot(taskId, runId) {
   const src = oracleGodot(taskId);
-  if (!fs.existsSync(src)) {
+  if (!fs.existsSync(path.join(src, 'project.godot'))) {
     return zeroRow(taskId, 'godot', 'ENGINE_TASK_UNSUPPORTED');
   }
-  return zeroRow(taskId, 'godot', 'ENGINE_TASK_UNSUPPORTED');
+  const bundle = loadP0GodotTask(taskId);
+  const staged = stageGodotProject({
+    taskId,
+    runId: `${runId}-gd`,
+    srcDir: src,
+  });
+  if (staged.tamper) return zeroRow(taskId, 'godot', 'INJECT_TAMPER');
+  if (staged.leak.length) return zeroRow(taskId, 'godot', 'HARNESS_LEAK');
+  const outDir = path.join(WORK_DIR, `${runId}-gd`);
+  const stillsDir = path.join(outDir, 'stills');
+  const job = runGodotJob({
+    projectDir: staged.dest,
+    job: makeJob({ bundle, steps: bundle.playplan.steps, stillsDir }),
+    outPath: path.join(outDir, 'pos.jsonl'),
+  });
+  const judged = judgeGodotEvents(job.events || [], bundle, 'pos', stillsDir);
+  if (job.ok === false) {
+    judged.primary = job.code || 'BOOT_FAIL';
+    judged.g0_ok = 0;
+    judged.notes = job.notes;
+  }
+  const G = judged.g0_ok === 1;
+  const vis = G ? await visualsFor(taskId, bundle.geometry, judged.stills) : { V: 0, A: 0, D: 0, looks_status: 'SKIP' };
+  return scoreAttempt({
+    id: taskId,
+    engine: 'godot',
+    G,
+    sliceScores: judged.sliceScores,
+    V: vis.V,
+    A: vis.A,
+    D: vis.D,
+    primary: judged.primary,
+    g0_ok: judged.g0_ok,
+    looks_status: vis.looks_status,
+    stills: judged.stills,
+  });
 }
 
 export async function scoreP1Onegame(taskId, runId) {
@@ -192,7 +227,9 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
     const og = await scoreP0Onegame(taskId, `${suiteRunId}-${taskId}`);
     rows.push(og.row);
     p0taskRows.push({ id: taskId, ...og.mechanical });
-    rows.push(scoreP0Godot(taskId));
+    process.stderr.write(`product P0 godot ${taskId}\n`);
+    const gd = await scoreP0Godot(taskId, `${suiteRunId}-${taskId}`);
+    rows.push(gd);
   }
 
   for (const taskId of P1_TASKS) {

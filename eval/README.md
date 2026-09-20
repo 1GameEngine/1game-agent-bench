@@ -6,7 +6,7 @@
 
 过程指标仍产出、不决定胜负：P0 五维表、`COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
 
-P1 对比集是 `compare_tasks` 里的 10 题；P0 四题也进入 `product_100` 分母。Godot 若无 P0 实现，该四题记 0 分仍平均。
+P1 对比集是 `compare_tasks` 里的 10 题；P0 四题两边都跑（Godot oracle 在 `examples/oracles/p0-*/godot/`）。
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 

@@ -132,7 +132,8 @@ export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
   for (const ev of events.filter((e) => e.event === 'checkpoint')) {
     const expected = bundle.checkpoint.slices[ev.id];
     const v = validateDump(ev.dump, bundle.schema, bundle.sha);
-    const errs = v.ok && expected ? checkpointMatch(ev.dump, expected) : ['bad checkpoint'];
+    const isFinal = ev.id === 'final';
+    const errs = v.ok && expected ? checkpointMatch(ev.dump, expected, bundle.checkpoint.compare, { isFinal }) : ['bad checkpoint'];
     const dumpOk = Boolean(expected) && v.ok && errs.length === 0;
     sliceScores.push(dumpOk ? 1 : 0);
     if (!dumpOk && primary === 'CHECKPOINTS_OK') {

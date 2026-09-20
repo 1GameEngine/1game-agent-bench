@@ -45,10 +45,17 @@ export function validateDump(dump, schema, sha) {
   return { ok: true, code: 'G0_OK', notes };
 }
 
-export function checkpointMatch(dump, expected) {
+export function checkpointMatch(dump, expected, compare = null, opts = {}) {
   const errors = [];
   for (const [k, v] of Object.entries(expected)) {
-    if (dump[k] !== v) errors.push(`${k}: expected ${JSON.stringify(v)} got ${JSON.stringify(dump[k])}`);
+    if (JSON.stringify(dump[k]) !== JSON.stringify(v)) {
+      errors.push(`${k}: expected ${JSON.stringify(v)} got ${JSON.stringify(dump[k])}`);
+    }
+  }
+  if (opts.isFinal && compare?.remainMs_lte != null) {
+    if (typeof dump?.remainMs !== 'number' || dump.remainMs > compare.remainMs_lte) {
+      errors.push(`remainMs_lte: ${dump?.remainMs} > ${compare.remainMs_lte}`);
+    }
   }
   return errors;
 }
