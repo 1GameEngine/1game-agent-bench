@@ -10,16 +10,8 @@ import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-
 import { scanHygiene } from './hygiene.mjs';
 import { primaryOf } from './verdict.mjs';
 import { loadP1Task } from './p1-load.mjs';
-import { scoreVisuals } from './looks-judge.mjs';
-import {
-  P0_TASKS,
-  P1_TASKS,
-  DEPTH_TASKS,
-  hasDepth,
-  scoreAttempt,
-  buildProduct100,
-  zeroRow,
-} from './product-100.mjs';
+import { scorePairedLooks } from './looks-pair.mjs';
+import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
@@ -32,27 +24,7 @@ function mergePlanResults(pos, neg) {
   return { primary: 'CHECKPOINTS_OK', g0_ok: 1, notes: [] };
 }
 
-async function visualsFor({ taskId, engine, instruction, geometry, stills, jobDir }) {
-  const keys = DEPTH_TASKS[taskId];
-  const depthKeys = Array.isArray(keys) && keys.length ? keys : undefined;
-  const okStills = (stills ?? []).filter((s) => s.ok);
-  const vis = await scoreVisuals({
-    stills: okStills,
-    geometry,
-    depthKeys,
-    instruction,
-    taskId,
-    engine,
-    jobDir,
-  });
-  let D;
-  if (hasDepth(taskId)) {
-    D = depthKeys ? vis.D_visual ?? 0 : vis.V;
-  }
-  return { V: vis.V, A: vis.A, D, looks_status: vis.looks_status, looks_source: vis.source };
-}
-
-export async function scoreP0Onegame(taskId, runId) {
+export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
   const stillsDir = path.join(WORK_DIR, runId, 'stills');
   const boot = bootstrap({
@@ -71,37 +43,31 @@ export async function scoreP0Onegame(taskId, runId) {
     result.argv_ok === 1 &&
     result.hygiene_ok === 1 &&
     !result.bindstore_empty;
-  const vis = G
-    ? await visualsFor({
-        taskId,
-        engine: 'onegame',
-        instruction: bundle.instruction,
-        geometry: bundle.geometry,
-        stills: result.stills,
-        jobDir: path.join(WORK_DIR, runId, 'looks'),
-      })
-    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
-  const row = scoreAttempt({
-    id: taskId,
-    engine: 'onegame',
+  return {
+    bundle,
     G,
     sliceScores: result.sliceScores,
-    V: vis.V,
-    A: vis.A,
-    D: vis.D,
+    stills: result.stills,
     primary: primaryOf(result),
     g0_ok: result.create_ok === 1 && !result.bindstore_empty ? 1 : 0,
-    looks_status: vis.looks_status,
-    looks_source: vis.looks_source,
-    stills: result.stills,
-  });
-  return { row, mechanical: result };
+    mechanical: result,
+    jobDir: path.join(WORK_DIR, runId, 'looks'),
+  };
 }
 
-export async function scoreP0Godot(taskId, runId) {
+export async function mechP0Godot(taskId, runId) {
   const src = oracleGodot(taskId);
   if (!fs.existsSync(path.join(src, 'project.godot'))) {
-    return zeroRow(taskId, 'godot', 'ENGINE_TASK_UNSUPPORTED');
+    return {
+      bundle: loadTaskBundle(taskId),
+      G: 0,
+      sliceScores: [],
+      stills: [],
+      primary: 'ENGINE_TASK_UNSUPPORTED',
+      g0_ok: 0,
+      rowReady: zeroRow(taskId, 'godot', 'ENGINE_TASK_UNSUPPORTED'),
+      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
+    };
   }
   const bundle = loadP0GodotTask(taskId);
   const staged = stageGodotProject({
@@ -109,8 +75,30 @@ export async function scoreP0Godot(taskId, runId) {
     runId: `${runId}-gd`,
     srcDir: src,
   });
-  if (staged.tamper) return zeroRow(taskId, 'godot', 'INJECT_TAMPER');
-  if (staged.leak.length) return zeroRow(taskId, 'godot', 'HARNESS_LEAK');
+  if (staged.tamper) {
+    return {
+      bundle,
+      G: 0,
+      sliceScores: [],
+      stills: [],
+      primary: 'INJECT_TAMPER',
+      g0_ok: 0,
+      rowReady: zeroRow(taskId, 'godot', 'INJECT_TAMPER'),
+      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
+    };
+  }
+  if (staged.leak.length) {
+    return {
+      bundle,
+      G: 0,
+      sliceScores: [],
+      stills: [],
+      primary: 'HARNESS_LEAK',
+      g0_ok: 0,
+      rowReady: zeroRow(taskId, 'godot', 'HARNESS_LEAK'),
+      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
+    };
+  }
   const outDir = path.join(WORK_DIR, `${runId}-gd`);
   const stillsDir = path.join(outDir, 'stills');
   const job = runGodotJob({
@@ -120,38 +108,22 @@ export async function scoreP0Godot(taskId, runId) {
   });
   const judged = judgeGodotEvents(job.events || [], bundle, 'pos', stillsDir);
   if (job.ok === false) {
-    judged.primary = job.code || 'BOOT_FAIL';
-    judged.g0_ok = 0;
-    judged.notes = job.notes;
+    judged.primary = job.code || judged.primary || 'BOOT_FAIL';
+    judged.g0_ok = judged.g0_ok ?? 0;
+    judged.notes = [...(judged.notes ?? []), ...(job.notes ?? [])];
   }
-  const G = judged.g0_ok === 1;
-  const vis = G
-    ? await visualsFor({
-        taskId,
-        engine: 'godot',
-        instruction: bundle.instruction,
-        geometry: bundle.geometry,
-        stills: judged.stills,
-        jobDir: path.join(outDir, 'looks'),
-      })
-    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
-  return scoreAttempt({
-    id: taskId,
-    engine: 'godot',
-    G,
+  return {
+    bundle,
+    G: judged.g0_ok === 1,
     sliceScores: judged.sliceScores,
-    V: vis.V,
-    A: vis.A,
-    D: vis.D,
+    stills: judged.stills,
     primary: judged.primary,
     g0_ok: judged.g0_ok,
-    looks_status: vis.looks_status,
-    looks_source: vis.looks_source,
-    stills: judged.stills,
-  });
+    jobDir: path.join(outDir, 'looks'),
+  };
 }
 
-export async function scoreP1Onegame(taskId, runId) {
+export async function mechP1Onegame(taskId, runId) {
   const bundle = loadP1Task(taskId);
   const boot = bootstrap({
     taskId,
@@ -174,35 +146,20 @@ export async function scoreP1Onegame(taskId, runId) {
   });
   const merged = mergePlanResults(pos, neg);
   const G = pos.g0_ok === 1 && hyg.ok;
-  const vis = G
-    ? await visualsFor({
-        taskId,
-        engine: 'onegame',
-        instruction: bundle.instruction,
-        geometry: bundle.geometry,
-        stills: pos.stills,
-        jobDir: path.join(WORK_DIR, `${runId}-og`, 'looks'),
-      })
-    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
-  const row = scoreAttempt({
-    id: taskId,
-    engine: 'onegame',
+  return {
+    bundle,
     G,
     sliceScores: pos.sliceScores,
     negSliceScores: neg.sliceScores,
-    V: vis.V,
-    A: vis.A,
-    D: vis.D,
+    stills: pos.stills,
     primary: hyg.ok ? merged.primary : 'HYGIENE_FAIL',
     g0_ok: pos.g0_ok,
-    looks_status: vis.looks_status,
-    looks_source: vis.looks_source,
-    stills: pos.stills,
-  });
-  return { row, attempt: { id: taskId, engine: 'onegame', ...merged, pos, neg, g0_ok: pos.g0_ok } };
+    attempt: { id: taskId, engine: 'onegame', ...merged, pos, neg, g0_ok: pos.g0_ok },
+    jobDir: path.join(WORK_DIR, `${runId}-og`, 'looks'),
+  };
 }
 
-export async function scoreP1Godot(taskId, runId) {
+export async function mechP1Godot(taskId, runId) {
   const bundle = loadP1Task(taskId);
   const staged = stageGodotProject({
     taskId,
@@ -210,12 +167,30 @@ export async function scoreP1Godot(taskId, runId) {
     srcDir: oracleGodot(taskId),
   });
   if (staged.tamper) {
-    const row = zeroRow(taskId, 'godot', 'INJECT_TAMPER');
-    return { row, attempt: { id: taskId, engine: 'godot', primary: 'INJECT_TAMPER', g0_ok: 0, notes: ['EvalProbe tamper'] } };
+    return {
+      bundle,
+      G: 0,
+      sliceScores: [],
+      stills: [],
+      primary: 'INJECT_TAMPER',
+      g0_ok: 0,
+      attempt: { id: taskId, engine: 'godot', primary: 'INJECT_TAMPER', g0_ok: 0, notes: ['EvalProbe tamper'] },
+      rowReady: zeroRow(taskId, 'godot', 'INJECT_TAMPER'),
+      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
+    };
   }
   if (staged.leak.length) {
-    const row = zeroRow(taskId, 'godot', 'HARNESS_LEAK');
-    return { row, attempt: { id: taskId, engine: 'godot', primary: 'HARNESS_LEAK', g0_ok: 0, notes: staged.leak } };
+    return {
+      bundle,
+      G: 0,
+      sliceScores: [],
+      stills: [],
+      primary: 'HARNESS_LEAK',
+      g0_ok: 0,
+      attempt: { id: taskId, engine: 'godot', primary: 'HARNESS_LEAK', g0_ok: 0, notes: staged.leak },
+      rowReady: zeroRow(taskId, 'godot', 'HARNESS_LEAK'),
+      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
+    };
   }
   const outDir = path.join(WORK_DIR, `${runId}-gd`);
   const posStills = path.join(outDir, 'stills-pos');
@@ -226,9 +201,8 @@ export async function scoreP1Godot(taskId, runId) {
   });
   const pos = judgeGodotEvents(posJob.events || [], bundle, 'pos', posStills);
   if (posJob.ok === false) {
-    pos.primary = posJob.code || 'BOOT_FAIL';
-    pos.g0_ok = 0;
-    pos.notes = posJob.notes;
+    pos.primary = posJob.code || pos.primary || 'BOOT_FAIL';
+    pos.notes = [...(pos.notes ?? []), ...(posJob.notes ?? [])];
   }
   const negJob = runGodotJob({
     projectDir: staged.dest,
@@ -237,33 +211,55 @@ export async function scoreP1Godot(taskId, runId) {
   });
   const neg = judgeGodotEvents(negJob.events || [], bundle, 'neg');
   const merged = mergePlanResults(pos, neg);
-  const G = pos.g0_ok === 1;
-  const vis = G
-    ? await visualsFor({
-        taskId,
-        engine: 'godot',
-        instruction: bundle.instruction,
-        geometry: bundle.geometry,
-        stills: pos.stills,
-        jobDir: path.join(outDir, 'looks'),
-      })
-    : { V: 0, A: 0, D: 0, looks_status: 'SKIP', looks_source: 'none' };
-  const row = scoreAttempt({
-    id: taskId,
-    engine: 'godot',
-    G,
+  return {
+    bundle,
+    G: pos.g0_ok === 1,
     sliceScores: pos.sliceScores,
     negSliceScores: neg.sliceScores,
+    stills: pos.stills,
+    primary: merged.primary,
+    g0_ok: pos.g0_ok,
+    attempt: { id: taskId, engine: 'godot', ...merged, pos, neg, g0_ok: pos.g0_ok },
+    jobDir: path.join(outDir, 'looks'),
+  };
+}
+
+function rowFromMech(taskId, engine, mech, vis) {
+  if (mech.rowReady && !mech.G) {
+    return { ...mech.rowReady, looks_status: vis.looks_status, looks_source: vis.looks_source };
+  }
+  return scoreAttempt({
+    id: taskId,
+    engine,
+    G: mech.G,
+    sliceScores: mech.sliceScores,
+    negSliceScores: mech.negSliceScores,
     V: vis.V,
     A: vis.A,
     D: vis.D,
-    primary: merged.primary,
-    g0_ok: pos.g0_ok,
+    primary: mech.primary,
+    g0_ok: mech.g0_ok,
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
-    stills: pos.stills,
+    stills: mech.stills,
   });
-  return { row, attempt: { id: taskId, engine: 'godot', ...merged, pos, neg, g0_ok: pos.g0_ok } };
+}
+
+async function pairAndRows(taskId, og, gd) {
+  const vis = await scorePairedLooks({
+    taskId,
+    instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
+    geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
+    og,
+    gd,
+    ogJobDir: og.jobDir,
+    gdJobDir: gd.jobDir,
+  });
+  return {
+    ogRow: rowFromMech(taskId, 'onegame', og, vis.og),
+    gdRow: rowFromMech(taskId, 'godot', gd, vis.gd),
+    pair: vis.pair,
+  };
 }
 
 export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
@@ -272,24 +268,21 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
   const p1attempts = [];
 
   for (const taskId of P0_TASKS) {
-    process.stderr.write(`product P0 onegame ${taskId}\n`);
-    const og = await scoreP0Onegame(taskId, `${suiteRunId}-${taskId}`);
-    rows.push(og.row);
+    process.stderr.write(`product P0 pair ${taskId}\n`);
+    const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
+    const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
+    const paired = await pairAndRows(taskId, og, gd);
+    rows.push(paired.ogRow, paired.gdRow);
     p0taskRows.push({ id: taskId, ...og.mechanical });
-    process.stderr.write(`product P0 godot ${taskId}\n`);
-    const gd = await scoreP0Godot(taskId, `${suiteRunId}-${taskId}`);
-    rows.push(gd);
   }
 
   for (const taskId of P1_TASKS) {
-    process.stderr.write(`product P1 onegame ${taskId}\n`);
-    const og = await scoreP1Onegame(taskId, `${suiteRunId}-${taskId}`);
-    rows.push(og.row);
-    p1attempts.push(og.attempt);
-    process.stderr.write(`product P1 godot ${taskId}\n`);
-    const gd = await scoreP1Godot(taskId, `${suiteRunId}-${taskId}`);
-    rows.push(gd.row);
-    p1attempts.push(gd.attempt);
+    process.stderr.write(`product P1 pair ${taskId}\n`);
+    const og = await mechP1Onegame(taskId, `${suiteRunId}-${taskId}`);
+    const gd = await mechP1Godot(taskId, `${suiteRunId}-${taskId}`);
+    const paired = await pairAndRows(taskId, og, gd);
+    rows.push(paired.ogRow, paired.gdRow);
+    p1attempts.push(og.attempt, gd.attempt);
   }
 
   const report = buildProduct100({ runId: suiteRunId, rows });

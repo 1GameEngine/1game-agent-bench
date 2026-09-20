@@ -91,7 +91,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：`product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\)（启动/卫生失败）则该题 0，仍占 1/14。M 来自官方 dump/checkpoint（脚本）。V（能否看清、控件位置、**图是否对得上该帧 dump**）与 A（好看）来自 **subagent** 对冻结静帧打 0 / 0.5 / 1（条目 V1–V4、A1–A4；有变体区时 D1）。单元测试在 `NODE_TEST_CONTEXT` 下仍走启发式，**套件胜负默认不走启发式**。更好看且图文一致的引擎在机制同分时总分更高。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/14。M 来自官方 dump。V/A 来自 **同一 subagent** 打冻结静帧。两边都产出游戏（`G=1`）时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则该题观感成对作废，套件 `comparable=false`，**不宣布胜者**。Godot 静帧在 320×180 视口抓取后与 1Game 一样 4× NN。单元测试在 `NODE_TEST_CONTEXT` 下仍走启发式，启发式不得当 headline。
 
 过程：每题五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 P1 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

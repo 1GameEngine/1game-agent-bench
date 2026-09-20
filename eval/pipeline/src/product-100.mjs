@@ -85,25 +85,41 @@ export function buildProduct100({ runId, rows }) {
       task_count: list.length,
     };
   }
-  const winner = winnerOf(engines.onegame.product_100, engines.godot.product_100);
+  const { comparable, reasons } = suiteComparableFromRows(rows);
   const og = engines.onegame.product_100.toFixed(1);
   const gd = engines.godot.product_100.toFixed(1);
-  const winner_sentence =
-    winner === 'tie'
-      ? `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
-      : `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+  let winner_engine;
+  let winner_sentence;
+  if (!comparable) {
+    winner_engine = 'incomparable';
+    const sample = reasons
+      .slice(0, 3)
+      .map((r) => `${r.id}:${r.reason}`)
+      .join('；');
+    winner_sentence = `产物分不可比（静帧或 looks Judge 未成对）。1Game = ${og}，Godot = ${gd}（含观感的百分制不得宣布胜者）。${sample}`;
+  } else {
+    winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
+    winner_sentence =
+      winner_engine === 'tie'
+        ? `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
+        : `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+  }
   return {
     schema: 'eval.product-100/1',
     suite_id: 'eval-spec/1',
     report_id: `P100_${runId}`,
     headline_track: 'product_100',
-    winner: true,
+    winner: comparable,
+    comparable,
+    incomparable_reasons: comparable ? [] : reasons,
     looks_included: true,
     still: {
       width: 1280,
       height: 720,
       video: false,
       onegame_scale: 4,
+      godot_logical: '320x180',
+      godot_scale: 4,
       looks: 'subagent',
       looks_items: ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1'],
     },
@@ -114,10 +130,10 @@ export function buildProduct100({ runId, rows }) {
       onegame: engines.onegame.product_100,
       godot: engines.godot.product_100,
     },
-    winner_engine: winner,
+    winner_engine,
     winner_sentence,
     notice:
-      '胜负只看 product_100。COMPARE_SCALAR 与 P0 五维表是过程指标，不得写入结论句。禁止 overall / total_score / vlm_*。',
+      '胜负只看可比的 product_100。两边都 G=1 的题必须同有 1280×720 静帧且同一 subagent looks。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {
@@ -126,6 +142,32 @@ export function buildProduct100({ runId, rows }) {
       p0_report: 'P0_report.json',
     },
   };
+}
+
+function suiteComparableFromRows(rows) {
+  const reasons = [];
+  for (const id of SUITE_TASKS) {
+    const og = rows.find((r) => r.id === id && r.engine === 'onegame') ?? zeroRow(id, 'onegame', 'ENGINE_TASK_UNSUPPORTED');
+    const gd = rows.find((r) => r.id === id && r.engine === 'godot') ?? zeroRow(id, 'godot', 'ENGINE_TASK_UNSUPPORTED');
+    if (!og.G && !gd.G) continue;
+    if (og.G !== gd.G) continue;
+    if (og.looks_status === 'INCOMPARABLE_VISUAL' || gd.looks_status === 'INCOMPARABLE_VISUAL') {
+      reasons.push({ id, reason: 'INCOMPARABLE_VISUAL' });
+      continue;
+    }
+    if (og.looks_status === 'INCOMPARABLE_LOOKS' || gd.looks_status === 'INCOMPARABLE_LOOKS') {
+      reasons.push({ id, reason: 'INCOMPARABLE_LOOKS' });
+      continue;
+    }
+    if (og.looks_status !== 'OK' || gd.looks_status !== 'OK') {
+      reasons.push({ id, reason: `${og.looks_status}/${gd.looks_status}` });
+      continue;
+    }
+    if (og.looks_source !== 'subagent' || gd.looks_source !== 'subagent') {
+      reasons.push({ id, reason: `looks_source=${og.looks_source}/${gd.looks_source}` });
+    }
+  }
+  return { comparable: reasons.length === 0, reasons };
 }
 
 export function zeroRow(id, engine, primary) {

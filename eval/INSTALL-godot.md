@@ -1,6 +1,8 @@
 # Godot 4.4.x（dump + 1280×720 静帧）
 
-机械正确性仍跑 **headless dump**。观感在 freeze 后抓 Viewport PNG；逻辑内容 320×180 时由评测仓最近邻 4× 到 1280×720。Xvfb **视频**标 `INCOMPARABLE_VISUAL`，不得入 `product_100`。
+机械正确性仍跑 **headless dump**。观感静帧：逻辑视口必须是 **320×180**（与题面点击坐标同一空间），评测仓最近邻 4× 到 1280×720。抓静帧时用 **Xvfb 上的单帧 PNG**（`--display-driver x11`），不是 Xvfb 录像。Xvfb **视频**仍标不可比，不得入 `product_100`。
+
+两边都 `G=1` 的题若只有一侧有静帧，V/A 成对记 `INCOMPARABLE_VISUAL`（两边都 0），套件 `comparable=false`，不得宣布胜者。
 
 点击坐标仍是题面 320×180。谁赢只引用 `product_100`，不引用 VLM 原始字段。
 

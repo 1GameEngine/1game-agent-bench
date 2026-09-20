@@ -40,18 +40,32 @@ test('low M caps A contribution', () => {
 
 test('buildProduct100 28 rows and winner sentence', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
-    scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1, 1], V: 1, A: 0.5, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK' }),
-    scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1, 1], V: 1, A: 1, D: 1, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'OK' }),
+    scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1, 1], V: 1, A: 0.5, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1, 1], V: 1, A: 1, D: 1, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
   ]);
   const report = buildProduct100({ runId: 'unit', rows });
   assert.equal(report.tasks.length, 28);
   assert.equal(report.winner_engine, 'godot');
+  assert.equal(report.comparable, true);
+  assert.equal(report.winner, true);
   assert.match(report.winner_sentence, /1Game = /);
   assert.match(report.winner_sentence, /Godot = /);
   assert.ok(!report.winner_sentence.includes('COMPARE_SCALAR'));
   assert.ok(!('overall' in report));
   assert.doesNotThrow(() => assertNoForbiddenScoreKeys(report));
   assert.equal(winnerOf(10, 10), 'tie');
+});
+
+test('buildProduct100 withholds winner when looks unpaired', () => {
+  const rows = SUITE_TASKS.flatMap((id) => [
+    scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1], V: 1, A: 1, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1], V: 0, A: 0, D: 0, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'CAPTURE_FAIL', looks_source: 'none' }),
+  ]);
+  const report = buildProduct100({ runId: 'gap', rows });
+  assert.equal(report.comparable, false);
+  assert.equal(report.winner, false);
+  assert.equal(report.winner_engine, 'incomparable');
+  assert.match(report.winner_sentence, /不可比/);
 });
 
 test('nearest-neighbor 320x180 -> 1280x720', () => {

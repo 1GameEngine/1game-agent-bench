@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { EVAL_DIR, PIPELINE_DIR, WORK_DIR } from './paths.mjs';
 import { execFileOk } from './exec.mjs';
 import { gameplayKeys, validateDump, checkpointMatch } from './p1-schema.mjs';
@@ -77,21 +78,39 @@ function leakScan(dest) {
   return hits;
 }
 
-export function runGodotJob({ projectDir, job, outPath, timeoutMs = 60_000 }) {
+export function runGodotJob({ projectDir, job, outPath, timeoutMs }) {
   const bin = godotBin();
   if (!fs.existsSync(bin)) {
-    return { ok: false, code: 'BOOT_FAIL', notes: [`godot binary missing: ${bin}`] };
+    return { ok: false, code: 'BOOT_FAIL', notes: [`godot binary missing: ${bin}`], events: [] };
   }
   const jobPath = outPath + '.job.json';
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  if (job.stills_dir) fs.mkdirSync(job.stills_dir, { recursive: true });
   fs.writeFileSync(jobPath, `${JSON.stringify(job, null, 2)}\n`);
   if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
-  execFileOk(bin, ['--headless', '--path', projectDir, '--import'], { cwd: projectDir, timeoutMs: 120_000 });
-  const proc = execFileOk(
-    bin,
-    ['--headless', '--path', projectDir, '--', `--job=${jobPath}`, `--out=${outPath}`],
-    { cwd: projectDir, timeoutMs },
-  );
+  const env = {
+    ...process.env,
+    SDL_AUDIODRIVER: 'dummy',
+    ALSA_CARD: 'dummy',
+  };
+  execFileOk(bin, ['--headless', '--path', projectDir, '--import'], {
+    cwd: projectDir,
+    timeoutMs: 120_000,
+    env,
+  });
+  const user = ['--', `--job=${jobPath}`, `--out=${outPath}`];
+  const wantStills = Boolean(job.stills_dir);
+  const runTimeout = timeoutMs ?? (wantStills ? 180_000 : 60_000);
+  let proc;
+  if (wantStills) {
+    proc = runGodotStills(bin, projectDir, user, runTimeout, env);
+  } else {
+    proc = execFileOk(bin, ['--headless', '--rendering-driver', 'opengl3', '--path', projectDir, ...user], {
+      cwd: projectDir,
+      timeoutMs: runTimeout,
+      env,
+    });
+  }
   const events = [];
   if (fs.existsSync(outPath)) {
     for (const line of fs.readFileSync(outPath, 'utf8').split('\n')) {
@@ -103,7 +122,30 @@ export function runGodotJob({ projectDir, job, outPath, timeoutMs = 60_000 }) {
       }
     }
   }
-  return { proc, events, jobPath };
+  const stillFail = events.filter((e) => e.event === 'still_fail');
+  return {
+    proc,
+    events,
+    jobPath,
+    ok: proc.status === 0 && !events.some((e) => e.event === 'error'),
+    notes: [
+      ...(proc.status === 0 ? [] : [`godot exit ${proc.status}: ${(proc.stderr || proc.stdout || '').slice(0, 300)}`]),
+      ...stillFail.map((e) => `still ${e.id}: ${e.message}`),
+    ],
+  };
+}
+
+function runGodotStills(bin, projectDir, user, timeoutMs, env) {
+  const glArgs = ['--rendering-driver', 'opengl3', '--path', projectDir, ...user];
+  const xvfb = spawnSync('which', ['xvfb-run'], { encoding: 'utf8' });
+  if (xvfb.status === 0) {
+    return execFileOk(
+      'xvfb-run',
+      ['-a', '-s', '-screen 0 320x180x24', bin, '--display-driver', 'x11', ...glArgs],
+      { cwd: projectDir, timeoutMs, env },
+    );
+  }
+  return execFileOk(bin, ['--headless', ...glArgs], { cwd: projectDir, timeoutMs, env });
 }
 
 export function makeJob({ bundle, steps, stillsDir }) {

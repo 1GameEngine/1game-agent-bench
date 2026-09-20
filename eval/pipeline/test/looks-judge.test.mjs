@@ -129,3 +129,28 @@ test('registered invoker scores V3 from dump match items', async () => {
     setLooksInvoker(null);
   }
 });
+
+test('paired looks zeros both when one side has no stills', async () => {
+  const { scorePairedLooks, stillsComplete } = await import('../src/looks-pair.mjs');
+  assert.equal(stillsComplete([{ ok: true, path: '/nope.png' }]), false);
+  const png = path.join(os.tmpdir(), `pair-${process.pid}.png`);
+  fs.writeFileSync(
+    png,
+    Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082',
+      'hex',
+    ),
+  );
+  const vis = await scorePairedLooks({
+    taskId: 'p1-toggle-lamp',
+    instruction: 'lamp',
+    geometry: { regions: {} },
+    og: { G: 1, stills: [{ ok: true, path: png }] },
+    gd: { G: 1, stills: [{ ok: false, status: 'CAPTURE_FAIL' }] },
+  });
+  assert.equal(vis.pair, 'INCOMPARABLE_VISUAL');
+  assert.equal(vis.og.V, 0);
+  assert.equal(vis.gd.V, 0);
+  assert.equal(vis.og.looks_status, 'INCOMPARABLE_VISUAL');
+  fs.unlinkSync(png);
+});

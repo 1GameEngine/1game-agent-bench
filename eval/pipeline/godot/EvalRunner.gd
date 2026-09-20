@@ -36,8 +36,21 @@ func _ready() -> void:
 		_schema_keys.append(String(k))
 	call_deferred("_run")
 
+func _lock_logical_viewport() -> void:
+	var win := get_window()
+	if win != null:
+		win.mode = Window.MODE_WINDOWED
+		win.size = Vector2i(320, 180)
+		win.content_scale_size = Vector2i(320, 180)
+		win.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
+		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
+	DisplayServer.window_set_size(Vector2i(320, 180))
+	get_viewport().size = Vector2i(320, 180)
+
 func _run() -> void:
+	_lock_logical_viewport()
 	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
 	if get_tree().current_scene == null:
 		_emit({"event": "error", "code": "BOOT_FAIL", "message": "no current_scene"})
 		get_tree().quit(3)
@@ -50,7 +63,7 @@ func _run() -> void:
 	var g0: Dictionary = probe.dump(String(_job["schema_id"]), String(_job["schema_sha256"]), _schema_keys)
 	_emit({"event": "g0", "dump": g0})
 	for step in _job.get("steps", []):
-		var err := _apply_step(step, probe)
+		var err := await _apply_step(step, probe)
 		if err != "":
 			_emit({"event": "error", "code": err, "step": step})
 			get_tree().quit(5)
@@ -64,7 +77,7 @@ func _apply_step(step: Dictionary, probe: Node) -> String:
 	if step.has("checkpoint"):
 		var d: Dictionary = probe.dump(String(_job["schema_id"]), String(_job["schema_sha256"]), _schema_keys)
 		_emit({"event": "checkpoint", "id": String(step["checkpoint"]), "dump": d})
-		_snapshot(String(step["checkpoint"]))
+		await _snapshot(String(step["checkpoint"]))
 		return ""
 	if step.has("tick"):
 		var n := int(step["tick"])
@@ -161,14 +174,24 @@ func _map_key(code: String) -> Key:
 func _snapshot(id: String) -> void:
 	if _stills_dir == "":
 		return
+	_lock_logical_viewport()
 	RenderingServer.force_draw(true)
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
 	var tex := get_viewport().get_texture()
 	if tex == null:
 		_emit({"event": "still_fail", "id": id, "message": "no viewport texture"})
 		return
 	var img := tex.get_image()
-	if img == null:
+	if img == null or img.get_width() < 1 or img.get_height() < 1:
 		_emit({"event": "still_fail", "id": id, "message": "no image"})
+		return
+	if img.get_width() != 320 or img.get_height() != 180:
+		_emit({
+			"event": "still_fail",
+			"id": id,
+			"message": "size %sx%s (need 320x180)" % [img.get_width(), img.get_height()],
+		})
 		return
 	var path := "%s/%s.png" % [_stills_dir, id]
 	var err := img.save_png(path)
