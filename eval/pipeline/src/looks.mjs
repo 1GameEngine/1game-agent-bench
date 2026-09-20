@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { decodePng, STILL_SCALE, LOGICAL_W, LOGICAL_H } from './png-nn.mjs';
+import { decodePng, LOGICAL_W } from './png-nn.mjs';
 
 function quantKey(r, g, b) {
   return `${r >> 4},${g >> 4},${b >> 4}`;
@@ -46,7 +46,7 @@ function meanDistance(a, b) {
 
 export function heuristicFrame({ png, geometry }) {
   const img = decodePng(png);
-  const scale = img.width === LOGICAL_W ? 1 : STILL_SCALE;
+  const scale = Math.max(1, Math.round(img.width / LOGICAL_W));
   const g = globalStats(img.rgba);
   const regions = Object.entries(geometry?.regions ?? {});
   const stats = regions.map(([, r]) => regionStats(img.rgba, img.width, img.height, r, scale));
@@ -73,7 +73,7 @@ export function heuristicFrame({ png, geometry }) {
 export function heuristicDepth({ png, geometry, keys }) {
   if (!keys?.length) return { D: 0, source: 'heuristic' };
   const img = decodePng(png);
-  const scale = img.width === LOGICAL_W ? 1 : STILL_SCALE;
+  const scale = Math.max(1, Math.round(img.width / LOGICAL_W));
   const means = keys.map((k) => regionStats(img.rgba, img.width, img.height, geometry.regions[k], scale).mean);
   let pairs = 0;
   let distinct = 0;

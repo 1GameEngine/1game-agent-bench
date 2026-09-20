@@ -1,11 +1,20 @@
 extends Node
 
 ## Injected autoload. Reads a job JSON outside the game tree and drives the closed action set.
+## Window lock is 1280×720. Clicks stay in 320×180. Stills come from a dedicated SubViewport
+## so Dummy/headless root textures cannot yield an empty PNG.
+
+const STILL_W := 1280
+const STILL_H := 720
+const LOGIC_W := 320
+const LOGIC_H := 180
+const STILL_SCALE := 4.0
 
 var _job: Dictionary = {}
 var _out_path: String = ""
 var _stills_dir: String = ""
 var _schema_keys: PackedStringArray = PackedStringArray()
+var _cap: SubViewport
 
 func _ready() -> void:
 	var job_path := ""
@@ -36,21 +45,37 @@ func _ready() -> void:
 		_schema_keys.append(String(k))
 	call_deferred("_run")
 
-func _lock_logical_viewport() -> void:
+func _lock_window() -> void:
 	var win := get_window()
 	if win != null:
 		win.mode = Window.MODE_WINDOWED
-		win.size = Vector2i(320, 180)
-		win.content_scale_size = Vector2i(320, 180)
-		win.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
+		win.size = Vector2i(STILL_W, STILL_H)
+		win.content_scale_size = Vector2i(LOGIC_W, LOGIC_H)
+		win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
-	DisplayServer.window_set_size(Vector2i(320, 180))
-	get_viewport().size = Vector2i(320, 180)
+	DisplayServer.window_set_size(Vector2i(STILL_W, STILL_H))
+	var vp := get_viewport()
+	vp.size = Vector2i(STILL_W, STILL_H)
+	vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+
+func _ensure_cap() -> void:
+	if _cap != null or _stills_dir == "":
+		return
+	_cap = SubViewport.new()
+	_cap.name = "EvalStillViewport"
+	_cap.size = Vector2i(STILL_W, STILL_H)
+	_cap.transparent_bg = false
+	_cap.disable_3d = true
+	_cap.handle_input_locally = false
+	_cap.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_cap.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	_cap.world_2d = get_tree().root.world_2d
+	_cap.canvas_transform = Transform2D.IDENTITY.scaled(Vector2(STILL_SCALE, STILL_SCALE))
+	add_child(_cap)
 
 func _run() -> void:
-	_lock_logical_viewport()
+	_lock_window()
 	await get_tree().process_frame
-	await RenderingServer.frame_post_draw
 	if get_tree().current_scene == null:
 		_emit({"event": "error", "code": "BOOT_FAIL", "message": "no current_scene"})
 		get_tree().quit(3)
@@ -174,24 +199,11 @@ func _map_key(code: String) -> Key:
 func _snapshot(id: String) -> void:
 	if _stills_dir == "":
 		return
-	_lock_logical_viewport()
-	RenderingServer.force_draw(true)
-	await get_tree().process_frame
-	await RenderingServer.frame_post_draw
-	var tex := get_viewport().get_texture()
-	if tex == null:
-		_emit({"event": "still_fail", "id": id, "message": "no viewport texture"})
-		return
-	var img := tex.get_image()
-	if img == null or img.get_width() < 1 or img.get_height() < 1:
-		_emit({"event": "still_fail", "id": id, "message": "no image"})
-		return
-	if img.get_width() != 320 or img.get_height() != 180:
-		_emit({
-			"event": "still_fail",
-			"id": id,
-			"message": "size %sx%s (need 320x180)" % [img.get_width(), img.get_height()],
-		})
+	_lock_window()
+	_ensure_cap()
+	var img: Image = await _grab_still()
+	if img == null:
+		_emit({"event": "still_fail", "id": id, "message": "empty viewport image"})
 		return
 	var path := "%s/%s.png" % [_stills_dir, id]
 	var err := img.save_png(path)
@@ -199,6 +211,44 @@ func _snapshot(id: String) -> void:
 		_emit({"event": "still_fail", "id": id, "message": "save_png %s" % err})
 		return
 	_emit({"event": "still", "id": id, "path": path, "w": img.get_width(), "h": img.get_height()})
+
+func _grab_still() -> Image:
+	for _i in 3:
+		RenderingServer.force_draw(true)
+		await get_tree().process_frame
+		var img := _image_from(_cap)
+		if _still_ok(img):
+			return img
+		img = _image_from(get_viewport())
+		if _still_ok(img):
+			return img
+	return null
+
+func _image_from(vp: Viewport) -> Image:
+	if vp == null:
+		return null
+	var tex := vp.get_texture()
+	if tex == null:
+		return null
+	return tex.get_image()
+
+func _still_ok(img: Image) -> bool:
+	if img == null or img.get_width() != STILL_W or img.get_height() != STILL_H:
+		return false
+	img.convert(Image.FORMAT_RGBA8)
+	var lit := 0
+	var y := 0
+	while y < STILL_H:
+		var x := 0
+		while x < STILL_W:
+			var c := img.get_pixel(x, y)
+			if c.r + c.g + c.b > 0.08:
+				lit += 1
+				if lit >= 8:
+					return true
+			x += 80
+		y += 45
+	return false
 
 func _emit(obj: Dictionary) -> void:
 	var f := FileAccess.open(_out_path, FileAccess.READ_WRITE)

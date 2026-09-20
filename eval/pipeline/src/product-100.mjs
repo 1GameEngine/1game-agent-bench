@@ -116,10 +116,8 @@ export function buildProduct100({ runId, rows }) {
     still: {
       width: 1280,
       height: 720,
+      window_lock: true,
       video: false,
-      onegame_scale: 4,
-      godot_logical: '320x180',
-      godot_scale: 4,
       looks: 'subagent',
       looks_items: ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1'],
     },

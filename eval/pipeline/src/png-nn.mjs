@@ -141,11 +141,7 @@ export const STILL_SCALE = 4;
 export function toJudgeStill(pngBuf) {
   const img = decodePng(pngBuf);
   if (img.width === STILL_W && img.height === STILL_H) return { png: pngBuf, ...img, scaled: false };
-  if (img.width === LOGICAL_W && img.height === LOGICAL_H) {
-    const up = nearestNeighborScale(img.rgba, img.width, img.height, STILL_SCALE);
-    return { png: encodePngRgba(up.width, up.height, up.rgba), ...up, scaled: true };
-  }
-  throw new Error(`unexpected still size ${img.width}x${img.height}`);
+  throw new Error(`window lock is 1280x720, got ${img.width}x${img.height}`);
 }
 
 export function sha256(buf) {

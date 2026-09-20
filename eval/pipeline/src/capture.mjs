@@ -17,9 +17,9 @@ export function captureArgv(outPng) {
     '--out',
     outPng,
     '--width',
-    '320',
+    '1280',
     '--height',
-    '180',
+    '720',
     '--format',
     'png',
     '--dpr',
@@ -60,7 +60,7 @@ export function finalizeStill(srcPath) {
       png: still.png,
       width: STILL_W,
       height: STILL_H,
-      scale: still.scaled ? 'nn_integer_4x' : 'native_1280x720',
+      scale: 'window_1280x720',
       sha256: sha256(still.png),
     };
   } catch (err) {

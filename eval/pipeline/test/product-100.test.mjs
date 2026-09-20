@@ -68,25 +68,24 @@ test('buildProduct100 withholds winner when looks unpaired', () => {
   assert.match(report.winner_sentence, /不可比/);
 });
 
-test('nearest-neighbor 320x180 -> 1280x720', () => {
-  const w = 320;
-  const h = 180;
+test('window lock 1280x720; 320x180 stills rejected', () => {
+  const w = 1280;
+  const h = 720;
   const rgba = Buffer.alloc(w * h * 4, 0);
   rgba[0] = 255;
   rgba[1] = 0;
   rgba[2] = 0;
   rgba[3] = 255;
   const png = encodePngRgba(w, h, rgba);
-  const round = decodePng(png);
-  assert.equal(round.width, 320);
-  assert.equal(round.rgba[0], 255);
-  const up = nearestNeighborScale(round.rgba, 320, 180, 4);
-  assert.equal(up.width, STILL_W);
-  assert.equal(up.height, STILL_H);
-  assert.equal(up.rgba[0], 255);
   const still = toJudgeStill(png);
-  assert.equal(still.width, 1280);
-  assert.equal(still.scaled, true);
+  assert.equal(still.width, STILL_W);
+  assert.equal(still.height, STILL_H);
+  assert.equal(still.scaled, false);
+  const small = encodePngRgba(320, 180, Buffer.alloc(320 * 180 * 4, 0));
+  assert.throws(() => toJudgeStill(small));
+  const nn = nearestNeighborScale(decodePng(small).rgba, 320, 180, 4);
+  assert.equal(nn.width, STILL_W);
+  assert.equal(nn.height, STILL_H);
   const hlook = heuristicFrame({
     png: still.png,
     geometry: { regions: { a: { x: 0, y: 0, w: 10, h: 10 } } },

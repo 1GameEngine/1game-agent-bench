@@ -137,7 +137,7 @@ export function buildLooksUserPrompt(job) {
   const reqs = LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`).join('\n');
   return [
     'You are a strict but fair still-frame game evaluator. Score only what is visible in the attached 1280x720 stills.',
-    'The image may be a 4x nearest-neighbor upscale from 320x180. Blocky pixels are normal, not blur.',
+    'The window is locked to 1280x720. Gameplay layout is 320x180 inside that window. Judge the 1280x720 pixels.',
     'Do not name engines or widget APIs. Do not compare two engines. Score this submission alone.',
     'Use only 0, 0.5, or 1 per item.',
     '',

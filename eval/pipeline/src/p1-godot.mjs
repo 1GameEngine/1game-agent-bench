@@ -35,6 +35,24 @@ function patchAutoload(projectGodot, probeRel, runnerRel) {
   return { tamper: false, text };
 }
 
+function patchWindowLock(projectGodot) {
+  let text = fs.readFileSync(projectGodot, 'utf8');
+  if (!/\[display\]/.test(text)) text += '\n[display]\n';
+  const pairs = {
+    'window/size/viewport_width': '1280',
+    'window/size/viewport_height': '720',
+    'window/stretch/mode': '"canvas_items"',
+    'window/stretch/aspect': '"ignore"',
+    'window/vsync/vsync_mode': '0',
+  };
+  for (const [key, val] of Object.entries(pairs)) {
+    const re = new RegExp(`^${key}=.*$`, 'm');
+    if (re.test(text)) text = text.replace(re, `${key}=${val}`);
+    else text = text.replace('[display]', `[display]\n${key}=${val}`);
+  }
+  fs.writeFileSync(projectGodot, text);
+}
+
 export function stageGodotProject({ taskId, runId, srcDir }) {
   const dest = path.join(WORK_DIR, runId, 'godot');
   fs.rmSync(dest, { recursive: true, force: true });
@@ -55,6 +73,7 @@ export function stageGodotProject({ taskId, runId, srcDir }) {
     }
   }
   const patched = patchAutoload(path.join(dest, 'project.godot'), 'eval_injected/EvalProbe.gd', 'eval_injected/EvalRunner.gd');
+  if (!patched.tamper) patchWindowLock(path.join(dest, 'project.godot'));
   return { dest, tamper: patched.tamper, leak: leakScan(dest), officialProbe };
 }
 
@@ -100,7 +119,7 @@ export function runGodotJob({ projectDir, job, outPath, timeoutMs }) {
   });
   const user = ['--', `--job=${jobPath}`, `--out=${outPath}`];
   const wantStills = Boolean(job.stills_dir);
-  const runTimeout = timeoutMs ?? (wantStills ? 180_000 : 60_000);
+  const runTimeout = timeoutMs ?? (wantStills ? 90_000 : 60_000);
   let proc;
   if (wantStills) {
     proc = runGodotStills(bin, projectDir, user, runTimeout, env);
@@ -141,7 +160,7 @@ function runGodotStills(bin, projectDir, user, timeoutMs, env) {
   if (xvfb.status === 0) {
     return execFileOk(
       'xvfb-run',
-      ['-a', '-s', '-screen 0 320x180x24', bin, '--display-driver', 'x11', ...glArgs],
+      ['-a', '-s', '-screen 0 1280x720x24', bin, '--display-driver', 'x11', ...glArgs],
       { cwd: projectDir, timeoutMs, env },
     );
   }
