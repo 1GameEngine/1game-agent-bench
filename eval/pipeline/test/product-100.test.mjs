@@ -16,8 +16,8 @@ import { loadSuite } from '../src/load.mjs';
 test('suite winner is product_100', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
-  assert.equal(SUITE_TASKS.length, 14);
-  assert.equal(P0_TASKS.length, 4);
+  assert.equal(SUITE_TASKS.length, 3);
+  assert.equal(P0_TASKS.length, 0);
 });
 
 test('G=0 zeros the task; missing D renormalizes', () => {
@@ -38,13 +38,13 @@ test('low M caps A contribution', () => {
   assert.ok(uncapped <= 100);
 });
 
-test('buildProduct100 28 rows and winner sentence', () => {
+test('buildProduct100 6 rows and winner sentence', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
     scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1, 1], V: 1, A: 0.5, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
     scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1, 1], V: 1, A: 1, D: 1, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
   ]);
   const report = buildProduct100({ runId: 'unit', rows });
-  assert.equal(report.tasks.length, 28);
+  assert.equal(report.tasks.length, 6);
   assert.equal(report.winner_engine, 'godot');
   assert.equal(report.comparable, true);
   assert.equal(report.winner, true);

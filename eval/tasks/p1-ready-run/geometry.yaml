@@ -1,0 +1,7 @@
+regions:
+  start: { x: 440, y: 200, w: 400, h: 160 }
+  play: { x: 0, y: 480, w: 1280, h: 240 }
+  dead: { x: 0, y: 0, w: 200, h: 80 }
+labels:
+  start: Start
+frozen_click_centers: []

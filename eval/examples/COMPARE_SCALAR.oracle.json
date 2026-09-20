@@ -5,140 +5,56 @@
   "comparable": true,
   "winner": false,
   "notice": "过程指标：COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。",
-  "checkpoints_ok": 20,
-  "attempts": 20,
-  "headline": "20/20",
-  "g0_ok": 20,
-  "g0_conditional": "20/20",
+  "checkpoints_ok": 6,
+  "attempts": 6,
+  "headline": "6/6",
+  "g0_ok": 6,
+  "g0_conditional": "6/6",
   "engines": {
     "onegame": {
-      "checkpoints_ok": 10,
-      "attempts": 10,
-      "g0_ok": 10
+      "checkpoints_ok": 3,
+      "attempts": 3,
+      "g0_ok": 3
     },
     "godot": {
-      "checkpoints_ok": 10,
-      "attempts": 10,
-      "g0_ok": 10
+      "checkpoints_ok": 3,
+      "attempts": 3,
+      "g0_ok": 3
     }
   },
   "tasks": [
     {
-      "id": "p1-toggle-lamp",
+      "id": "p1-signal-desk",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-toggle-lamp",
+      "id": "p1-signal-desk",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-counter-clamp",
+      "id": "p1-grid-scout",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-counter-clamp",
+      "id": "p1-grid-scout",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-pick-slot",
+      "id": "p1-ready-run",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-pick-slot",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-arm-fire",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-arm-fire",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-grid-step",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-grid-step",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-seq-ab",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-seq-ab",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-tab-act",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-tab-act",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-space-pulse",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-space-pulse",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-door-pair",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-door-pair",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-mode-cycle",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-mode-cycle",
+      "id": "p1-ready-run",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1

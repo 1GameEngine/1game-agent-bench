@@ -4,6 +4,6 @@
 
 全部内容在 [`eval/`](eval/README.md)。
 
-- 胜负：`product_100`（P0 四题 + P1 十题，百分制平均）。
+- 胜负：`product_100`（headline 三题等权百分制平均：信号台 / 格子探路 / 开局街机）。
 - 过程：P0 五维表；P1 `COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。
 

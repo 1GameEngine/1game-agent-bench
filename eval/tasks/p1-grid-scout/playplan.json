@@ -1,0 +1,55 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "kr",
+      "keydown": "ArrowRight"
+    },
+    {
+      "id": "ur",
+      "keyup": "ArrowRight"
+    },
+    {
+      "id": "s1d",
+      "keydown": "Space"
+    },
+    {
+      "id": "s1u",
+      "keyup": "Space"
+    },
+    {
+      "id": "kl1",
+      "keydown": "ArrowLeft"
+    },
+    {
+      "id": "ul1",
+      "keyup": "ArrowLeft"
+    },
+    {
+      "id": "kl2",
+      "keydown": "ArrowLeft"
+    },
+    {
+      "id": "ul2",
+      "keyup": "ArrowLeft"
+    },
+    {
+      "id": "s0d",
+      "keydown": "Space"
+    },
+    {
+      "id": "s0u",
+      "keyup": "Space"
+    },
+    {
+      "id": "cp1",
+      "checkpoint": "final"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "dump",
+  "compare": {
+    "mode": "schema_strict",
+    "extras": "fail",
+    "remainMs_lte": 0
+  },
+  "slices": {
+    "init": {
+      "phase": "ready",
+      "remainMs": 0,
+      "score": 0,
+      "pulses": 0
+    },
+    "after_start": {
+      "phase": "countdown",
+      "remainMs": 3000,
+      "score": 0,
+      "pulses": 0
+    },
+    "final": {
+      "phase": "playing",
+      "remainMs": 0,
+      "score": 1,
+      "pulses": 1
+    },
+    "neg_final": {
+      "phase": "ready",
+      "remainMs": 0,
+      "score": 0,
+      "pulses": 0
+    }
+  }
+}

@@ -7,12 +7,12 @@ import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
 
-test('P1 compare_tasks are 10 closed-set tasks', () => {
+test('P1 compare_tasks are 3 headline games', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
-  assert.equal(P1_TASKS.length, 10);
+  assert.equal(P1_TASKS.length, 3);
   for (const id of P1_TASKS) {
     const b = loadP1Task(id);
     assert.equal(b.task.scene.width, 1280);

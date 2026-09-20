@@ -6,18 +6,7 @@ import { EvalError } from './util.mjs';
 import { auditClosedPlayplan } from './p1-closed.mjs';
 import { loadSchemaFile } from './p1-schema.mjs';
 
-export const P1_TASKS = [
-  'p1-toggle-lamp',
-  'p1-counter-clamp',
-  'p1-pick-slot',
-  'p1-arm-fire',
-  'p1-grid-step',
-  'p1-seq-ab',
-  'p1-tab-act',
-  'p1-space-pulse',
-  'p1-door-pair',
-  'p1-mode-cycle',
-];
+export const P1_TASKS = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
 
 const ENGINE_WORDS = ['ColorRect', 'Autoload', 'bindStore', 'CharacterBody2D', '<node>', 'For'];
 

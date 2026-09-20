@@ -17,16 +17,9 @@ engines:
     inject: EvalProbe
 tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
 compare_tasks:
-  - p1-toggle-lamp
-  - p1-counter-clamp
-  - p1-pick-slot
-  - p1-arm-fire
-  - p1-grid-step
-  - p1-seq-ab
-  - p1-tab-act
-  - p1-space-pulse
-  - p1-door-pair
-  - p1-mode-cycle
+  - p1-signal-desk
+  - p1-grid-scout
+  - p1-ready-run
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden

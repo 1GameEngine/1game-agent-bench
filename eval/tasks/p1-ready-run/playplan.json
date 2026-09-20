@@ -1,0 +1,39 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "st",
+      "click": "start"
+    },
+    {
+      "id": "mid",
+      "checkpoint": "after_start"
+    },
+    {
+      "id": "wait",
+      "tick": 188
+    },
+    {
+      "id": "hit",
+      "click": "play"
+    },
+    {
+      "id": "pd",
+      "keydown": "Space"
+    },
+    {
+      "id": "pu",
+      "keyup": "Space"
+    },
+    {
+      "id": "cp1",
+      "checkpoint": "final"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.p1-signal-desk/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eval.schema_id",
+    "eval.schema_sha256",
+    "lamp",
+    "channel",
+    "armed",
+    "shots"
+  ],
+  "properties": {
+    "eval.schema_id": {
+      "const": "eval.p1-signal-desk/1"
+    },
+    "eval.schema_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "lamp": {
+      "type": "boolean"
+    },
+    "channel": {
+      "enum": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    "armed": {
+      "type": "boolean"
+    },
+    "shots": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

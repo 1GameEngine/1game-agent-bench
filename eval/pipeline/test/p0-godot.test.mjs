@@ -4,10 +4,10 @@ import { loadTaskBundle } from '../src/load.mjs';
 import { auditClosedPlayplan } from '../src/p1-closed.mjs';
 import { checkpointMatch } from '../src/p1-schema.mjs';
 import { loadP0GodotTask, p0ClosedPlayplan, argvStepToClosed } from '../src/p0-godot.mjs';
-import { P0_TASKS } from '../src/product-100.mjs';
+import { PROCESS_P0_TASKS } from '../src/product-100.mjs';
 
 test('P0 argv playplans project to closed Godot jobs', () => {
-  for (const id of P0_TASKS) {
+  for (const id of PROCESS_P0_TASKS) {
     const bundle = loadTaskBundle(id);
     const closed = p0ClosedPlayplan(bundle);
     const geom = { regions: bundle.geometry.regions ?? {} };

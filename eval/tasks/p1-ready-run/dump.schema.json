@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.p1-ready-run/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eval.schema_id",
+    "eval.schema_sha256",
+    "phase",
+    "remainMs",
+    "score",
+    "pulses"
+  ],
+  "properties": {
+    "eval.schema_id": {
+      "const": "eval.p1-ready-run/1"
+    },
+    "eval.schema_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "phase": {
+      "enum": [
+        "ready",
+        "countdown",
+        "playing"
+      ]
+    },
+    "remainMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "score": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pulses": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

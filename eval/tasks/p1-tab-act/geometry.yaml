@@ -1,9 +1,0 @@
-regions:
-  red: { x: 80, y: 80, w: 280, h: 128 }
-  blue: { x: 400, y: 80, w: 280, h: 128 }
-  act: { x: 440, y: 360, w: 400, h: 160 }
-labels:
-  red: Red
-  blue: Blue
-  act: Act
-frozen_click_centers: []

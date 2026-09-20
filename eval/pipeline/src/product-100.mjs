@@ -1,26 +1,13 @@
-export const P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
+export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
+export const P0_TASKS = [];
 
-export const P1_TASKS = [
-  'p1-toggle-lamp',
-  'p1-counter-clamp',
-  'p1-pick-slot',
-  'p1-arm-fire',
-  'p1-grid-step',
-  'p1-seq-ab',
-  'p1-tab-act',
-  'p1-space-pulse',
-  'p1-door-pair',
-  'p1-mode-cycle',
-];
+export const P1_TASKS = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
 
-export const SUITE_TASKS = [...P0_TASKS, ...P1_TASKS];
+export const SUITE_TASKS = [...P1_TASKS];
 
 export const DEPTH_TASKS = {
-  'p0-grid-marks': ['cell0', 'cell1', 'cell2'],
-  'p1-pick-slot': ['slotA', 'slotB', 'slotC'],
-  'p1-tab-act': ['red', 'blue'],
-  'p1-door-pair': ['left', 'right'],
-  'p1-mode-cycle': null,
+  'p1-signal-desk': ['chanA', 'chanB', 'chanC'],
+  'p1-grid-scout': ['cell0', 'cell1', 'cell2'],
 };
 
 export const WEIGHTS = { M: 40, D: 10, V: 20, A: 30 };
@@ -101,8 +88,8 @@ export function buildProduct100({ runId, rows }) {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
     winner_sentence =
       winner_engine === 'tie'
-        ? `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
-        : `套件总分（14题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+        ? `套件总分（3题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
+        : `套件总分（3题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
   }
   return {
     schema: 'eval.product-100/1',
@@ -122,7 +109,7 @@ export function buildProduct100({ runId, rows }) {
       looks_items: ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1'],
     },
     weights: { ...WEIGHTS },
-    task_count: 14,
+    task_count: 3,
     task_ids: [...SUITE_TASKS],
     product_100: {
       onegame: engines.onegame.product_100,
@@ -131,7 +118,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      '胜负只看可比的 product_100。两边都 G=1 的题必须同有 1280×720 静帧且同一 looks-job（默认 worker 或 EVAL_LOOKS_CMD）。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
+      '胜负只看可比的 product_100（3 题等权）。两边都 G=1 的题必须同有 1280×720 静帧且同一 looks-job。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {

@@ -1,9 +1,0 @@
-regions:
-  left: { x: 160, y: 280, w: 400, h: 160 }
-  right: { x: 720, y: 280, w: 400, h: 160 }
-  dead: { x: 0, y: 0, w: 160, h: 120 }
-labels:
-  left: Left
-  right: Right
-frozen_click_centers:
-  - "80,60"

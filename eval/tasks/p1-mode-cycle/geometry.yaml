@@ -1,7 +1,0 @@
-regions:
-  cycle: { x: 440, y: 280, w: 400, h: 160 }
-  dead: { x: 0, y: 560, w: 240, h: 120 }
-labels:
-  cycle: Cycle
-frozen_click_centers:
-  - "120,620"

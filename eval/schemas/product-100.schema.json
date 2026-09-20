@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "eval.product-100/1",
-  "title": "product_100 suite winner (P0+P1, 14 tasks)",
+  "title": "product_100 suite winner (3 headline games)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -25,7 +25,7 @@
     "looks_included": { "const": true },
     "still": { "type": "object" },
     "weights": { "type": "object" },
-    "task_count": { "const": 14 },
+    "task_count": { "const": 3 },
     "task_ids": { "type": "array" },
     "product_100": {
       "type": "object",

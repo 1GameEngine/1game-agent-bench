@@ -42,16 +42,17 @@ export function loadSuite() {
   if (suite.engines?.onegame?.npm_train !== PIN) {
     throw new EvalError('EVAL_INTERNAL', `npm_train must be ${PIN}`);
   }
-  const expected = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
-  if (JSON.stringify(suite.tasks) !== JSON.stringify(expected)) {
-    throw new EvalError('EVAL_INTERNAL', 'suite.tasks must be the frozen P0 four');
+  const processTasks = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
+  if (JSON.stringify(suite.tasks) !== JSON.stringify(processTasks)) {
+    throw new EvalError('EVAL_INTERNAL', 'suite.tasks must stay the P0 process four');
   }
   if (JSON.stringify(suite.scoring?.dimensions) !== JSON.stringify(['create_ok', 'replay_ok', 'store_match', 'argv_ok', 'hygiene_ok'])) {
     throw new EvalError('EVAL_INTERNAL', 'scoring.dimensions must be the frozen five');
   }
   const compare = suite.compare_tasks ?? [];
-  if (compare.length < 8 || compare.length > 12) {
-    throw new EvalError('EVAL_INTERNAL', 'compare_tasks must be 8–12 P1 tasks');
+  const headline = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
+  if (JSON.stringify(compare) !== JSON.stringify(headline)) {
+    throw new EvalError('EVAL_INTERNAL', 'compare_tasks must be the 3 headline games');
   }
   return suite;
 }

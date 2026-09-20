@@ -2,11 +2,11 @@
 
 私有评测产品。不要发到 npm，不要做成 `1game-*` skill。
 
-**当前里程碑：product_100。** 跨引擎谁赢只看 **14 题等权平均的百分制** `product_100`（P0 四题 + P1 十题）。结论句只引用两个套件分。
+**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（信号台 / 格子探路 / 开局街机）。结论句只引用两个套件分。
 
-过程指标仍产出、不决定胜负：P0 五维表、`COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
+过程指标仍产出、不决定胜负：P0 四题五维表（夹具，不进 headline）、`COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
 
-P1 对比集是 `compare_tasks` 里的 10 题；P0 四题两边都跑（Godot oracle 在 `examples/oracles/p0-*/godot/`）。
+Headline 三题在 `compare_tasks`：`p1-signal-desk` `p1-grid-scout` `p1-ready-run`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
@@ -79,8 +79,8 @@ pnpm install
 pnpm test                 # 合同/审计/Judge 子集/报表禁令
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
-pnpm run run-p1-compare   # 10 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
-pnpm run run-product-100  # 14 题 × 两引擎 → PRODUCT_100.json（胜负）
+pnpm run run-p1-compare   # 3 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
+pnpm run run-product-100  # 3 题 × 两引擎 → PRODUCT_100.json（胜负）
 # 观感：默认 looks-job worker 打 V/A。EVAL_LOOKS_CMD 可换成外部 VLM。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
 node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
@@ -90,11 +90,11 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/14。M 来自官方 dump。V/A 来自 **同一 subagent** 打冻结静帧。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。启发式不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。M 来自官方 dump。V/A 来自 **同一 looks-job** 打冻结静帧。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。启发式不得当 headline。
 
-过程：每题五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 P1 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
+过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 
-P0 四题：`p0-click-score` `p0-hud-start` `p0-grid-marks` `p0-countdown-play`。
+Headline 三题：`p1-signal-desk`（规则/状态）`p1-grid-scout`（空间）`p1-ready-run`（街机节奏）。P0 四题只作过程夹具。
 
 ## 本仓不包含
 

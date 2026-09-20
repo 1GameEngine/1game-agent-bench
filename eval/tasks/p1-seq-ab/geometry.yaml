@@ -1,7 +1,0 @@
-regions:
-  btnA: { x: 200, y: 280, w: 360, h: 160 }
-  btnB: { x: 720, y: 280, w: 360, h: 160 }
-labels:
-  btnA: A
-  btnB: B
-frozen_click_centers: []

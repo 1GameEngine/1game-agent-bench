@@ -1,0 +1,27 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "miss",
+      "click": "dead"
+    },
+    {
+      "id": "idle",
+      "tick": 10
+    },
+    {
+      "id": "hit0",
+      "click": "play"
+    },
+    {
+      "id": "cp1",
+      "checkpoint": "neg_final"
+    }
+  ]
+}
