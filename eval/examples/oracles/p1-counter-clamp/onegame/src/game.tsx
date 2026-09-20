@@ -19,10 +19,10 @@ function PlusBtn() {
   const active = useNodeActive(node);
   return (
     <group
-      x={180}
-      y={70}
-      width={80}
-      height={40}
+      x={720}
+      y={280}
+      width={320}
+      height={160}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -34,12 +34,12 @@ function PlusBtn() {
       <node
         x={0}
         y={0}
-        width={80}
-        height={40}
-        shape="roundedRect(8 8 8 8)"
+        width={320}
+        height={160}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
-      <text x={0} y={8} width={80} height={24} text="Plus" textAlign="center" textSize={16} textColor="#ffffff" />
+      <text x={0} y={32} width={320} height={96} text="Plus" textAlign="center" textSize={64} textColor="#ffffff" />
     </group>
   );
 }
@@ -50,10 +50,10 @@ function MinusBtn() {
   const active = useNodeActive(node);
   return (
     <group
-      x={60}
-      y={70}
-      width={80}
-      height={40}
+      x={240}
+      y={280}
+      width={320}
+      height={160}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -65,20 +65,20 @@ function MinusBtn() {
       <node
         x={0}
         y={0}
-        width={80}
-        height={40}
-        shape="roundedRect(8 8 8 8)"
+        width={320}
+        height={160}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
-      <text x={0} y={8} width={80} height={24} text="Minus" textAlign="center" textSize={16} textColor="#ffffff" />
+      <text x={0} y={32} width={320} height={96} text="Minus" textAlign="center" textSize={64} textColor="#ffffff" />
     </group>
   );
 }
 
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={String(store.value)} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={String(store.value)} textColor="#fff" textSize={64} />
       <MinusBtn />
       <PlusBtn />
     </scene>

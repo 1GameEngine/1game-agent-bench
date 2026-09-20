@@ -134,9 +134,9 @@ export function nearestNeighborScale(rgba, width, height, scale) {
 
 export const STILL_W = 1280;
 export const STILL_H = 720;
-export const LOGICAL_W = 320;
-export const LOGICAL_H = 180;
-export const STILL_SCALE = 4;
+export const LOGICAL_W = 1280;
+export const LOGICAL_H = 720;
+export const STILL_SCALE = 1;
 
 export function toJudgeStill(pngBuf) {
   const img = decodePng(pngBuf);

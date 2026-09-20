@@ -24,21 +24,21 @@ test('ingested P0 playplans pass argv audit', () => {
   }
 });
 
-test('click 160,90 allowed on full viewport', () => {
+test('click 640,360 allowed on full viewport', () => {
   const bundle = loadTaskBundle('p0-click-score');
   const r = auditPlayplanStep(
-    ['1gameplay', 'step', 'out/eval.1gamerecord', '--click', '160,90'],
+    ['1gameplay', 'step', 'out/eval.1gamerecord', '--click', '640,360'],
     { rules, allowedClicks: bundle.allowedClicks, recordRel: 'out/eval.1gamerecord' },
   );
   assert.equal(r.ok, true);
 });
 
-test('frozen 50,20 allowed on hud; click+until forbidden', () => {
+test('frozen 200,80 allowed on hud; click+until forbidden', () => {
   const bundle = loadTaskBundle('p0-hud-start');
-  assert.ok(bundle.allowedClicks.has('50,20'));
-  assert.ok(bundle.allowedClicks.has('160,90'));
+  assert.ok(bundle.allowedClicks.has('200,80'));
+  assert.ok(bundle.allowedClicks.has('640,360'));
   const bad = auditPlayplanStep(
-    ['1gameplay', 'step', 'out/eval.1gamerecord', '--click', '160,90', '--until', 'x'],
+    ['1gameplay', 'step', 'out/eval.1gamerecord', '--click', '640,360', '--until', 'x'],
     { rules, allowedClicks: bundle.allowedClicks, recordRel: 'out/eval.1gamerecord' },
   );
   assert.equal(bad.ok, false);
@@ -167,8 +167,8 @@ test('primary mapping', () => {
 
 test('geometry centers', () => {
   const c = allowedClickCenters({
-    regions: { full: { x: 0, y: 0, w: 320, h: 180 } },
+    regions: { full: { x: 0, y: 0, w: 1280, h: 720 } },
     frozen_click_centers: [],
   });
-  assert.ok(c.has('160,90'));
+  assert.ok(c.has('640,360'));
 });

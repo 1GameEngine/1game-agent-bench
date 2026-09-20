@@ -1,6 +1,6 @@
 regions:
-  btnA: { x: 50, y: 70, w: 90, h: 40 }
-  btnB: { x: 180, y: 70, w: 90, h: 40 }
+  btnA: { x: 200, y: 280, w: 360, h: 160 }
+  btnB: { x: 720, y: 280, w: 360, h: 160 }
 labels:
   btnA: A
   btnB: B

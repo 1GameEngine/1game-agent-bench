@@ -1,9 +1,9 @@
 regions:
-  plus: { x: 180, y: 70, w: 80, h: 40 }
-  minus: { x: 60, y: 70, w: 80, h: 40 }
-  dead: { x: 0, y: 0, w: 40, h: 40 }
+  plus: { x: 720, y: 280, w: 320, h: 160 }
+  minus: { x: 240, y: 280, w: 320, h: 160 }
+  dead: { x: 0, y: 0, w: 160, h: 160 }
 labels:
   plus: Plus
   minus: Minus
 frozen_click_centers:
-  - "20,20"
+  - "80,80"

@@ -21,10 +21,10 @@ function StartButton() {
   const active = useNodeActive(node);
   return (
     <group
-      x={110}
-      y={70}
-      width={100}
-      height={40}
+      x={440}
+      y={280}
+      width={400}
+      height={160}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -36,19 +36,19 @@ function StartButton() {
       <node
         x={0}
         y={0}
-        width={100}
-        height={40}
-        shape="roundedRect(8 8 8 8)"
+        width={400}
+        height={160}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
       <text
         x={0}
-        y={8}
-        width={100}
-        height={24}
+        y={32}
+        width={400}
+        height={96}
         text="Start"
         textAlign="center"
-        textSize={18}
+        textSize={72}
         textColor="#ffffff"
       />
     </group>
@@ -57,15 +57,15 @@ function StartButton() {
 
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
       <text
-        x={12}
-        y={8}
-        width={296}
-        height={24}
+        x={48}
+        y={32}
+        width={1184}
+        height={96}
         text={`phase=${store.phase}`}
         textColor="#ffffff"
-        textSize={16}
+        textSize={64}
       />
       <StartButton />
     </scene>

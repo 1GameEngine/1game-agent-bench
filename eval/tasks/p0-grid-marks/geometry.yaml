@@ -1,5 +1,5 @@
 regions:
-  cell0: { x: 20, y: 50, w: 80, h: 80 }
-  cell1: { x: 120, y: 50, w: 80, h: 80 }
-  cell2: { x: 220, y: 50, w: 80, h: 80 }
+  cell0: { x: 80, y: 200, w: 320, h: 320 }
+  cell1: { x: 480, y: 200, w: 320, h: 320 }
+  cell2: { x: 880, y: 200, w: 320, h: 320 }
 frozen_click_centers: []

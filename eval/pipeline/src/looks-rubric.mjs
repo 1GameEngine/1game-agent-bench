@@ -33,7 +33,7 @@ export const LOOKS_ITEMS = [
     id: 'A2',
     dim: 'A',
     description:
-      'Play objects show authored internal structure (edges, icons, pixel art, illustration), not only unstructured flat fills. Judge the pixels, not any engine API. Axis-aligned blocky pixels from integer 4x upscale are not a defect. Score 0.5 at most if the still is mostly unstructured flat fills. Score 1 if main objects look drawn on purpose.',
+      'Play objects show authored internal structure (edges, icons, pixel art, illustration), not only unstructured flat fills. Judge the pixels, not any engine API. Score 0.5 at most if the still is mostly unstructured flat fills. Score 1 if main objects look drawn on purpose.',
   },
   {
     id: 'A3',
@@ -137,7 +137,7 @@ export function buildLooksUserPrompt(job) {
   const reqs = LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`).join('\n');
   return [
     'You are a strict but fair still-frame game evaluator. Score only what is visible in the attached 1280x720 stills.',
-    'The window is locked to 1280x720. Gameplay layout is 320x180 inside that window. Judge the 1280x720 pixels.',
+    'The window and gameplay are 1280x720. Score only those pixels.',
     'Do not name engines or widget APIs. Do not compare two engines. Score this submission alone.',
     'Use only 0, 0.5, or 1 per item.',
     '',

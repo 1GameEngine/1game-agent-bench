@@ -15,6 +15,8 @@ test('P1 compare_tasks are 10 closed-set tasks', () => {
   assert.equal(P1_TASKS.length, 10);
   for (const id of P1_TASKS) {
     const b = loadP1Task(id);
+    assert.equal(b.task.scene.width, 1280);
+    assert.equal(b.task.scene.height, 720);
     assert.equal(auditClosedPlayplan(b.playplan, b.geometry).ok, true);
     assert.equal(auditClosedPlayplan(b.playplanNeg, b.geometry).ok, true);
   }

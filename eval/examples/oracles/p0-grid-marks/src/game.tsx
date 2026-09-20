@@ -13,9 +13,9 @@ type GameState = {
 };
 
 const CELLS = [
-  { id: 0, x: 20, y: 50 },
-  { id: 1, x: 120, y: 50 },
-  { id: 2, x: 220, y: 50 },
+  { id: 0, x: 80, y: 200 },
+  { id: 1, x: 480, y: 200 },
+  { id: 2, x: 880, y: 200 },
 ] as const;
 
 const { store, commitChange, bindStore } = createGameStore({
@@ -32,8 +32,8 @@ function Cell(props: { id: 0 | 1 | 2; x: number; y: number }) {
       key={`cell-${props.id}`}
       x={props.x}
       y={props.y}
-      width={80}
-      height={80}
+      width={320}
+      height={320}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -49,19 +49,19 @@ function Cell(props: { id: 0 | 1 | 2; x: number; y: number }) {
       <node
         x={0}
         y={0}
-        width={80}
-        height={80}
-        shape="roundedRect(6 6 6 6)"
+        width={320}
+        height={320}
+        shape="roundedRect(24 24 24 24)"
         backgroundColor={active() ? '#1e3a8a' : hover() ? '#1e40af' : '#1f2937'}
       />
       <text
         x={0}
-        y={24}
-        width={80}
-        height={32}
+        y={96}
+        width={320}
+        height={128}
         text={store.cells[props.id]}
         textAlign="center"
-        textSize={28}
+        textSize={112}
         textColor="#f9fafb"
       />
     </group>
@@ -70,15 +70,15 @@ function Cell(props: { id: 0 | 1 | 2; x: number; y: number }) {
 
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
       <text
-        x={12}
-        y={8}
-        width={296}
-        height={24}
+        x={48}
+        y={32}
+        width={1184}
+        height={96}
         text={`turn=${store.turn}`}
         textColor="#ffffff"
-        textSize={16}
+        textSize={64}
       />
       <Cell key="cell-0" id={0} x={CELLS[0].x} y={CELLS[0].y} />
       <Cell key="cell-1" id={1} x={CELLS[1].x} y={CELLS[1].y} />

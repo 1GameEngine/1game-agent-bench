@@ -1,10 +1,10 @@
 # Godot 4.4.x（dump + 1280×720 静帧）
 
-机械正确性仍跑 **headless dump**。观感：**视窗锁死 1280×720**。游戏布局仍是 320×180（点击坐标不变）；EvalRunner 用 `canvas_items` 把 320×180 铺进 1280×720，并从专用 **SubViewport 1280×720** 出 PNG，避免 root/Dummy 空纹理。Xvfb 单帧（`--screen 1280x720`），不是录像。
+机械正确性仍跑 **headless dump**。场景、点击、观感视窗都是 **1280×720**。EvalRunner 从专用 SubViewport 出 PNG，避免 root/Dummy 空纹理。Xvfb 单帧（`--screen 1280x720`），不是录像。
 
 两边都 `G=1` 的题若只有一侧有静帧，V/A 成对记 `INCOMPARABLE_VISUAL`（两边都 0），套件 `comparable=false`，不得宣布胜者。
 
-点击坐标仍是题面 320×180。谁赢只引用 `product_100`，不引用 VLM 原始字段。
+点击坐标是题面 1280×720。谁赢只引用 `product_100`，不引用 VLM 原始字段。
 
 ## 二进制
 

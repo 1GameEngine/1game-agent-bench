@@ -31,7 +31,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 公开 train | `1.21.0` 精确字符串，无 `^` |
 | 必须同版本 | `@1game/cli` `@1game/engine-bundle` `@1game/cli-1gameplay` `@1game/skill` |
 | 游戏入口 | `src/game.tsx` |
-| 场景 | 恰好 1 个 `<scene>`，320×180 |
+| 场景 | 恰好 1 个 `<scene>`，1280×720 |
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | 只 `1gameplay frame query --select store:state`；不读图；不用 Chromium |
 | Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；**视窗锁死 1280×720**（`--width 1280 --height 720`）。Capture **不是** Judge。 |
@@ -91,7 +91,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/14。M 来自官方 dump。V/A 来自 **同一 subagent** 打冻结静帧。两边视窗都锁 **1280×720**（点击仍是题面 320×180）。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。启发式不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/14。M 来自官方 dump。V/A 来自 **同一 subagent** 打冻结静帧。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。启发式不得当 headline。
 
 过程：每题五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 P1 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

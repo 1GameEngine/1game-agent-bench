@@ -17,8 +17,8 @@ function App() {
   return (
     <scene
       name="main"
-      width={320}
-      height={180}
+      width={1280}
+      height={720}
       backgroundColor="#0f1224"
       onKeyDown={(e) => {
         if (e.detail?.code === 'Space') {
@@ -36,7 +36,7 @@ function App() {
         }
       }}
     >
-      <text x={12} y={8} width={296} height={24} text={`held=${store.held} pulses=${store.pulses}`} textColor="#fff" textSize={16} />
+      <text x={48} y={32} width={1184} height={96} text={`held=${store.held} pulses=${store.pulses}`} textColor="#fff" textSize={64} />
     </scene>
   );
 }

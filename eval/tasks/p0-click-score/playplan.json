@@ -1,9 +1,9 @@
 {
   "schema": "eval.playplan/1",
   "steps": [
-    { "id": "c1", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "160,90"] },
-    { "id": "c2", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "160,90"] },
-    { "id": "c3", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "160,90"] },
-    { "id": "c4", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "160,90"] }
+    { "id": "c1", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] },
+    { "id": "c2", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] },
+    { "id": "c3", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] },
+    { "id": "c4", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] }
   ]
 }

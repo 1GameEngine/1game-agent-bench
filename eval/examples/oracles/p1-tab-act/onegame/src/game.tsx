@@ -21,10 +21,10 @@ function RedBtn() {
   const active = useNodeActive(node);
   return (
     <group
-      x={20}
-      y={20}
-      width={70}
-      height={32}
+      x={80}
+      y={80}
+      width={280}
+      height={128}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -36,12 +36,12 @@ function RedBtn() {
       <node
         x={0}
         y={0}
-        width={70}
-        height={32}
-        shape="roundedRect(8 8 8 8)"
+        width={280}
+        height={128}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
-      <text x={0} y={8} width={70} height={24} text="Red" textAlign="center" textSize={16} textColor="#ffffff" />
+      <text x={0} y={32} width={280} height={96} text="Red" textAlign="center" textSize={64} textColor="#ffffff" />
     </group>
   );
 }
@@ -52,10 +52,10 @@ function BlueBtn() {
   const active = useNodeActive(node);
   return (
     <group
-      x={100}
-      y={20}
-      width={70}
-      height={32}
+      x={400}
+      y={80}
+      width={280}
+      height={128}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -67,12 +67,12 @@ function BlueBtn() {
       <node
         x={0}
         y={0}
-        width={70}
-        height={32}
-        shape="roundedRect(8 8 8 8)"
+        width={280}
+        height={128}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
-      <text x={0} y={8} width={70} height={24} text="Blue" textAlign="center" textSize={16} textColor="#ffffff" />
+      <text x={0} y={32} width={280} height={96} text="Blue" textAlign="center" textSize={64} textColor="#ffffff" />
     </group>
   );
 }
@@ -83,10 +83,10 @@ function ActBtn() {
   const active = useNodeActive(node);
   return (
     <group
-      x={110}
-      y={90}
-      width={100}
-      height={40}
+      x={440}
+      y={360}
+      width={400}
+      height={160}
       clickable
       virtualNodeRef={setNode}
       onClick={() => {
@@ -98,20 +98,20 @@ function ActBtn() {
       <node
         x={0}
         y={0}
-        width={100}
-        height={40}
-        shape="roundedRect(8 8 8 8)"
+        width={400}
+        height={160}
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}
       />
-      <text x={0} y={8} width={100} height={24} text="Act" textAlign="center" textSize={16} textColor="#ffffff" />
+      <text x={0} y={32} width={400} height={96} text="Act" textAlign="center" textSize={64} textColor="#ffffff" />
     </group>
   );
 }
 
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={180} y={20} width={120} height={24} text={`${store.tab} ${store.count_red}/${store.count_blue}`} textColor="#fff" textSize={14} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={720} y={80} width={480} height={96} text={`${store.tab} ${store.count_red}/${store.count_blue}`} textColor="#fff" textSize={56} />
       <RedBtn />
       <BlueBtn />
       <ActBtn />

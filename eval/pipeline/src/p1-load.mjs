@@ -34,6 +34,9 @@ export function loadP1Task(taskId) {
   if (task.judge !== 'schema_strict' || task.rng !== 'forbidden' || task.physics !== 'forbidden') {
     throw new EvalError('EVAL_INTERNAL', `P1 flags ${taskId}`);
   }
+  if (task.scene?.count !== 1 || task.scene?.width !== 1280 || task.scene?.height !== 720) {
+    throw new EvalError('EVAL_INTERNAL', `P1 scene must be 1×1280×720`);
+  }
   if (checkpoint.compare?.mode !== 'schema_strict' || checkpoint.compare?.extras !== 'fail') {
     throw new EvalError('EVAL_INTERNAL', 'P1 checkpoint must be schema_strict extras=fail');
   }

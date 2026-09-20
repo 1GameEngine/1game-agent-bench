@@ -1,14 +1,11 @@
 extends Node
 
 ## Injected autoload. Reads a job JSON outside the game tree and drives the closed action set.
-## Window lock is 1280×720. Clicks stay in 320×180. Stills come from a dedicated SubViewport
+## Window and gameplay are both 1280×720. Stills come from a dedicated SubViewport
 ## so Dummy/headless root textures cannot yield an empty PNG.
 
 const STILL_W := 1280
 const STILL_H := 720
-const LOGIC_W := 320
-const LOGIC_H := 180
-const STILL_SCALE := 4.0
 
 var _job: Dictionary = {}
 var _out_path: String = ""
@@ -50,9 +47,8 @@ func _lock_window() -> void:
 	if win != null:
 		win.mode = Window.MODE_WINDOWED
 		win.size = Vector2i(STILL_W, STILL_H)
-		win.content_scale_size = Vector2i(LOGIC_W, LOGIC_H)
-		win.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-		win.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
+		win.content_scale_size = Vector2i(STILL_W, STILL_H)
+		win.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	DisplayServer.window_set_size(Vector2i(STILL_W, STILL_H))
 	var vp := get_viewport()
 	vp.size = Vector2i(STILL_W, STILL_H)
@@ -70,7 +66,7 @@ func _ensure_cap() -> void:
 	_cap.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_cap.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	_cap.world_2d = get_tree().root.world_2d
-	_cap.canvas_transform = Transform2D.IDENTITY.scaled(Vector2(STILL_SCALE, STILL_SCALE))
+	_cap.canvas_transform = Transform2D.IDENTITY
 	add_child(_cap)
 
 func _run() -> void:

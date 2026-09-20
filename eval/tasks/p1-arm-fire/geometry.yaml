@@ -1,6 +1,6 @@
 regions:
-  arm: { x: 50, y: 70, w: 90, h: 40 }
-  fire: { x: 180, y: 70, w: 90, h: 40 }
+  arm: { x: 200, y: 280, w: 360, h: 160 }
+  fire: { x: 720, y: 280, w: 360, h: 160 }
 labels:
   arm: Arm
   fire: Fire

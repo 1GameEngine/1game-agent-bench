@@ -1,7 +1,7 @@
 id: p0-countdown-play
 tier: P0
 entry: src/game.tsx
-scene: { count: 1, width: 320, height: 180 }
+scene: { count: 1, width: 1280, height: 720 }
 store_keys: [phase, remainMs]
 rng: forbidden
 physics: forbidden

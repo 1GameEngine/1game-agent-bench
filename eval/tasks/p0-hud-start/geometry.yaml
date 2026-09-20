@@ -1,5 +1,5 @@
 regions:
-  dead: { x: 0, y: 0, w: 80, h: 40 }
-  btn_start: { x: 110, y: 70, w: 100, h: 40, label: Start }
+  dead: { x: 0, y: 0, w: 320, h: 160 }
+  btn_start: { x: 440, y: 280, w: 400, h: 160, label: Start }
 frozen_click_centers:
-  - "50,20"
+  - "200,80"

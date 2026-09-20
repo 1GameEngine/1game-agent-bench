@@ -28,7 +28,7 @@
 - 禁止 Rapier / `runtime/physics`。
 - 禁止额外 `@1game/*`（含 `@1game/solid-ui`）。`@1game/cli` 与 `@1game/engine-bundle` 版本字符串必须相等且为 `1.21.0`。
 - 禁止 `Math.random`、`Date.now` 作为玩法输入。
-- 禁止第二个 `<scene>`。场景逻辑尺寸 320×180。
+- 禁止第二个 `<scene>`。场景逻辑尺寸 1280×720。
 - 禁止设置 `ONEGAME_ENGINE_CDN_BASE`。
 - 禁止改 `node_modules/**`、改 `@1game/skill`、写 `whats-new/**`、链接任何引擎 `docs/*.md`、`1game publish`。
 - 不要使用 `--until`（评测 Replay 整题禁用）。

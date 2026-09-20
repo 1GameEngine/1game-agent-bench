@@ -75,8 +75,8 @@ export function loadTaskBundle(taskId) {
   if (task.entry !== 'src/game.tsx') {
     throw new EvalError('EVAL_INTERNAL', 'entry must be src/game.tsx');
   }
-  if (task.scene?.count !== 1 || task.scene?.width !== 320 || task.scene?.height !== 180) {
-    throw new EvalError('EVAL_INTERNAL', 'P0 scene must be 1×320×180');
+  if (task.scene?.count !== 1 || task.scene?.width !== 1280 || task.scene?.height !== 720) {
+    throw new EvalError('EVAL_INTERNAL', 'P0 scene must be 1×1280×720');
   }
   if (task.rng !== 'forbidden' || task.physics !== 'forbidden' || task.judge !== 'store_subset') {
     throw new EvalError('EVAL_INTERNAL', 'P0 task flags mismatch');

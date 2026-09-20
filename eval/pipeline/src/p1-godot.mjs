@@ -41,7 +41,7 @@ function patchWindowLock(projectGodot) {
   const pairs = {
     'window/size/viewport_width': '1280',
     'window/size/viewport_height': '720',
-    'window/stretch/mode': '"canvas_items"',
+    'window/stretch/mode': '"disabled"',
     'window/stretch/aspect': '"ignore"',
     'window/vsync/vsync_mode': '0',
   };

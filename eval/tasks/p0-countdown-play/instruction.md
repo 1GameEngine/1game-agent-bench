@@ -1,6 +1,6 @@
 标题：倒计时开局
 
-做一个 320×180 的小游戏。不要处理点击。
+做一个 1280×720 的小游戏。不要处理点击。
 
 状态字段名必须是：
 - phase: 字符串，只能是 "countdown" 或 "playing"
@@ -15,7 +15,7 @@
 
 ## 实现约束
 
-- 恰好一个 `<scene width={320} height={180}>`。
+- 恰好一个 `<scene width={1280} height={720}>`。
 - `const store = createGameStore({...}); renderGame(root, { bindStore: store });`
 - 玩法状态只放 store；用 `store.commitChange`（或文档中的等价 commit）更新。
 - 禁止 `Math.random`、`Date.now` 作为玩法输入；禁止物理包；禁止第二个 scene。

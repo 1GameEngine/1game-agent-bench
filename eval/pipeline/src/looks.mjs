@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { decodePng, LOGICAL_W } from './png-nn.mjs';
+import { decodePng } from './png-nn.mjs';
 
 function quantKey(r, g, b) {
   return `${r >> 4},${g >> 4},${b >> 4}`;
@@ -46,10 +46,9 @@ function meanDistance(a, b) {
 
 export function heuristicFrame({ png, geometry }) {
   const img = decodePng(png);
-  const scale = Math.max(1, Math.round(img.width / LOGICAL_W));
   const g = globalStats(img.rgba);
   const regions = Object.entries(geometry?.regions ?? {});
-  const stats = regions.map(([, r]) => regionStats(img.rgba, img.width, img.height, r, scale));
+  const stats = regions.map(([, r]) => regionStats(img.rgba, img.width, img.height, r, 1));
   const contrast = stats.filter((s) => s.unique >= 2).length;
   const v1 = regions.length === 0 ? (g.unique >= 3 ? 1 : 0.5) : contrast / regions.length;
   const v2 = g.unique >= 4 ? 1 : g.unique >= 2 ? 0.5 : 0;
@@ -73,8 +72,7 @@ export function heuristicFrame({ png, geometry }) {
 export function heuristicDepth({ png, geometry, keys }) {
   if (!keys?.length) return { D: 0, source: 'heuristic' };
   const img = decodePng(png);
-  const scale = Math.max(1, Math.round(img.width / LOGICAL_W));
-  const means = keys.map((k) => regionStats(img.rgba, img.width, img.height, geometry.regions[k], scale).mean);
+  const means = keys.map((k) => regionStats(img.rgba, img.width, img.height, geometry.regions[k], 1).mean);
   let pairs = 0;
   let distinct = 0;
   for (let i = 0; i < means.length; i++) {

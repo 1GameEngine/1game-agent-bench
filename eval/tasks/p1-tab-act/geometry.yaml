@@ -1,7 +1,7 @@
 regions:
-  red: { x: 20, y: 20, w: 70, h: 32 }
-  blue: { x: 100, y: 20, w: 70, h: 32 }
-  act: { x: 110, y: 90, w: 100, h: 40 }
+  red: { x: 80, y: 80, w: 280, h: 128 }
+  blue: { x: 400, y: 80, w: 280, h: 128 }
+  act: { x: 440, y: 360, w: 400, h: 160 }
 labels:
   red: Red
   blue: Blue

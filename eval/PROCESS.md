@@ -21,4 +21,4 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 观感（好看 / 能否看清 / 静帧是否对得上 dump）走 **独立 looks-job + subagent**，角色不是 Capture，也不是机械 Judge。机械正确性仍只认 dump/checkpoint。缺 subagent 时记 `SUBAGENT_UNAVAILABLE`，不得悄悄改用启发式充当套件分。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
 
-两引擎都 `G=1` 时，静帧必须成对且均为 **视窗 1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。
+两引擎都 `G=1` 时，静帧必须成对且均为 **1280×720**（与题面同一坐标系）；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

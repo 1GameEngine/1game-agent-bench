@@ -25,15 +25,15 @@ function App() {
   });
 
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
       <text
-        x={12}
-        y={8}
-        width={296}
-        height={24}
+        x={48}
+        y={32}
+        width={1184}
+        height={96}
         text={`phase=${store.phase} remainMs=${store.remainMs}`}
         textColor="#ffffff"
-        textSize={16}
+        textSize={64}
       />
     </scene>
   );

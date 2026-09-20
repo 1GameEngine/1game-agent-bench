@@ -7,12 +7,12 @@ const { store, commitChange } = createGameStore({
 
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
       <node
         x={0}
         y={0}
-        width={320}
-        height={180}
+        width={1280}
+        height={720}
         clickable
         onClick={() => {
           commitChange('click', (draft) => {
@@ -20,7 +20,7 @@ function App() {
           });
         }}
       />
-      <text x={12} y={8} width={296} height={24} text={String(store.score)} textColor="#fff" textSize={16} />
+      <text x={48} y={32} width={1184} height={96} text={String(store.score)} textColor="#fff" textSize={64} />
     </scene>
   );
 }

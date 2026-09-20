@@ -23,8 +23,8 @@ function nudge(code: string) {
 }
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224" onKeyDown={(e) => nudge(e.detail?.code)}>
-      <text x={12} y={8} width={296} height={24} text={`${store.x},${store.y}`} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224" onKeyDown={(e) => nudge(e.detail?.code)}>
+      <text x={48} y={32} width={1184} height={96} text={`${store.x},${store.y}`} textColor="#fff" textSize={64} />
     </scene>
   );
 }

@@ -12,7 +12,7 @@ ORACLES = ROOT / "examples" / "oracles"
 CONSTRAINT = """
 ## 实现约束
 
-- 画面逻辑尺寸 320×180。
+- 画面逻辑尺寸 1280×720。
 - 可点控件必须覆盖下列矩形（左上角 x,y 与宽高）；按钮文案必须与 labels 完全一致。
 - 状态字段名与类型必须与题面一致。
 - 禁止随机；禁止用物理决定对错。
@@ -70,9 +70,9 @@ run/main_scene="res://game.tscn"
 config/features=PackedStringArray("4.4")
 
 [display]
-window/size/viewport_width=320
-window/size/viewport_height=180
-window/stretch/mode="viewport"
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="disabled"
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
@@ -123,10 +123,10 @@ function {fn}() {{
         y={{0}}
         width={{{w}}}
         height={{{h}}}
-        shape="roundedRect(8 8 8 8)"
+        shape="roundedRect(32 32 32 32)"
         backgroundColor={{active() ? '#1d4ed8' : hover() ? '#3b82f6' : '#2563eb'}}
       />
-      <text x={{0}} y={{8}} width={{{w}}} height={{24}} text="{label}" textAlign="center" textSize={{16}} textColor="#ffffff" />
+      <text x={{0}} y={{32}} width={{{w}}} height={{96}} text="{label}" textAlign="center" textSize={{64}} textColor="#ffffff" />
     </group>
   );
 }}
@@ -154,7 +154,7 @@ add(
     init_store="on: false",
     instruction="""标题：拨灯
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - on: 布尔，初始 false
@@ -164,9 +164,9 @@ add(
 点按钮以外不得改变 on。
 """,
     geom={
-        "regions": {"toggle": {"x": 110, "y": 70, "w": 100, "h": 40}, "dead": {"x": 0, "y": 0, "w": 80, "h": 40}},
+        "regions": {"toggle": {"x": 440, "y": 280, "w": 400, "h": 160}, "dead": {"x": 0, "y": 0, "w": 320, "h": 160}},
         "labels": {"toggle": "Toggle"},
-        "frozen_click_centers": ["40,20"],
+        "frozen_click_centers": ["160,80"],
     },
     pos_steps=[
         {"id": "cp0", "checkpoint": "init"},
@@ -182,12 +182,12 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ on: false } satisfies GameState);
 '''
-    + button_tsx("ToggleBtn", "Toggle", 110, 70, 100, 40, "          draft.on = !draft.on;")
+    + button_tsx("ToggleBtn", "Toggle", 440, 280, 400, 160, "          draft.on = !draft.on;")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224" >
-      <text x={12} y={8} width={296} height={24} text={store.on ? 'on' : 'off'} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224" >
+      <text x={48} y={32} width={1184} height={96} text={store.on ? 'on' : 'off'} textColor="#fff" textSize={64} />
       <ToggleBtn />
     </scene>
   );
@@ -199,7 +199,7 @@ var on: bool = false
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 110 and p.x < 210 and p.y >= 70 and p.y < 110:
+		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
 			on = not on
 ''',
 )
@@ -210,7 +210,7 @@ add(
     fields={"value": {"type": "integer", "minimum": 0, "maximum": 3}},
     instruction="""标题：加减夹紧
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - value: 整数，初始 0，范围 0 到 3（含）
@@ -220,12 +220,12 @@ add(
 """,
     geom={
         "regions": {
-            "plus": {"x": 180, "y": 70, "w": 80, "h": 40},
-            "minus": {"x": 60, "y": 70, "w": 80, "h": 40},
-            "dead": {"x": 0, "y": 0, "w": 40, "h": 40},
+            "plus": {"x": 720, "y": 280, "w": 320, "h": 160},
+            "minus": {"x": 240, "y": 280, "w": 320, "h": 160},
+            "dead": {"x": 0, "y": 0, "w": 160, "h": 160},
         },
         "labels": {"plus": "Plus", "minus": "Minus"},
-        "frozen_click_centers": ["20,20"],
+        "frozen_click_centers": ["80,80"],
     },
     pos_steps=[
         {"id": "cp0", "checkpoint": "init"},
@@ -244,13 +244,13 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ value: 0 } satisfies GameState);
 '''
-    + button_tsx("PlusBtn", "Plus", 180, 70, 80, 40, "          draft.value = Math.min(3, draft.value + 1);")
-    + button_tsx("MinusBtn", "Minus", 60, 70, 80, 40, "          draft.value = Math.max(0, draft.value - 1);")
+    + button_tsx("PlusBtn", "Plus", 720, 280, 320, 160, "          draft.value = Math.min(3, draft.value + 1);")
+    + button_tsx("MinusBtn", "Minus", 240, 280, 320, 160, "          draft.value = Math.max(0, draft.value - 1);")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={String(store.value)} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={String(store.value)} textColor="#fff" textSize={64} />
       <MinusBtn />
       <PlusBtn />
     </scene>
@@ -263,9 +263,9 @@ var value: int = 0
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 180 and p.x < 260 and p.y >= 70 and p.y < 110:
+		if p.x >= 720 and p.x < 1040 and p.y >= 280 and p.y < 440:
 			value = mini(3, value + 1)
-		elif p.x >= 60 and p.x < 140 and p.y >= 70 and p.y < 110:
+		elif p.x >= 240 and p.x < 560 and p.y >= 280 and p.y < 440:
 			value = maxi(0, value - 1)
 ''',
 )
@@ -276,7 +276,7 @@ add(
     fields={"slot": {"enum": ["A", "B", "C"]}},
     instruction="""标题：三槽选择
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - slot: 字符串，只能是 A、B 或 C，初始 A
@@ -286,13 +286,13 @@ add(
 """,
     geom={
         "regions": {
-            "slotA": {"x": 20, "y": 70, "w": 80, "h": 40},
-            "slotB": {"x": 120, "y": 70, "w": 80, "h": 40},
-            "slotC": {"x": 220, "y": 70, "w": 80, "h": 40},
-            "dead": {"x": 0, "y": 0, "w": 40, "h": 30},
+            "slotA": {"x": 80, "y": 280, "w": 320, "h": 160},
+            "slotB": {"x": 480, "y": 280, "w": 320, "h": 160},
+            "slotC": {"x": 880, "y": 280, "w": 320, "h": 160},
+            "dead": {"x": 0, "y": 0, "w": 160, "h": 120},
         },
         "labels": {"slotA": "A", "slotB": "B", "slotC": "C"},
-        "frozen_click_centers": ["20,15"],
+        "frozen_click_centers": ["80,60"],
     },
     pos_steps=[
         {"id": "cp0", "checkpoint": "init"},
@@ -309,14 +309,14 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ slot: 'A' as 'A' | 'B' | 'C' } satisfies GameState);
 '''
-    + button_tsx("BtnA", "A", 20, 70, 80, 40, "          draft.slot = 'A';")
-    + button_tsx("BtnB", "B", 120, 70, 80, 40, "          draft.slot = 'B';")
-    + button_tsx("BtnC", "C", 220, 70, 80, 40, "          draft.slot = 'C';")
+    + button_tsx("BtnA", "A", 80, 280, 320, 160, "          draft.slot = 'A';")
+    + button_tsx("BtnB", "B", 480, 280, 320, 160, "          draft.slot = 'B';")
+    + button_tsx("BtnC", "C", 880, 280, 320, 160, "          draft.slot = 'C';")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={store.slot} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={store.slot} textColor="#fff" textSize={64} />
       <BtnA />
       <BtnB />
       <BtnC />
@@ -330,11 +330,11 @@ var slot: String = "A"
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 20 and p.x < 100 and p.y >= 70 and p.y < 110:
+		if p.x >= 80 and p.x < 400 and p.y >= 280 and p.y < 440:
 			slot = "A"
-		elif p.x >= 120 and p.x < 200 and p.y >= 70 and p.y < 110:
+		elif p.x >= 480 and p.x < 800 and p.y >= 280 and p.y < 440:
 			slot = "B"
-		elif p.x >= 220 and p.x < 300 and p.y >= 70 and p.y < 110:
+		elif p.x >= 880 and p.x < 1200 and p.y >= 280 and p.y < 440:
 			slot = "C"
 ''',
 )
@@ -345,7 +345,7 @@ add(
     fields={"armed": {"type": "boolean"}, "shots": {"type": "integer", "minimum": 0}},
     instruction="""标题：先上膛再开火
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - armed: 布尔，初始 false
@@ -358,8 +358,8 @@ add(
 """,
     geom={
         "regions": {
-            "arm": {"x": 50, "y": 70, "w": 90, "h": 40},
-            "fire": {"x": 180, "y": 70, "w": 90, "h": 40},
+            "arm": {"x": 200, "y": 280, "w": 360, "h": 160},
+            "fire": {"x": 720, "y": 280, "w": 360, "h": 160},
         },
         "labels": {"arm": "Arm", "fire": "Fire"},
         "frozen_click_centers": [],
@@ -381,13 +381,13 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ armed: false, shots: 0 } satisfies GameState);
 '''
-    + button_tsx("ArmBtn", "Arm", 50, 70, 90, 40, "          draft.armed = true;")
-    + button_tsx("FireBtn", "Fire", 180, 70, 90, 40, "          if (draft.armed) { draft.shots += 1; draft.armed = false; }")
+    + button_tsx("ArmBtn", "Arm", 200, 280, 360, 160, "          draft.armed = true;")
+    + button_tsx("FireBtn", "Fire", 720, 280, 360, 160, "          if (draft.armed) { draft.shots += 1; draft.armed = false; }")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={`armed=${store.armed} shots=${store.shots}`} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={`armed=${store.armed} shots=${store.shots}`} textColor="#fff" textSize={64} />
       <ArmBtn />
       <FireBtn />
     </scene>
@@ -401,9 +401,9 @@ var shots: int = 0
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 50 and p.x < 140 and p.y >= 70 and p.y < 110:
+		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
 			armed = true
-		elif p.x >= 180 and p.x < 270 and p.y >= 70 and p.y < 110:
+		elif p.x >= 720 and p.x < 1080 and p.y >= 280 and p.y < 440:
 			if armed:
 				shots += 1
 				armed = false
@@ -416,7 +416,7 @@ add(
     fields={"x": {"type": "integer", "minimum": 0, "maximum": 2}, "y": {"type": "integer", "minimum": 0, "maximum": 2}},
     instruction="""标题：格子走动
 
-做一个 320×180 的小游戏。不要处理指针点击。
+做一个 1280×720 的小游戏。不要处理指针点击。
 
 状态字段：
 - x: 整数 0..2，初始 1
@@ -444,7 +444,7 @@ ArrowRight 增加 x，ArrowLeft 减少 x，ArrowDown 增加 y，ArrowUp 减少 y
         {"id": "ul3", "keyup": "ArrowLeft"},
         {"id": "cp1", "checkpoint": "neg_final"},
     ],
-    checks={"init": {"x": 1, "y": 1}, "final": {"x": 2, "y": 0}, "neg_final": {"x": 0, "y": 1}},
+    checks={"init": {"x": 4, "y": 4}, "final": {"x": 8, "y": 0}, "neg_final": {"x": 0, "y": 4}},
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ x: 1, y: 1 } satisfies GameState);
 function nudge(code: string) {
@@ -457,8 +457,8 @@ function nudge(code: string) {
 }
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224" onKeyDown={(e) => nudge(e.detail?.code)}>
-      <text x={12} y={8} width={296} height={24} text={`${store.x},${store.y}`} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224" onKeyDown={(e) => nudge(e.detail?.code)}>
+      <text x={48} y={32} width={1184} height={96} text={`${store.x},${store.y}`} textColor="#fff" textSize={64} />
     </scene>
   );
 }
@@ -486,7 +486,7 @@ add(
     fields={"stage": {"type": "integer", "minimum": 0, "maximum": 2}},
     instruction="""标题：顺序 AB
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - stage: 整数，只能是 0、1、2，初始 0
@@ -498,8 +498,8 @@ stage 为 1 时只有点 B 会变成 2。
 """,
     geom={
         "regions": {
-            "btnA": {"x": 50, "y": 70, "w": 90, "h": 40},
-            "btnB": {"x": 180, "y": 70, "w": 90, "h": 40},
+            "btnA": {"x": 200, "y": 280, "w": 360, "h": 160},
+            "btnB": {"x": 720, "y": 280, "w": 360, "h": 160},
         },
         "labels": {"btnA": "A", "btnB": "B"},
         "frozen_click_centers": [],
@@ -519,13 +519,13 @@ stage 为 1 时只有点 B 会变成 2。
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ stage: 0 } satisfies GameState);
 '''
-    + button_tsx("BtnA", "A", 50, 70, 90, 40, "          if (draft.stage === 0) draft.stage = 1;")
-    + button_tsx("BtnB", "B", 180, 70, 90, 40, "          if (draft.stage === 1) draft.stage = 2;")
+    + button_tsx("BtnA", "A", 200, 280, 360, 160, "          if (draft.stage === 0) draft.stage = 1;")
+    + button_tsx("BtnB", "B", 720, 280, 360, 160, "          if (draft.stage === 1) draft.stage = 2;")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={String(store.stage)} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={String(store.stage)} textColor="#fff" textSize={64} />
       <BtnA />
       <BtnB />
     </scene>
@@ -538,10 +538,10 @@ var stage: int = 0
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 50 and p.x < 140 and p.y >= 70 and p.y < 110:
+		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
 			if stage == 0:
 				stage = 1
-		elif p.x >= 180 and p.x < 270 and p.y >= 70 and p.y < 110:
+		elif p.x >= 720 and p.x < 1080 and p.y >= 280 and p.y < 440:
 			if stage == 1:
 				stage = 2
 ''',
@@ -557,7 +557,7 @@ add(
     },
     instruction="""标题：分栏计数
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - tab: 字符串，只能是 red 或 blue，初始 red
@@ -571,9 +571,9 @@ add(
 """,
     geom={
         "regions": {
-            "red": {"x": 20, "y": 20, "w": 70, "h": 32},
-            "blue": {"x": 100, "y": 20, "w": 70, "h": 32},
-            "act": {"x": 110, "y": 90, "w": 100, "h": 40},
+            "red": {"x": 80, "y": 80, "w": 280, "h": 128},
+            "blue": {"x": 400, "y": 80, "w": 280, "h": 128},
+            "act": {"x": 440, "y": 360, "w": 400, "h": 160},
         },
         "labels": {"red": "Red", "blue": "Blue", "act": "Act"},
         "frozen_click_centers": [],
@@ -598,14 +598,14 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ tab: 'red' as 'red' | 'blue', count_red: 0, count_blue: 0 } satisfies GameState);
 '''
-    + button_tsx("RedBtn", "Red", 20, 20, 70, 32, "          draft.tab = 'red';")
-    + button_tsx("BlueBtn", "Blue", 100, 20, 70, 32, "          draft.tab = 'blue';")
-    + button_tsx("ActBtn", "Act", 110, 90, 100, 40, "          if (draft.tab === 'red') draft.count_red += 1; else draft.count_blue += 1;")
+    + button_tsx("RedBtn", "Red", 80, 80, 280, 128, "          draft.tab = 'red';")
+    + button_tsx("BlueBtn", "Blue", 400, 80, 280, 128, "          draft.tab = 'blue';")
+    + button_tsx("ActBtn", "Act", 440, 360, 400, 160, "          if (draft.tab === 'red') draft.count_red += 1; else draft.count_blue += 1;")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={180} y={20} width={120} height={24} text={`${store.tab} ${store.count_red}/${store.count_blue}`} textColor="#fff" textSize={14} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={720} y={80} width={480} height={96} text={`${store.tab} ${store.count_red}/${store.count_blue}`} textColor="#fff" textSize={56} />
       <RedBtn />
       <BlueBtn />
       <ActBtn />
@@ -621,11 +621,11 @@ var count_blue: int = 0
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 20 and p.x < 90 and p.y >= 20 and p.y < 52:
+		if p.x >= 80 and p.x < 360 and p.y >= 80 and p.y < 208:
 			tab = "red"
-		elif p.x >= 100 and p.x < 170 and p.y >= 20 and p.y < 52:
+		elif p.x >= 400 and p.x < 680 and p.y >= 80 and p.y < 208:
 			tab = "blue"
-		elif p.x >= 110 and p.x < 210 and p.y >= 90 and p.y < 130:
+		elif p.x >= 440 and p.x < 840 and p.y >= 360 and p.y < 520:
 			if tab == "red":
 				count_red += 1
 			else:
@@ -639,7 +639,7 @@ add(
     fields={"held": {"type": "boolean"}, "pulses": {"type": "integer", "minimum": 0}},
     instruction="""标题：空格脉冲
 
-做一个 320×180 的小游戏。不要处理指针点击。
+做一个 1280×720 的小游戏。不要处理指针点击。
 
 状态字段：
 - held: 布尔，初始 false
@@ -674,8 +674,8 @@ function App() {
   return (
     <scene
       name="main"
-      width={320}
-      height={180}
+      width={1280}
+      height={720}
       backgroundColor="#0f1224"
       onKeyDown={(e) => {
         if (e.detail?.code === 'Space') {
@@ -693,7 +693,7 @@ function App() {
         }
       }}
     >
-      <text x={12} y={8} width={296} height={24} text={`held=${store.held} pulses=${store.pulses}`} textColor="#fff" textSize={16} />
+      <text x={48} y={32} width={1184} height={96} text={`held=${store.held} pulses=${store.pulses}`} textColor="#fff" textSize={64} />
     </scene>
   );
 }
@@ -718,7 +718,7 @@ add(
     fields={"left": {"type": "boolean"}, "right": {"type": "boolean"}},
     instruction="""标题：双门
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - left: 布尔，初始 false
@@ -729,12 +729,12 @@ add(
 """,
     geom={
         "regions": {
-            "left": {"x": 40, "y": 70, "w": 100, "h": 40},
-            "right": {"x": 180, "y": 70, "w": 100, "h": 40},
-            "dead": {"x": 0, "y": 0, "w": 40, "h": 30},
+            "left": {"x": 160, "y": 280, "w": 400, "h": 160},
+            "right": {"x": 720, "y": 280, "w": 400, "h": 160},
+            "dead": {"x": 0, "y": 0, "w": 160, "h": 120},
         },
         "labels": {"left": "Left", "right": "Right"},
-        "frozen_click_centers": ["20,15"],
+        "frozen_click_centers": ["80,60"],
     },
     pos_steps=[
         {"id": "cp0", "checkpoint": "init"},
@@ -755,13 +755,13 @@ add(
     tsx_logic='''
 const { store, commitChange, bindStore } = createGameStore({ left: false, right: false } satisfies GameState);
 '''
-    + button_tsx("LeftBtn", "Left", 40, 70, 100, 40, "          draft.left = true;")
-    + button_tsx("RightBtn", "Right", 180, 70, 100, 40, "          draft.right = true;")
+    + button_tsx("LeftBtn", "Left", 160, 280, 400, 160, "          draft.left = true;")
+    + button_tsx("RightBtn", "Right", 720, 280, 400, 160, "          draft.right = true;")
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={`${store.left}/${store.right}`} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={`${store.left}/${store.right}`} textColor="#fff" textSize={64} />
       <LeftBtn />
       <RightBtn />
     </scene>
@@ -775,9 +775,9 @@ var right: bool = false
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 40 and p.x < 140 and p.y >= 70 and p.y < 110:
+		if p.x >= 160 and p.x < 560 and p.y >= 280 and p.y < 440:
 			left = true
-		elif p.x >= 180 and p.x < 280 and p.y >= 70 and p.y < 110:
+		elif p.x >= 720 and p.x < 1120 and p.y >= 280 and p.y < 440:
 			right = true
 ''',
 )
@@ -788,7 +788,7 @@ add(
     fields={"mode": {"enum": ["stop", "walk", "run"]}},
     instruction="""标题：模式循环
 
-做一个 320×180 的小游戏。
+做一个 1280×720 的小游戏。
 
 状态字段：
 - mode: 字符串，只能是 stop、walk 或 run，初始 stop
@@ -798,11 +798,11 @@ add(
 """,
     geom={
         "regions": {
-            "cycle": {"x": 110, "y": 70, "w": 100, "h": 40},
-            "dead": {"x": 0, "y": 140, "w": 60, "h": 30},
+            "cycle": {"x": 440, "y": 280, "w": 400, "h": 160},
+            "dead": {"x": 0, "y": 560, "w": 240, "h": 120},
         },
         "labels": {"cycle": "Cycle"},
-        "frozen_click_centers": ["30,155"],
+        "frozen_click_centers": ["120,620"],
     },
     pos_steps=[
         {"id": "cp0", "checkpoint": "init"},
@@ -822,17 +822,17 @@ const { store, commitChange, bindStore } = createGameStore({ mode: 'stop' as 'st
     + button_tsx(
         "CycleBtn",
         "Cycle",
-        110,
-        70,
-        100,
-        40,
+        440,
+        280,
+        400,
+        160,
         "          draft.mode = draft.mode === 'stop' ? 'walk' : draft.mode === 'walk' ? 'run' : 'stop';",
     )
     + '''
 function App() {
   return (
-    <scene name="main" width={320} height={180} backgroundColor="#0f1224">
-      <text x={12} y={8} width={296} height={24} text={store.mode} textColor="#fff" textSize={16} />
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <text x={48} y={32} width={1184} height={96} text={store.mode} textColor="#fff" textSize={64} />
       <CycleBtn />
     </scene>
   );
@@ -844,7 +844,7 @@ var mode: String = "stop"
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var p = event.position
-		if p.x >= 110 and p.x < 210 and p.y >= 70 and p.y < 110:
+		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
 			if mode == "stop":
 				mode = "walk"
 			elif mode == "walk":
@@ -887,7 +887,7 @@ def emit_task(task):
 tier: P1
 engines: [onegame, godot]
 entry: src/game.tsx
-scene: {{ count: 1, width: 320, height: 180 }}
+scene: {{ count: 1, width: 1280, height: 720 }}
 schema: dump.schema.json
 judge: schema_strict
 rng: forbidden
