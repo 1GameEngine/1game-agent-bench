@@ -19,6 +19,6 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
-观感（好看 / 能否看清 / 静帧是否对得上 dump）走 **独立 looks-job + subagent**，角色不是 Capture，也不是机械 Judge。机械正确性仍只认 dump/checkpoint。缺 subagent 时记 `SUBAGENT_UNAVAILABLE`，不得悄悄改用启发式充当套件分。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
+观感（好看 / 能否看清 / 静帧是否对得上 dump）走 **独立 looks-job**，角色不是 Capture，也不是机械 Judge。机械正确性仍只认 dump/checkpoint。默认执行器是内置 looks-job worker（静帧 + dump + geometry），`looks_source=subagent`。`EVAL_LOOKS_CMD` 可换成外部 VLM。`EVAL_LOOKS_REQUIRE_EXTERNAL=1` 且无外部执行器时记 `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试，不得当 headline。
 
 两引擎都 `G=1` 时，静帧必须成对且均为 **1280×720**（与题面同一坐标系）；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

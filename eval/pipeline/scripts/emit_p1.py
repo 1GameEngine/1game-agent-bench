@@ -137,12 +137,77 @@ def rect_hit(name, r):
     return f'(p.x>={r["x"]} and p.x<{r["x"]+r["w"]} and p.y>={r["y"]} and p.y<{r["y"]+r["h"]})'
 
 
+def gd_visual(geom, *, state: str, hud: str, input_body: str = "", extra_refresh: str = "\tpass", extra_input: str = ""):
+    labels = geom.get("labels") or {}
+    adds = []
+    for name, r in (geom.get("regions") or {}).items():
+        if name == "dead":
+            continue
+        lab = labels.get(name, "")
+        adds.append(f'\t_add_btn("{name}", {r["x"]}, {r["y"]}, {r["w"]}, {r["h"]}, "{lab}")')
+    add_block = "\n".join(adds) if adds else "\tpass"
+    mouse = ""
+    if input_body.strip():
+        mouse = f"""	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var p = event.position
+{input_body.rstrip()}
+		_refresh()
+"""
+    input_fn = extra_input + (mouse if mouse else "\tpass\n")
+    return f'''extends Node2D
+{state}
+var _hud: Label
+var _btns: Dictionary = {{}}
+
+func _ready() -> void:
+	var bg := ColorRect.new()
+	bg.position = Vector2.ZERO
+	bg.size = Vector2(1280, 720)
+	bg.color = Color("0f1224")
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bg)
+	_hud = Label.new()
+	_hud.position = Vector2(48, 32)
+	_hud.size = Vector2(1184, 96)
+	_hud.add_theme_font_size_override("font_size", 64)
+	add_child(_hud)
+{add_block}
+	_refresh()
+
+func _add_btn(id: String, x: int, y: int, w: int, h: int, caption: String) -> void:
+	var r := ColorRect.new()
+	r.position = Vector2(x, y)
+	r.size = Vector2(w, h)
+	r.color = Color("2563eb")
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(r)
+	_btns[id] = r
+	if caption != "":
+		var lab := Label.new()
+		lab.position = Vector2(x, y + maxi(0, int(h / 2) - 48))
+		lab.size = Vector2(w, mini(h, 96))
+		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lab.text = caption
+		lab.add_theme_font_size_override("font_size", 64)
+		add_child(lab)
+
+func _refresh() -> void:
+	_hud.text = {hud}
+{extra_refresh}
+
+func _input(event) -> void:
+{input_fn}
+'''
+
+
 # ---------- task definitions ----------
 
 TASKS_DEF = []
 
 
 def add(**kw):
+    if callable(kw.get("gd")):
+        kw["gd"] = kw["gd"](kw)
     TASKS_DEF.append(kw)
 
 
@@ -194,14 +259,17 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var on: bool = false
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var on: bool = false",
+        hud='"on" if on else "off"',
+        input_body="""		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
 			on = not on
-''',
+""",
+        extra_refresh="""	if _btns.has("toggle"):
+		_btns["toggle"].color = Color("fbbf24") if on else Color("2563eb")
+""",
+    ),
 )
 
 add(
@@ -258,16 +326,16 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var value: int = 0
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 720 and p.x < 1040 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var value: int = 0",
+        hud="str(value)",
+        input_body="""		if p.x >= 720 and p.x < 1040 and p.y >= 280 and p.y < 440:
 			value = mini(3, value + 1)
 		elif p.x >= 240 and p.x < 560 and p.y >= 280 and p.y < 440:
 			value = maxi(0, value - 1)
-''',
+""",
+    ),
 )
 
 add(
@@ -325,18 +393,22 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var slot: String = "A"
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 80 and p.x < 400 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state='var slot: String = "A"',
+        hud="slot",
+        input_body="""		if p.x >= 80 and p.x < 400 and p.y >= 280 and p.y < 440:
 			slot = "A"
 		elif p.x >= 480 and p.x < 800 and p.y >= 280 and p.y < 440:
 			slot = "B"
 		elif p.x >= 880 and p.x < 1200 and p.y >= 280 and p.y < 440:
 			slot = "C"
-''',
+""",
+        extra_refresh="""	for id in ["slotA", "slotB", "slotC"]:
+		if _btns.has(id):
+			_btns[id].color = Color("1d4ed8") if slot == id.substr(4) else Color("2563eb")
+""",
+    ),
 )
 
 add(
@@ -395,19 +467,21 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var armed: bool = false
-var shots: int = 0
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var armed: bool = false\nvar shots: int = 0",
+        hud='"armed=%s shots=%s" % [armed, shots]',
+        input_body="""		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
 			armed = true
 		elif p.x >= 720 and p.x < 1080 and p.y >= 280 and p.y < 440:
 			if armed:
 				shots += 1
 				armed = false
-''',
+""",
+        extra_refresh="""	if _btns.has("arm"):
+		_btns["arm"].color = Color("fbbf24") if armed else Color("2563eb")
+""",
+    ),
 )
 
 add(
@@ -464,11 +538,11 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var x: int = 1
-var y: int = 1
-func _input(event):
-	if event is InputEventKey and event.pressed and not event.echo:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var x: int = 1\nvar y: int = 1",
+        hud='"%s,%s" % [x, y]',
+        extra_input="""	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_RIGHT:
 			x = mini(2, x + 1)
 		elif event.keycode == KEY_LEFT:
@@ -477,7 +551,9 @@ func _input(event):
 			y = mini(2, y + 1)
 		elif event.keycode == KEY_UP:
 			y = maxi(0, y - 1)
-''',
+		_refresh()
+""",
+    ),
 )
 
 add(
@@ -533,18 +609,23 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var stage: int = 0
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var stage: int = 0",
+        hud="str(stage)",
+        input_body="""		if p.x >= 200 and p.x < 560 and p.y >= 280 and p.y < 440:
 			if stage == 0:
 				stage = 1
 		elif p.x >= 720 and p.x < 1080 and p.y >= 280 and p.y < 440:
 			if stage == 1:
 				stage = 2
-''',
+""",
+        extra_refresh="""	if _btns.has("btnA"):
+		_btns["btnA"].color = Color("1d4ed8") if stage == 0 else Color("2563eb")
+	if _btns.has("btnB"):
+		_btns["btnB"].color = Color("1d4ed8") if stage == 1 else Color("2563eb")
+""",
+    ),
 )
 
 add(
@@ -614,14 +695,11 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var tab: String = "red"
-var count_red: int = 0
-var count_blue: int = 0
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 80 and p.x < 360 and p.y >= 80 and p.y < 208:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state='var tab: String = "red"\nvar count_red: int = 0\nvar count_blue: int = 0',
+        hud='"%s %s/%s" % [tab, count_red, count_blue]',
+        input_body="""		if p.x >= 80 and p.x < 360 and p.y >= 80 and p.y < 208:
 			tab = "red"
 		elif p.x >= 400 and p.x < 680 and p.y >= 80 and p.y < 208:
 			tab = "blue"
@@ -630,7 +708,13 @@ func _input(event):
 				count_red += 1
 			else:
 				count_blue += 1
-''',
+""",
+        extra_refresh="""	if _btns.has("red"):
+		_btns["red"].color = Color("dc2626") if tab == "red" else Color("7f1d1d")
+	if _btns.has("blue"):
+		_btns["blue"].color = Color("2563eb") if tab == "blue" else Color("1e3a8a")
+""",
+    ),
 )
 
 add(
@@ -699,17 +783,19 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var held: bool = false
-var pulses: int = 0
-func _input(event):
-	if event is InputEventKey and event.keycode == KEY_SPACE and not event.echo:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var held: bool = false\nvar pulses: int = 0",
+        hud='"held=%s pulses=%s" % [held, pulses]',
+        extra_input="""	if event is InputEventKey and event.keycode == KEY_SPACE and not event.echo:
 		if event.pressed:
 			held = true
 		else:
 			held = false
 			pulses += 1
-''',
+		_refresh()
+""",
+    ),
 )
 
 add(
@@ -769,17 +855,21 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var left: bool = false
-var right: bool = false
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 160 and p.x < 560 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state="var left: bool = false\nvar right: bool = false",
+        hud='"%s/%s" % [left, right]',
+        input_body="""		if p.x >= 160 and p.x < 560 and p.y >= 280 and p.y < 440:
 			left = true
 		elif p.x >= 720 and p.x < 1120 and p.y >= 280 and p.y < 440:
 			right = true
-''',
+""",
+        extra_refresh="""	if _btns.has("left"):
+		_btns["left"].color = Color("22c55e") if left else Color("2563eb")
+	if _btns.has("right"):
+		_btns["right"].color = Color("22c55e") if right else Color("2563eb")
+""",
+    ),
 )
 
 add(
@@ -839,19 +929,27 @@ function App() {
 }
 renderGame(() => <App />, { bindStore });
 ''',
-    gd='''extends Node2D
-var mode: String = "stop"
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var p = event.position
-		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
+    gd=lambda t: gd_visual(
+        t["geom"],
+        state='var mode: String = "stop"',
+        hud="mode",
+        input_body="""		if p.x >= 440 and p.x < 840 and p.y >= 280 and p.y < 440:
 			if mode == "stop":
 				mode = "walk"
 			elif mode == "walk":
 				mode = "run"
 			else:
 				mode = "stop"
-''',
+""",
+        extra_refresh="""	if _btns.has("cycle"):
+		if mode == "stop":
+			_btns["cycle"].color = Color("2563eb")
+		elif mode == "walk":
+			_btns["cycle"].color = Color("22c55e")
+		else:
+			_btns["cycle"].color = Color("f59e0b")
+""",
+    ),
 )
 
 

@@ -11,6 +11,7 @@ import {
   normalizeLooksScores,
 } from './looks-rubric.mjs';
 import { heuristicDepth, heuristicFrame, round01, average01 } from './looks.mjs';
+import { scoreLooksWorker } from './looks-worker.mjs';
 
 let registeredInvoker = null;
 
@@ -128,7 +129,7 @@ export async function judgeLooksJob(job, stills) {
     }
     if (text == null) text = readVerdictFile(job);
     if (text == null) text = invokeCmd(job);
-    if (text == null) {
+    if (text == null && process.env.EVAL_LOOKS_REQUIRE_EXTERNAL === '1') {
       return {
         V: 0,
         A: 0,
@@ -136,6 +137,9 @@ export async function judgeLooksJob(job, stills) {
         looks_status: 'SUBAGENT_UNAVAILABLE',
         source: 'subagent',
       };
+    }
+    if (text == null) {
+      return scoreLooksWorker(job, stills);
     }
     const parsed =
       typeof text === 'object'

@@ -12,6 +12,7 @@ import {
   promptHasBannedWords,
   stripInstruction,
 } from '../src/looks-rubric.mjs';
+import { encodePngRgba } from '../src/png-nn.mjs';
 import { buildLooksJob, looksBackend, scoreVisuals, setLooksInvoker } from '../src/looks-judge.mjs';
 
 test('parseLooksVerdict extracts JSON and quantizes 0/0.5/1', () => {
@@ -73,7 +74,9 @@ test('NODE_TEST_CONTEXT backend is heuristic', () => {
 
 test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', async () => {
   const prev = process.env.EVAL_LOOKS_BACKEND;
+  const prevReq = process.env.EVAL_LOOKS_REQUIRE_EXTERNAL;
   process.env.EVAL_LOOKS_BACKEND = 'subagent';
+  process.env.EVAL_LOOKS_REQUIRE_EXTERNAL = '1';
   setLooksInvoker(null);
   try {
     const vis = await scoreVisuals({
@@ -95,6 +98,53 @@ test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', asyn
     assert.equal(vis2.V, 0);
     assert.equal(vis2.A, 0);
     assert.equal(vis2.source, 'subagent');
+    fs.unlinkSync(tmp);
+  } finally {
+    if (prev === undefined) delete process.env.EVAL_LOOKS_BACKEND;
+    else process.env.EVAL_LOOKS_BACKEND = prev;
+    if (prevReq === undefined) delete process.env.EVAL_LOOKS_REQUIRE_EXTERNAL;
+    else process.env.EVAL_LOOKS_REQUIRE_EXTERNAL = prevReq;
+    setLooksInvoker(null);
+  }
+});
+
+test('looks-job worker scores stills when no external invoker', async () => {
+  const prev = process.env.EVAL_LOOKS_BACKEND;
+  process.env.EVAL_LOOKS_BACKEND = 'subagent';
+  setLooksInvoker(null);
+  try {
+    const w = 1280;
+    const h = 720;
+    const rgba = Buffer.alloc(w * h * 4, 15);
+    for (let y = 32; y < 128; y++) {
+      for (let x = 48; x < 400; x++) {
+        const i = (y * w + x) * 4;
+        rgba[i] = 255;
+        rgba[i + 1] = 255;
+        rgba[i + 2] = 255;
+        rgba[i + 3] = 255;
+      }
+    }
+    for (let y = 280; y < 440; y++) {
+      for (let x = 440; x < 840; x++) {
+        const i = (y * w + x) * 4;
+        rgba[i] = 37;
+        rgba[i + 1] = 99;
+        rgba[i + 2] = 235;
+        rgba[i + 3] = 255;
+      }
+    }
+    const tmp = path.join(os.tmpdir(), `looks-worker-${process.pid}.png`);
+    fs.writeFileSync(tmp, encodePngRgba(w, h, rgba));
+    const vis = await scoreVisuals({
+      stills: [{ ok: true, path: tmp, dump: { on: false }, dump_ok: 1 }],
+      geometry: { labels: { toggle: 'Toggle' }, regions: { toggle: { x: 440, y: 280, w: 400, h: 160 } } },
+      instruction: 'lamp',
+      taskId: 'p1-toggle-lamp',
+    });
+    assert.equal(vis.looks_status, 'OK');
+    assert.equal(vis.source, 'subagent');
+    assert.ok(vis.V >= 0.5);
     fs.unlinkSync(tmp);
   } finally {
     if (prev === undefined) delete process.env.EVAL_LOOKS_BACKEND;

@@ -131,7 +131,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      '胜负只看可比的 product_100。两边都 G=1 的题必须同有 1280×720 静帧且同一 subagent looks。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
+      '胜负只看可比的 product_100。两边都 G=1 的题必须同有 1280×720 静帧且同一 looks-job（默认 worker 或 EVAL_LOOKS_CMD）。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {

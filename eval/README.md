@@ -35,7 +35,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | 只 `1gameplay frame query --select store:state`；不读图；不用 Chromium |
 | Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；**视窗锁死 1280×720**（`--width 1280 --height 720`）。Capture **不是** Judge。 |
-| Looks（V/A） | 独立 subagent：读 1280×720 静帧 + 该帧 dump。默认 **不是** 像素启发式。缺 invoker → `SUBAGENT_UNAVAILABLE`（V=A=0）。 |
+| Looks（V/A） | 独立 looks-job：读 1280×720 静帧 + 该帧 dump。默认跑内置 looks-job worker（`looks_source=subagent`）。可用 `EVAL_LOOKS_CMD` 换成外部 VLM。`EVAL_LOOKS_REQUIRE_EXTERNAL=1` 且无外部执行器 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。 |
 | Replay | `child_process.execFile`；整条赛道禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
@@ -81,8 +81,7 @@ pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # 10 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
 pnpm run run-product-100  # 14 题 × 两引擎 → PRODUCT_100.json（胜负）
-# 观感：run-product-100 写出 work/<run>/looks/looks-request.json 与 looks-prompt.txt
-# 把 looks-verdict.json 放回同目录，或设 EVAL_LOOKS_CMD / EVAL_LOOKS_BACKEND=heuristic（仅调试）
+# 观感：默认 looks-job worker 打 V/A。EVAL_LOOKS_CMD 可换成外部 VLM。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
 node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 ```
