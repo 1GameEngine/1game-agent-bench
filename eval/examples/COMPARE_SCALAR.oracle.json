@@ -1,0 +1,146 @@
+{
+  "schema": "eval.compare-scalar/1",
+  "headline_track": "COMPARE_SCALAR",
+  "report_id": "COMPARE_SCALAR_p1-oracle-full",
+  "comparable": true,
+  "notice": "COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。P0 五维表禁止进入 headline。禁止 overall / total_score。跨引擎结论句禁止引用 VLM 数字。",
+  "checkpoints_ok": 20,
+  "attempts": 20,
+  "headline": "20/20",
+  "g0_ok": 20,
+  "g0_conditional": "20/20",
+  "engines": {
+    "onegame": {
+      "checkpoints_ok": 10,
+      "attempts": 10,
+      "g0_ok": 10
+    },
+    "godot": {
+      "checkpoints_ok": 10,
+      "attempts": 10,
+      "g0_ok": 10
+    }
+  },
+  "tasks": [
+    {
+      "id": "p1-toggle-lamp",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-toggle-lamp",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-counter-clamp",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-counter-clamp",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-pick-slot",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-pick-slot",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-arm-fire",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-arm-fire",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-grid-step",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-grid-step",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-seq-ab",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-seq-ab",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-tab-act",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-tab-act",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-space-pulse",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-space-pulse",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-door-pair",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-door-pair",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-mode-cycle",
+      "engine": "onegame",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    },
+    {
+      "id": "p1-mode-cycle",
+      "engine": "godot",
+      "primary": "CHECKPOINTS_OK",
+      "g0_ok": 1
+    }
+  ]
+}
