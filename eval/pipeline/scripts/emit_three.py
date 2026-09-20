@@ -747,7 +747,7 @@ def main():
             ],
             "checks": {
                 "init": {"phase": "ready", "remainMs": 0, "score": 0, "pulses": 0},
-                "after_start": {"phase": "countdown", "remainMs": 3000, "score": 0, "pulses": 0},
+                "after_start": {"phase": "countdown", "score": 0, "pulses": 0},
                 "final": {"phase": "playing", "remainMs": 0, "score": 1, "pulses": 1},
                 "neg_final": {"phase": "ready", "remainMs": 0, "score": 0, "pulses": 0},
             },

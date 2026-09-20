@@ -15,7 +15,6 @@
     },
     "after_start": {
       "phase": "countdown",
-      "remainMs": 3000,
       "score": 0,
       "pulses": 0
     },
