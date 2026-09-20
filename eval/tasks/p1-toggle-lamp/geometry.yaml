@@ -1,0 +1,7 @@
+regions:
+  toggle: { x: 110, y: 70, w: 100, h: 40 }
+  dead: { x: 0, y: 0, w: 80, h: 40 }
+labels:
+  toggle: Toggle
+frozen_click_centers:
+  - "40,20"

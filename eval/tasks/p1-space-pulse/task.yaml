@@ -1,0 +1,9 @@
+id: p1-space-pulse
+tier: P1
+engines: [onegame, godot]
+entry: src/game.tsx
+scene: { count: 1, width: 320, height: 180 }
+schema: dump.schema.json
+judge: schema_strict
+rng: forbidden
+physics: forbidden

@@ -6,3 +6,5 @@ eval/pipeline/node_modules/
 eval/pipeline/.test-work/
 *.1gamerecord
 *.1gamerecord.swp
+eval/tools/godot/*.x86_64
+eval/tools/godot/*.zip

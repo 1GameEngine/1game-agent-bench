@@ -1,0 +1,7 @@
+regions:
+  cycle: { x: 110, y: 70, w: 100, h: 40 }
+  dead: { x: 0, y: 140, w: 60, h: 30 }
+labels:
+  cycle: Cycle
+frozen_click_centers:
+  - "30,155"

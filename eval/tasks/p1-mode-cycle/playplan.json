@@ -1,0 +1,23 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "c1",
+      "click": "cycle"
+    },
+    {
+      "id": "c2",
+      "click": "cycle"
+    },
+    {
+      "id": "cp1",
+      "checkpoint": "final"
+    }
+  ]
+}

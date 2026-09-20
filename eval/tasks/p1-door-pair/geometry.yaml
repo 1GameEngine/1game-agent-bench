@@ -1,0 +1,9 @@
+regions:
+  left: { x: 40, y: 70, w: 100, h: 40 }
+  right: { x: 180, y: 70, w: 100, h: 40 }
+  dead: { x: 0, y: 0, w: 40, h: 30 }
+labels:
+  left: Left
+  right: Right
+frozen_click_centers:
+  - "20,15"

@@ -11,6 +11,14 @@
     "headline_track": { "const": "COMPARE_SCALAR" },
     "checkpoints_ok": { "type": "integer", "minimum": 0 },
     "attempts": { "type": "integer", "minimum": 0 },
+    "comparable": { "type": "boolean" },
+    "report_id": { "type": "string" },
+    "notice": { "type": "string" },
+    "headline": { "type": "string" },
+    "g0_ok": { "type": "integer", "minimum": 0 },
+    "g0_conditional": { "type": "string" },
+    "engines": { "type": "object" },
+    "tasks": { "type": "array" },
     "overall": false,
     "total_score": false
   }

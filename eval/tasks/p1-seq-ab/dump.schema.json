@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.p1-seq-ab/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eval.schema_id",
+    "eval.schema_sha256",
+    "stage"
+  ],
+  "properties": {
+    "eval.schema_id": {
+      "const": "eval.p1-seq-ab/1"
+    },
+    "eval.schema_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "stage": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    }
+  }
+}

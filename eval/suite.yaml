@@ -1,9 +1,9 @@
 suite_id: eval-spec/1
-headline_track: none          # P0 禁止 headline；P1 改为 COMPARE_SCALAR
+headline_track: COMPARE_SCALAR
 p0_in_headline: false
 clock:
   dt_ms: 16
-  wait_means: N_ticks         # 禁止墙钟；禁止单次超长 dt 冒充多帧
+  wait_means: N_ticks
   max_dt_ms: 16
 physics: forbidden
 rng: forbidden
@@ -11,11 +11,23 @@ engines:
   onegame:
     npm_train: "1.21.0"
     paint: napi-canvas
-  godot:                      # P1
-    version: "4.4.x"
+  godot:
+    version: "4.4.1"
     render: headless
     inject: EvalProbe
 tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
+compare_tasks:
+  - p1-toggle-lamp
+  - p1-counter-clamp
+  - p1-pick-slot
+  - p1-arm-fire
+  - p1-grid-step
+  - p1-seq-ab
+  - p1-tab-act
+  - p1-space-pulse
+  - p1-door-pair
+  - p1-mode-cycle
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden
+  headline: COMPARE_SCALAR

@@ -1,0 +1,19 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "dump",
+  "compare": {
+    "mode": "schema_strict",
+    "extras": "fail"
+  },
+  "slices": {
+    "init": {
+      "on": false
+    },
+    "final": {
+      "on": true
+    },
+    "neg_final": {
+      "on": false
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "dump",
+  "compare": {
+    "mode": "schema_strict",
+    "extras": "fail"
+  },
+  "slices": {
+    "init": {
+      "armed": false,
+      "shots": 0
+    },
+    "final": {
+      "armed": false,
+      "shots": 1
+    },
+    "neg_final": {
+      "armed": false,
+      "shots": 0
+    }
+  }
+}

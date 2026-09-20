@@ -1,0 +1,7 @@
+regions:
+  arm: { x: 50, y: 70, w: 90, h: 40 }
+  fire: { x: 180, y: 70, w: 90, h: 40 }
+labels:
+  arm: Arm
+  fire: Fire
+frozen_click_centers: []

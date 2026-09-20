@@ -12,7 +12,7 @@ const rules = loadArgvRules();
 
 test('suite.yaml P0 contract', () => {
   const suite = loadSuite();
-  assert.equal(suite.headline_track, 'none');
+  assert.equal(suite.headline_track, 'COMPARE_SCALAR');
   assert.equal(suite.p0_in_headline, false);
   assert.equal(suite.scoring.overall, 'forbidden');
 });

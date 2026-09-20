@@ -2,7 +2,11 @@
 
 私有评测产品。不要发到 npm，不要做成 `1game-*` skill。
 
-**当前里程碑：P0。** 报表前缀 `P0_`，`headline_track: none`，**不可与 Godot 对比**，禁止 `overall` / `total_score`。P1 / Godot / `COMPARE_SCALAR` 未授权，不要实现、不要写进 P0 报表。
+**当前里程碑：P1。** 可比 headline 只有 `COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`（分母含 G0 失败）。P0 五维表仍可发，但 **禁止进入 headline**。禁止 `overall` / `total_score`。跨引擎结论句禁止引用 VLM 数字。
+
+P1 对比集是 `compare_tasks` 里的 10 题，**不是** P0 四题。
+
+Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
 实现 SSOT 是本仓合同（任务 instruction / geometry / playplan / checkpoint 原文）。缺字段停工。
 
@@ -69,8 +73,9 @@ npm train `1.21.0` 在缺少 `options.bindStore` 时 **create 直接失败**。�
 ```bash
 pnpm install
 pnpm test                 # 合同/审计/Judge 子集/报表禁令
-pnpm run run-oracles      # 第 5 节 init + 四份人手 oracle，期望五维全 1
-pnpm run test-negatives   # BINDSTORE_EMPTY / --ms 3008 / 改 skill / overall
+pnpm run run-oracles      # P0 四份 oracle，五维全 1
+pnpm run test-negatives   # P0 负例
+pnpm run run-p1-compare   # 10 题 × 两引擎 oracle → COMPARE_SCALAR.json
 ```
 
 不要打开本仓当 Builder 工作区。Oracle 只用于验收流水线。
@@ -83,4 +88,4 @@ P0 四题：`p0-click-score` `p0-hud-start` `p0-grid-marks` `p0-countdown-play`�
 
 ## 本仓不包含
 
-像素金标、Playwright、Chromium、Rapier、Godot harness、Harbor、公开 npm 包、`whats-new` 写作、`1game-engine` 链接。
+像素金标、Playwright、Chromium、Rapier、Harbor、公开 npm 包、`whats-new` 写作、`1game-engine` 链接、把 napi-canvas 静帧与 Xvfb 视频合成同一视觉分。

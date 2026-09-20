@@ -8,6 +8,7 @@ import { replayJudgeHygiene } from './replay.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { primaryOf } from './verdict.mjs';
 import { auditPlayplanStep, allowedClickCenters } from './argv-audit.mjs';
+import { runP1Compare } from './p1-run.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -120,6 +121,13 @@ export async function main(argv = process.argv.slice(2)) {
       process.stdout.write(`${JSON.stringify(row, null, 2)}\n`);
       return;
     }
+    if (cmd === 'run-p1-compare') {
+      const { report, out } = runP1Compare(argValue(argv, '--run-id') ?? `p1-${Date.now()}`);
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      process.stderr.write(`wrote ${out}\n`);
+      process.exitCode = report.checkpoints_ok === report.attempts ? 0 : 1;
+      return;
+    }
     if (cmd === 'test-negatives') {
       const out = runNegatives(argValue(argv, '--run-id') ?? `neg-${Date.now()}`);
       process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
@@ -132,7 +140,9 @@ export async function main(argv = process.argv.slice(2)) {
       process.exitCode = ok ? 0 : 1;
       return;
     }
-    process.stderr.write(`Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives\n`);
+    process.stderr.write(
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare\n`,
+    );
     process.exitCode = 2;
   } catch (err) {
     process.stderr.write(`${err.primary ?? 'EVAL_INTERNAL'}: ${err.message}\n`);

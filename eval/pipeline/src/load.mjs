@@ -18,11 +18,11 @@ export function loadSuite() {
   if (suite.suite_id !== 'eval-spec/1') {
     throw new EvalError('EVAL_INTERNAL', `suite_id must be eval-spec/1, got ${suite.suite_id}`);
   }
-  if (suite.headline_track !== 'none') {
-    throw new EvalError('SPEC_VIOLATION', 'P0 suite headline_track must be none');
-  }
   if (suite.p0_in_headline !== false) {
     throw new EvalError('SPEC_VIOLATION', 'p0_in_headline must be false');
+  }
+  if (suite.headline_track !== 'none' && suite.headline_track !== 'COMPARE_SCALAR') {
+    throw new EvalError('SPEC_VIOLATION', 'headline_track must be none or COMPARE_SCALAR');
   }
   if (suite.scoring?.overall !== 'forbidden') {
     throw new EvalError('SPEC_VIOLATION', 'scoring.overall must be forbidden');
@@ -42,6 +42,10 @@ export function loadSuite() {
   }
   if (JSON.stringify(suite.scoring?.dimensions) !== JSON.stringify(['create_ok', 'replay_ok', 'store_match', 'argv_ok', 'hygiene_ok'])) {
     throw new EvalError('EVAL_INTERNAL', 'scoring.dimensions must be the frozen five');
+  }
+  const compare = suite.compare_tasks ?? [];
+  if (compare.length < 8 || compare.length > 12) {
+    throw new EvalError('EVAL_INTERNAL', 'compare_tasks must be 8–12 P1 tasks');
   }
   return suite;
 }

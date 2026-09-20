@@ -1,0 +1,11 @@
+regions:
+  slotA: { x: 20, y: 70, w: 80, h: 40 }
+  slotB: { x: 120, y: 70, w: 80, h: 40 }
+  slotC: { x: 220, y: 70, w: 80, h: 40 }
+  dead: { x: 0, y: 0, w: 40, h: 30 }
+labels:
+  slotA: A
+  slotB: B
+  slotC: C
+frozen_click_centers:
+  - "20,15"

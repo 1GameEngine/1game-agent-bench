@@ -1,0 +1,7 @@
+regions:
+  btnA: { x: 50, y: 70, w: 90, h: 40 }
+  btnB: { x: 180, y: 70, w: 90, h: 40 }
+labels:
+  btnA: A
+  btnB: B
+frozen_click_centers: []
