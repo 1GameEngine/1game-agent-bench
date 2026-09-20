@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { EVAL_DIR, PIPELINE_DIR, WORK_DIR } from './paths.mjs';
 import { execFileOk } from './exec.mjs';
 import { gameplayKeys, validateDump, checkpointMatch } from './p1-schema.mjs';
+import { finalizeStill } from './capture.mjs';
 
 export function godotBin() {
   return (
@@ -105,38 +106,46 @@ export function runGodotJob({ projectDir, job, outPath, timeoutMs = 60_000 }) {
   return { proc, events, jobPath };
 }
 
-export function makeJob({ bundle, steps }) {
+export function makeJob({ bundle, steps, stillsDir }) {
   return {
     schema_id: bundle.schema.$id,
     schema_sha256: bundle.sha,
     schema_keys: gameplayKeys(bundle.schema),
     geometry: { regions: bundle.geometry.regions ?? {} },
     post_ticks_after_input: 1,
+    stills_dir: stillsDir ?? '',
     steps,
   };
 }
 
-export function judgeGodotEvents(events, bundle, playplanKind) {
+export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
   const notes = [];
+  const sliceScores = [];
+  const stills = [];
   const err = events.find((e) => e.event === 'error');
-  if (err) return { primary: err.code || 'BOOT_FAIL', notes: [err.message || JSON.stringify(err)], g0_ok: 0 };
+  if (err) return { primary: err.code || 'BOOT_FAIL', notes: [err.message || JSON.stringify(err)], g0_ok: 0, sliceScores, stills };
   const g0 = events.find((e) => e.event === 'g0');
-  if (!g0) return { primary: 'BOOT_FAIL', notes: ['no g0 dump'], g0_ok: 0 };
+  if (!g0) return { primary: 'BOOT_FAIL', notes: ['no g0 dump'], g0_ok: 0, sliceScores, stills };
   const g0v = validateDump(g0.dump, bundle.schema, bundle.sha);
-  if (!g0v.ok) return { primary: g0v.code, notes: g0v.notes, g0_ok: 0 };
+  if (!g0v.ok) return { primary: g0v.code, notes: g0v.notes, g0_ok: 0, sliceScores, stills };
+  let primary = 'CHECKPOINTS_OK';
   for (const ev of events.filter((e) => e.event === 'checkpoint')) {
     const expected = bundle.checkpoint.slices[ev.id];
-    if (!expected) {
-      notes.push(`unknown checkpoint ${ev.id}`);
-      return { primary: 'CHECKPOINT_FAIL', notes, g0_ok: 1 };
-    }
     const v = validateDump(ev.dump, bundle.schema, bundle.sha);
-    if (!v.ok) return { primary: v.code, notes: v.notes, g0_ok: 1 };
-    const errs = checkpointMatch(ev.dump, expected);
-    if (errs.length) {
-      notes.push(...errs);
-      return { primary: 'CHECKPOINT_FAIL', notes, g0_ok: 1 };
+    const errs = v.ok && expected ? checkpointMatch(ev.dump, expected) : ['bad checkpoint'];
+    const dumpOk = Boolean(expected) && v.ok && errs.length === 0;
+    sliceScores.push(dumpOk ? 1 : 0);
+    if (!dumpOk && primary === 'CHECKPOINTS_OK') {
+      primary = expected ? (v.ok ? 'CHECKPOINT_FAIL' : v.code) : 'CHECKPOINT_FAIL';
+      notes.push(...(expected && v.ok ? errs : v.notes ?? [`unknown ${ev.id}`]));
+    }
+    const rawPath = stillsDir ? path.join(stillsDir, `${ev.id}.png`) : ev.path;
+    if (rawPath && fs.existsSync(rawPath)) {
+      const cap = finalizeStill(rawPath);
+      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, ...cap });
+    } else {
+      stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, ok: false, status: 'CAPTURE_FAIL' });
     }
   }
-  return { primary: 'CHECKPOINTS_OK', notes, g0_ok: 1, playplanKind };
+  return { primary, notes, g0_ok: 1, playplanKind, sliceScores, stills };
 }

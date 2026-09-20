@@ -1,5 +1,5 @@
 suite_id: eval-spec/1
-headline_track: COMPARE_SCALAR
+headline_track: product_100
 p0_in_headline: false
 clock:
   dt_ms: 16
@@ -30,4 +30,5 @@ compare_tasks:
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden
-  headline: COMPARE_SCALAR
+  product_100: required
+  headline: product_100

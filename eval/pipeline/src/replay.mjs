@@ -6,6 +6,7 @@ import { auditReplayArgv, pnpmExecArgv } from './argv-audit.mjs';
 import { execFileOk } from './exec.mjs';
 import { compareCheckpointSlice } from './compare.mjs';
 import { scanHygiene } from './hygiene.mjs';
+import { captureOnegameStill } from './capture.mjs';
 
 function spawn1gameplay(playArgv, { cwd, rules, allowedClicks, role }) {
   const audit = auditReplayArgv(playArgv, { rules, allowedClicks, recordRel: RECORD_REL, role });
@@ -16,8 +17,10 @@ function spawn1gameplay(playArgv, { cwd, rules, allowedClicks, role }) {
   return { audit, proc };
 }
 
-export function replayAndJudge({ gameDir, bundle }) {
+export function replayAndJudge({ gameDir, bundle, stillsDir }) {
   const notes = [];
+  const sliceScores = [];
+  const stills = [];
   let create_ok = 0;
   let replay_ok = 0;
   let store_match = 0;
@@ -74,6 +77,17 @@ export function replayAndJudge({ gameDir, bundle }) {
     'full',
   ];
 
+  function captureSlice(id, dumpOk) {
+    if (!stillsDir) return;
+    const cap = captureOnegameStill({
+      gameDir,
+      outPng: path.join(stillsDir, `${id}.png`),
+      rules: bundle.rules,
+      allowedClicks: bundle.allowedClicks,
+    });
+    stills.push({ id, dump_ok: dumpOk ? 1 : 0, ...cap });
+  }
+
   function queryStore() {
     const { audit, proc } = spawn1gameplay(queryArgv, {
       cwd: gameDir,
@@ -104,9 +118,15 @@ export function replayAndJudge({ gameDir, bundle }) {
       bindstore_empty = true;
       storeErrors.push(store.reason ?? 'BINDSTORE_EMPTY');
     } else {
-      storeErrors.push(
-        ...compareCheckpointSlice(bundle.checkpoint.init, store.value, bundle.checkpoint.compare, { isFinal: false }),
+      const initErrs = compareCheckpointSlice(
+        bundle.checkpoint.init,
+        store.value,
+        bundle.checkpoint.compare,
+        { isFinal: false },
       );
+      storeErrors.push(...initErrs);
+      sliceScores.push(initErrs.length ? 0 : 1);
+      captureSlice('init', initErrs.length === 0);
     }
   }
 
@@ -149,9 +169,12 @@ export function replayAndJudge({ gameDir, bundle }) {
             break;
           }
           for (const mid of mids) {
-            storeErrors.push(
-              ...compareCheckpointSlice(mid.match, st.value, bundle.checkpoint.compare, { isFinal: false }),
-            );
+            const midErrs = compareCheckpointSlice(mid.match, st.value, bundle.checkpoint.compare, {
+              isFinal: false,
+            });
+            storeErrors.push(...midErrs);
+            sliceScores.push(midErrs.length ? 0 : 1);
+            captureSlice(mid.after, midErrs.length === 0);
           }
         }
       } catch (err) {
@@ -174,9 +197,15 @@ export function replayAndJudge({ gameDir, bundle }) {
       bindstore_empty = true;
       storeErrors.push('BINDSTORE_EMPTY at final');
     } else {
-      storeErrors.push(
-        ...compareCheckpointSlice(bundle.checkpoint.final, st.value, bundle.checkpoint.compare, { isFinal: true }),
+      const finalErrs = compareCheckpointSlice(
+        bundle.checkpoint.final,
+        st.value,
+        bundle.checkpoint.compare,
+        { isFinal: true },
       );
+      storeErrors.push(...finalErrs);
+      sliceScores.push(finalErrs.length ? 0 : 1);
+      captureSlice('final', finalErrs.length === 0);
     }
   }
 
@@ -193,11 +222,13 @@ export function replayAndJudge({ gameDir, bundle }) {
     timeout,
     primaryHint,
     notes,
+    sliceScores,
+    stills,
   };
 }
 
-export function replayJudgeHygiene({ gameDir, bundle, builderLog }) {
-  const mechanical = replayAndJudge({ gameDir, bundle });
+export function replayJudgeHygiene({ gameDir, bundle, builderLog, stillsDir }) {
+  const mechanical = replayAndJudge({ gameDir, bundle, stillsDir });
   const hygiene = scanHygiene({ gameDir, builderLog });
   const hygiene_ok = hygiene.ok ? 1 : 0;
   if (!hygiene.ok) mechanical.notes.push(...hygiene.issues);

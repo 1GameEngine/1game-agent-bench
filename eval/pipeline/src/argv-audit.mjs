@@ -74,8 +74,15 @@ export function auditReplayArgv(argv, { rules, allowedClicks, recordRel, role })
     issues.push(`argv head not allowed: ${argv.slice(0, 3).join(' ')}`);
   }
 
+  const isScreenshot = argv[1] === 'frame' && argv[2] === 'screenshot';
   if (role === 'judge' && argv.some((a) => a === 'screenshot' || a === 'paint')) {
     issues.push('Judge path must not screenshot/paint');
+  }
+  if (isScreenshot && role !== 'capture') {
+    issues.push('frame screenshot is capture-only');
+  }
+  if (role === 'capture' && !isScreenshot) {
+    issues.push('capture role may only run frame screenshot');
   }
 
   for (const tok of rules.p0_forbidden_tokens ?? []) {
@@ -94,6 +101,12 @@ export function auditReplayArgv(argv, { rules, allowedClicks, recordRel, role })
     const select = flagValue(argv, '--select');
     if (select && select !== rules.judge_select) {
       issues.push(`frame query --select must be ${rules.judge_select}`);
+    }
+  }
+
+  if (matched && matched[1] === 'frame' && matched[2] === 'screenshot') {
+    if (!argv.includes('--at') || !argv.includes('--out')) {
+      issues.push('screenshot must pass --at and --out');
     }
   }
 

@@ -12,9 +12,10 @@ const rules = loadArgvRules();
 
 test('suite.yaml P0 contract', () => {
   const suite = loadSuite();
-  assert.equal(suite.headline_track, 'COMPARE_SCALAR');
+  assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.equal(suite.scoring.overall, 'forbidden');
+  assert.equal(suite.scoring.product_100, 'required');
 });
 
 test('ingested P0 playplans pass argv audit', () => {
@@ -65,6 +66,43 @@ test('judge screenshot argv is violation', () => {
     role: 'judge',
   });
   assert.equal(r.ok, false);
+});
+
+test('capture screenshot argv ok; replay screenshot rejected', () => {
+  const cap = auditReplayArgv(
+    [
+      '1gameplay',
+      'frame',
+      'screenshot',
+      'out/eval.1gamerecord',
+      '--at',
+      'last',
+      '--out',
+      'out/freeze.png',
+      '--width',
+      '320',
+      '--height',
+      '180',
+      '--format',
+      'png',
+      '--dpr',
+      '1',
+    ],
+    {
+      rules,
+      allowedClicks: new Set(),
+      recordRel: 'out/eval.1gamerecord',
+      role: 'capture',
+    },
+  );
+  assert.equal(cap.ok, true);
+  const replay = auditReplayArgv(['1gameplay', 'frame', 'screenshot', 'out/eval.1gamerecord', '--at', 'last', '--out', 'x.png'], {
+    rules,
+    allowedClicks: new Set(),
+    recordRel: 'out/eval.1gamerecord',
+    role: 'replay',
+  });
+  assert.equal(replay.ok, false);
 });
 
 test('deep subset: extra keys ok; array elements ===', () => {

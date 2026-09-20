@@ -21,11 +21,17 @@ export function loadSuite() {
   if (suite.p0_in_headline !== false) {
     throw new EvalError('SPEC_VIOLATION', 'p0_in_headline must be false');
   }
-  if (suite.headline_track !== 'none' && suite.headline_track !== 'COMPARE_SCALAR') {
-    throw new EvalError('SPEC_VIOLATION', 'headline_track must be none or COMPARE_SCALAR');
+  if (suite.headline_track !== 'product_100') {
+    throw new EvalError('SPEC_VIOLATION', 'headline_track must be product_100');
   }
   if (suite.scoring?.overall !== 'forbidden') {
     throw new EvalError('SPEC_VIOLATION', 'scoring.overall must be forbidden');
+  }
+  if (suite.scoring?.product_100 !== 'required') {
+    throw new EvalError('SPEC_VIOLATION', 'scoring.product_100 must be required');
+  }
+  if (suite.scoring?.headline !== 'product_100') {
+    throw new EvalError('SPEC_VIOLATION', 'scoring.headline must be product_100');
   }
   if (suite.clock?.dt_ms !== 16 || suite.clock?.max_dt_ms !== 16 || suite.clock?.wait_means !== 'N_ticks') {
     throw new EvalError('EVAL_INTERNAL', 'P0 clock contract is dt_ms=16, wait_means=N_ticks, max_dt_ms=16');

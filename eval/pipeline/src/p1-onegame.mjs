@@ -5,6 +5,9 @@ import { parseCliJson, readStoreState } from './util.mjs';
 import { execFileOk } from './exec.mjs';
 import { stepOp, clickCoord } from './p1-closed.mjs';
 import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
+import { captureOnegameStill } from './capture.mjs';
+import { loadArgvRules } from './load.mjs';
+import { allowedClickCenters } from './argv-audit.mjs';
 
 function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
@@ -56,8 +59,11 @@ function applyStep(cwd, step, geometry) {
   return { ok: false, proc: { stdout: 'ACTION_NOT_IN_CLOSED_SET' } };
 }
 
-export function runOnegamePlayplan({ gameDir, bundle, steps }) {
+export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   const notes = [];
+  const sliceScores = [];
+  const stills = [];
+  let primary = 'CHECKPOINTS_OK';
   const created = createRecord(gameDir);
   if (created.status !== 0) {
     const msg = created.stdout + created.stderr;
@@ -68,27 +74,48 @@ export function runOnegamePlayplan({ gameDir, bundle, steps }) {
   if (q0.store.empty) return { primary: 'BIND_FAIL', g0_ok: 0, notes: ['BINDSTORE_EMPTY'] };
   const proj0 = projectDump(q0.store.value, bundle.schema, bundle.sha);
   const g0v = validateDump(proj0.dump, bundle.schema, bundle.sha);
-  if (!g0v.ok) return { primary: g0v.code, g0_ok: 0, notes: g0v.notes };
+  if (!g0v.ok) return { primary: g0v.code, g0_ok: 0, notes: g0v.notes, sliceScores, stills };
+
+  const rules = loadArgvRules();
+  const clicks = allowedClickCenters(bundle.geometry);
 
   for (const step of steps) {
     const op = stepOp(step);
     if (op === 'checkpoint') {
       const q = queryStore(gameDir);
-      if (q.store.empty) return { primary: 'BIND_FAIL', g0_ok: 1, notes: ['empty at checkpoint'] };
+      if (q.store.empty) {
+        sliceScores.push(0);
+        if (primary === 'CHECKPOINTS_OK') primary = 'BIND_FAIL';
+        notes.push('empty at checkpoint');
+        continue;
+      }
       const proj = projectDump(q.store.value, bundle.schema, bundle.sha);
       const v = validateDump(proj.dump, bundle.schema, bundle.sha);
-      if (!v.ok) return { primary: v.code, g0_ok: 1, notes: v.notes };
       const expected = bundle.checkpoint.slices[step.checkpoint];
-      if (!expected) return { primary: 'CHECKPOINT_FAIL', g0_ok: 1, notes: [`unknown ${step.checkpoint}`] };
-      const errs = checkpointMatch(proj.dump, expected);
-      if (errs.length) return { primary: 'CHECKPOINT_FAIL', g0_ok: 1, notes: errs };
+      const errs = v.ok && expected ? checkpointMatch(proj.dump, expected) : ['invalid dump'];
+      const dumpOk = v.ok && expected && errs.length === 0;
+      sliceScores.push(dumpOk ? 1 : 0);
+      if (!dumpOk && primary === 'CHECKPOINTS_OK') {
+        primary = v.ok ? 'CHECKPOINT_FAIL' : v.code;
+        notes.push(...(v.ok ? errs : v.notes));
+      }
+      if (stillsDir) {
+        const cap = captureOnegameStill({
+          gameDir,
+          outPng: path.join(stillsDir, `${step.checkpoint}.png`),
+          rules,
+          allowedClicks: clicks,
+        });
+        stills.push({ id: step.checkpoint, dump_ok: dumpOk ? 1 : 0, ...cap });
+      }
       continue;
     }
     const applied = applyStep(gameDir, step, bundle.geometry);
     if (!applied.ok) {
       notes.push(`step ${step.id} failed`);
-      return { primary: 'BOOT_FAIL', g0_ok: 1, notes };
+      if (primary === 'CHECKPOINTS_OK') primary = 'BOOT_FAIL';
+      break;
     }
   }
-  return { primary: 'CHECKPOINTS_OK', g0_ok: 1, notes };
+  return { primary, g0_ok: 1, notes, sliceScores, stills };
 }

@@ -8,8 +8,10 @@ export function buildCompareScalar({ runId, attempts }) {
     headline_track: 'COMPARE_SCALAR',
     report_id: `COMPARE_SCALAR_${runId}`,
     comparable: true,
+    winner: false,
     notice:
-      'COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。P0 五维表禁止进入 headline。禁止 overall / total_score。跨引擎结论句禁止引用 VLM 数字。',
+      '过程指标：COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。',
+    winner: false,
     checkpoints_ok,
     attempts: attempts.length,
     headline: `${checkpoints_ok}/${attempts.length}`,

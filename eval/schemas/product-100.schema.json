@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.product-100/1",
+  "title": "product_100 suite winner (P0+P1, 14 tasks)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "suite_id",
+    "headline_track",
+    "winner",
+    "product_100",
+    "task_count",
+    "looks_included",
+    "winner_sentence"
+  ],
+  "properties": {
+    "schema": { "const": "eval.product-100/1" },
+    "suite_id": { "const": "eval-spec/1" },
+    "report_id": { "type": "string" },
+    "headline_track": { "const": "product_100" },
+    "winner": { "const": true },
+    "looks_included": { "const": true },
+    "still": { "type": "object" },
+    "weights": { "type": "object" },
+    "task_count": { "const": 14 },
+    "task_ids": { "type": "array" },
+    "product_100": {
+      "type": "object",
+      "required": ["onegame", "godot"],
+      "properties": {
+        "onegame": { "type": "number" },
+        "godot": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "winner_engine": { "enum": ["onegame", "godot", "tie"] },
+    "winner_sentence": { "type": "string" },
+    "notice": { "type": "string" },
+    "engines": { "type": "object" },
+    "tasks": { "type": "array" },
+    "process_appendix": { "type": "object" },
+    "overall": false,
+    "total_score": false,
+    "vlm_score": false
+  }
+}

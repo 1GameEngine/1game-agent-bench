@@ -4,6 +4,7 @@ extends Node
 
 var _job: Dictionary = {}
 var _out_path: String = ""
+var _stills_dir: String = ""
 var _schema_keys: PackedStringArray = PackedStringArray()
 
 func _ready() -> void:
@@ -28,6 +29,9 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 	_job = parsed
+	_stills_dir = String(_job.get("stills_dir", ""))
+	if _stills_dir != "":
+		DirAccess.make_dir_recursive_absolute(_stills_dir)
 	for k in _job.get("schema_keys", []):
 		_schema_keys.append(String(k))
 	call_deferred("_run")
@@ -60,6 +64,7 @@ func _apply_step(step: Dictionary, probe: Node) -> String:
 	if step.has("checkpoint"):
 		var d: Dictionary = probe.dump(String(_job["schema_id"]), String(_job["schema_sha256"]), _schema_keys)
 		_emit({"event": "checkpoint", "id": String(step["checkpoint"]), "dump": d})
+		_snapshot(String(step["checkpoint"]))
 		return ""
 	if step.has("tick"):
 		var n := int(step["tick"])
@@ -152,6 +157,25 @@ func _map_key(code: String) -> Key:
 			return KEY_D
 		_:
 			return KEY_NONE
+
+func _snapshot(id: String) -> void:
+	if _stills_dir == "":
+		return
+	RenderingServer.force_draw(true)
+	var tex := get_viewport().get_texture()
+	if tex == null:
+		_emit({"event": "still_fail", "id": id, "message": "no viewport texture"})
+		return
+	var img := tex.get_image()
+	if img == null:
+		_emit({"event": "still_fail", "id": id, "message": "no image"})
+		return
+	var path := "%s/%s.png" % [_stills_dir, id]
+	var err := img.save_png(path)
+	if err != OK:
+		_emit({"event": "still_fail", "id": id, "message": "save_png %s" % err})
+		return
+	_emit({"event": "still", "id": id, "path": path, "w": img.get_width(), "h": img.get_height()})
 
 func _emit(obj: Dictionary) -> void:
 	var f := FileAccess.open(_out_path, FileAccess.READ_WRITE)

@@ -1,6 +1,8 @@
-# Godot 4.4.x（P1 headless dump）
+# Godot 4.4.x（dump + 1280×720 静帧）
 
-评测只跑 **无显示 headless dump**。Xvfb 视频若存在，只能标 `INCOMPARABLE_VISUAL`，**不得**与 1Game napi-canvas 静帧合成同一视觉分。跨引擎结论句禁止引用任何 VLM 数字。
+机械正确性仍跑 **headless dump**。观感在 freeze 后抓 Viewport PNG；逻辑内容 320×180 时由评测仓最近邻 4× 到 1280×720。Xvfb **视频**标 `INCOMPARABLE_VISUAL`，不得入 `product_100`。
+
+点击坐标仍是题面 320×180。谁赢只引用 `product_100`，不引用 VLM 原始字段。
 
 ## 二进制
 

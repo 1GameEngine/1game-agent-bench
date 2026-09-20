@@ -4,6 +4,6 @@
 
 全部内容在 [`eval/`](eval/README.md)。
 
-- P0：机械五维表，前缀 `P0_`，不可进入 headline。
-- P1：唯一可比 headline `COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。
+- 胜负：`product_100`（P0 四题 + P1 十题，百分制平均）。
+- 过程：P0 五维表；P1 `COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。
 

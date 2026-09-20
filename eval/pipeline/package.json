@@ -10,7 +10,7 @@
   "scripts": {
     "run-oracles": "node src/cli.mjs run-oracles",
     "run-p1-compare": "node src/cli.mjs run-p1-compare",
-    "test": "node --test test/*.test.mjs",
+    "run-product-100": "node src/cli.mjs run-product-100",
     "test": "node --test test/*.test.mjs",
     "test-negatives": "node src/cli.mjs test-negatives"
   },

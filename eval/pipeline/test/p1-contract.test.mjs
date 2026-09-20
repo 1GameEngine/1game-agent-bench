@@ -9,7 +9,7 @@ import { loadSuite } from '../src/load.mjs';
 
 test('P1 compare_tasks are 10 closed-set tasks', () => {
   const suite = loadSuite();
-  assert.equal(suite.headline_track, 'COMPARE_SCALAR');
+  assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
   assert.equal(P1_TASKS.length, 10);
@@ -41,6 +41,7 @@ test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {
   assert.equal(report.checkpoints_ok, 1);
   assert.equal(report.attempts, 2);
   assert.equal(report.g0_conditional, '1/1');
+  assert.equal(report.winner, false);
   assert.ok(!('overall' in report));
   assert.throws(() => assertNoForbiddenScoreKeys({ overall: 1 }));
 });

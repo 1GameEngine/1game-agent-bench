@@ -19,7 +19,7 @@ export const REQUIRED_ONEGAME = [
 export const PINNED_OK = new Set(REQUIRED_ONEGAME);
 export const DIMENSIONS = ['create_ok', 'replay_ok', 'store_match', 'argv_ok', 'hygiene_ok'];
 export const P0_NOTICE =
-  'P0 机械五维表；报表前缀 P0_；headline_track=none；不可与 Godot 对比；禁止 overall / total_score。';
+  'P0 机械五维表（过程指标，非胜负）。报表前缀 P0_；headline_track=none。套件胜负只看 product_100。禁止 overall / total_score。';
 
 export function gameDir(runId) {
   return path.join(WORK_DIR, runId, 'game');

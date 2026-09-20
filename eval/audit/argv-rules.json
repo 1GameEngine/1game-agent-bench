@@ -3,8 +3,10 @@
   "allowed_heads": [
     ["1gameplay", "create"],
     ["1gameplay", "step"],
-    ["1gameplay", "frame", "query"]
+    ["1gameplay", "frame", "query"],
+    ["1gameplay", "frame", "screenshot"]
   ],
+  "capture_heads": [["1gameplay", "frame", "screenshot"]],
   "judge_select": "store:state",
   "judge_forbidden_commands": ["screenshot", "paint"],
   "p0_forbidden_tokens": [

@@ -12,6 +12,7 @@
     "checkpoints_ok": { "type": "integer", "minimum": 0 },
     "attempts": { "type": "integer", "minimum": 0 },
     "comparable": { "type": "boolean" },
+    "winner": { "const": false },
     "report_id": { "type": "string" },
     "notice": { "type": "string" },
     "headline": { "type": "string" },

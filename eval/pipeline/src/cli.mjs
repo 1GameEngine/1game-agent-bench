@@ -9,6 +9,7 @@ import { buildReport, writeReport } from './report.mjs';
 import { primaryOf } from './verdict.mjs';
 import { auditPlayplanStep, allowedClickCenters } from './argv-audit.mjs';
 import { runP1Compare } from './p1-run.mjs';
+import { runProduct100 } from './product-run.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -128,6 +129,13 @@ export async function main(argv = process.argv.slice(2)) {
       process.exitCode = report.checkpoints_ok === report.attempts ? 0 : 1;
       return;
     }
+    if (cmd === 'run-product-100') {
+      const { report, out } = await runProduct100(argValue(argv, '--run-id') ?? `p100-${Date.now()}`);
+      process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, winner_sentence: report.winner_sentence }, null, 2)}\n`);
+      process.stderr.write(`wrote ${out}\n`);
+      process.exitCode = 0;
+      return;
+    }
     if (cmd === 'test-negatives') {
       const out = runNegatives(argValue(argv, '--run-id') ?? `neg-${Date.now()}`);
       process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
@@ -141,7 +149,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100\n`,
     );
     process.exitCode = 2;
   } catch (err) {
