@@ -67,13 +67,71 @@ export function readTraces(dir) {
   return traces;
 }
 
-export function scenarioSet(traces) {
-  return [...new Set((traces ?? []).map((t) => t.trace?.scenario).filter(Boolean))];
+export function unwrapTrace(t) {
+  return t?.trace ?? t;
 }
 
-export function missingRequiredScenarios(traces) {
-  const have = new Set(scenarioSet(traces));
+export function scenarioContentOk(trace) {
+  const sc = unwrapTrace(trace)?.scenario;
+  if (sc === 'fail' || sc === 'clear' || sc === 'loop') {
+    return Array.isArray(unwrapTrace(trace)?.events) && unwrapTrace(trace).events.length > 0;
+  }
+  return true;
+}
+
+export function scenarioSet(traces) {
+  return [...new Set((traces ?? []).map((t) => unwrapTrace(t)?.scenario).filter(Boolean))];
+}
+
+export function missingRequiredScenarios(traces, opts = {}) {
+  const have = new Set();
+  for (const t of traces ?? []) {
+    const trace = unwrapTrace(t);
+    const audit = t?.audit ?? { ok: true };
+    if (!audit.ok) continue;
+    if (!scenarioContentOk(trace)) continue;
+    if (opts.replayedScenarios && !opts.replayedScenarios.includes(trace.scenario)) continue;
+    if (opts.observedScenarios && !opts.observedScenarios.includes(trace.scenario)) continue;
+    if (trace.scenario) have.add(trace.scenario);
+  }
   return REQUIRED_SCENARIOS.filter((s) => !have.has(s));
+}
+
+export function parseStillId(id) {
+  const m = String(id ?? '').match(/^(.*)_f(\d+)$/);
+  if (!m) return { scenario: String(id || 'play'), frame: 0 };
+  return { scenario: m[1], frame: Number(m[2]) };
+}
+
+export function stillPlayMeta(still) {
+  const parsed = parseStillId(still?.id);
+  const frame = Number.isInteger(still?.dump?.frame) ? still.dump.frame : parsed.frame;
+  const scenario = still?.dump?.scenario || parsed.scenario;
+  return { scenario, frame, t_ms: frame * FRAME_MS };
+}
+
+export function groupStillsByScenario(stills) {
+  const by = new Map();
+  for (const s of stills ?? []) {
+    const { scenario } = parseStillId(s.id);
+    const list = by.get(scenario) ?? [];
+    list.push(s);
+    by.set(scenario, list);
+  }
+  return by;
+}
+
+export const LOOKS_MAX_FRAMES = 40;
+
+export function capLooksStills(stills, max = LOOKS_MAX_FRAMES) {
+  const list = [...(stills ?? [])];
+  if (list.length <= max) return { stills: list, sample_policy: 'fps2' };
+  const out = [];
+  for (let i = 0; i < max; i++) {
+    const idx = Math.round((i * (list.length - 1)) / Math.max(1, max - 1));
+    out.push(list[idx]);
+  }
+  return { stills: out, sample_policy: 'fps2_cap40' };
 }
 
 export function capFrames(durationFrames) {
@@ -94,21 +152,11 @@ export function eventsByFrame(trace) {
   return map;
 }
 
-export function pickLooksStills(stills, maxPerScenario = 3) {
-  const by = new Map();
-  for (const s of stills ?? []) {
-    const sc = String(s.id ?? '').split('_f')[0] || 'play';
-    const list = by.get(sc) ?? [];
-    list.push(s);
-    by.set(sc, list);
-  }
+export function pickLooksStills(stills, maxPerScenario = LOOKS_MAX_FRAMES) {
+  const by = groupStillsByScenario(stills);
   const out = [];
   for (const list of by.values()) {
-    if (list.length <= maxPerScenario) {
-      out.push(...list);
-      continue;
-    }
-    out.push(list[0], list[Math.floor(list.length / 2)], list[list.length - 1]);
+    out.push(...capLooksStills(list, maxPerScenario).stills);
   }
   return out;
 }

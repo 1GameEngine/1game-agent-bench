@@ -14,10 +14,10 @@ import {
   capFrames,
   eventsByFrame,
   missingRequiredScenarios,
-  pickLooksStills,
   readTraces,
   sampleEvery,
   scenarioSet,
+  stillPlayMeta,
 } from './p1-trace.mjs';
 
 function gp(cwd, argv) {
@@ -213,6 +213,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
   const rules = loadArgvRules();
   const every = sampleEvery();
   let primary = 'TRACE_OK';
+  const replayed_scenarios = [];
 
   for (const item of valid) {
     const boot = createRecord(gameDir);
@@ -224,6 +225,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
     const n = capFrames(item.trace.duration_frames);
     const by = eventsByFrame(item.trace);
     let i = 0;
+    let failed = false;
     while (i < n) {
       const evs = by.get(i) ?? [];
       for (const ev of evs) {
@@ -231,16 +233,18 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
         if (!applied.ok) {
           primary = 'TRACE_REPLAY_FAIL';
           notes.push(`${item.trace.scenario} frame ${i} ${ev.type}`);
+          failed = true;
           break;
         }
       }
-      if (primary !== 'TRACE_OK') break;
+      if (failed) break;
       const stop = nextBarrier(i, n, every, by);
       const run = Math.max(1, stop - i);
       const ticked = tickFrames(gameDir, run);
       if (!ticked.ok) {
         primary = 'TRACE_REPLAY_FAIL';
         notes.push(`${item.trace.scenario} tick ${i}+${run}`);
+        failed = true;
         break;
       }
       const last = i + run - 1;
@@ -252,27 +256,29 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
           rules,
           allowedClicks: [],
         });
+        const meta = { scenario: item.trace.scenario, frame: last, t_ms: last * FRAME_MS };
         stills.push({
           id,
           dump_ok: 1,
-          dump: { scenario: item.trace.scenario, frame: last },
+          dump: meta,
           ...cap,
         });
       }
       i += run;
     }
-    if (primary !== 'TRACE_OK') break;
+    if (failed) break;
+    replayed_scenarios.push(item.trace.scenario);
   }
 
-  const looks = pickLooksStills(stills);
   return {
     primary,
     g0_ok: 1,
     notes,
-    stills: looks,
-    stills_all: stills,
+    stills,
     traces: submitted,
     scenarios: scenarioSet(valid),
-    missing_scenarios: missingRequiredScenarios(valid),
+    replayed_scenarios,
+    missing_scenarios: missingRequiredScenarios(valid, { replayedScenarios: replayed_scenarios }),
   };
 }
+

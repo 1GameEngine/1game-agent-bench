@@ -6,7 +6,7 @@ import { EVAL_DIR, PIPELINE_DIR, WORK_DIR } from './paths.mjs';
 import { execFileOk } from './exec.mjs';
 import { gameplayKeys, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { finalizeStill } from './capture.mjs';
-import { pickLooksStills } from './p1-trace.mjs';
+import { FRAME_MS, parseStillId } from './p1-trace.mjs';
 
 export function godotBin() {
   return (
@@ -206,21 +206,23 @@ export function judgeTraceEvents(events, stillsDir) {
   const g0 = events.find((e) => e.event === 'g0');
   if (!g0) return { primary: 'BOOT_FAIL', notes: ['no g0'], g0_ok: 0, stills };
   for (const ev of events.filter((e) => e.event === 'still')) {
+    const parsed = parseStillId(ev.id);
+    const meta = { scenario: parsed.scenario, frame: parsed.frame, t_ms: parsed.frame * FRAME_MS };
     const rawPath = stillsDir ? path.join(stillsDir, `${ev.id}.png`) : ev.path;
     if (rawPath && fs.existsSync(rawPath)) {
       const cap = finalizeStill(rawPath);
       stills.push({
         id: ev.id,
         dump_ok: 1,
-        dump: { scenario: String(ev.id).split('_f')[0], frame: ev.id },
+        dump: meta,
         ...cap,
       });
     } else {
-      stills.push({ id: ev.id, dump_ok: 0, dump: {}, ok: false, status: 'CAPTURE_FAIL' });
+      stills.push({ id: ev.id, dump_ok: 0, dump: meta, ok: false, status: 'CAPTURE_FAIL' });
     }
   }
   const scenarios = [...new Set(events.filter((e) => e.event === 'trace_done').map((e) => e.scenario))];
-  return { primary: 'TRACE_OK', notes, g0_ok: 1, stills: pickLooksStills(stills), stills_all: stills, scenarios };
+  return { primary: 'TRACE_OK', notes, g0_ok: 1, stills, scenarios, replayed_scenarios: scenarios };
 }
 
 export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {

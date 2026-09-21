@@ -3,51 +3,101 @@
   "requirements": [
     {
       "id": "M1",
-      "description": "\u5f00\u5c40\u73a9\u5bb6\u5728\u94a5\u5319\u5de6\u4fa7\u7684\u51fa\u751f\u683c\uff0c\u5730\u56fe\u5899\u4e0e\u51fa\u53e3\u53ef\u8fa8\u3002"
+      "dim": "M",
+      "applies": ["intro"],
+      "need": "all",
+      "weight": 1,
+      "description": "开局玩家在钥匙左侧出生格，墙与出口可辨。"
     },
     {
       "id": "M2",
-      "description": "\u65b9\u5411\u952e\u4e00\u6b21\u4e00\u683c\uff0c\u4e0d\u80fd\u7a7f\u5899\u3002"
+      "dim": "M",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "连续抽帧里玩家格子位置改变，且没有穿墙。"
     },
     {
       "id": "M3",
-      "description": "\u62ff\u5230\u94a5\u5319\u540e\u95e8\u7684\u5916\u89c2\u6216\u53ef\u901a\u8fc7\u6027\u6539\u53d8\u3002"
+      "dim": "M",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "拿到钥匙后门的外观或可通过性改变。"
     },
     {
       "id": "M4",
-      "description": "\u7bb1\u5b50\u53ef\u88ab\u63a8\u5230\u7a7a\u5730\uff0c\u4e0d\u80fd\u63a8\u8fdb\u5899\u91cc\u3002"
+      "dim": "M",
+      "applies": ["loop"],
+      "need": "any",
+      "weight": 1,
+      "description": "箱子相对周围格子可移动或占据独立格，没有推进墙里。"
     },
     {
       "id": "M5",
-      "description": "\u5b88\u536b\u6309\u56fa\u5b9a\u8def\u7ebf\u79fb\u52a8\uff1b\u78b0\u5230\u5b88\u536b\u6216\u8b66\u62a5\u4f1a\u5931\u8d25\u3002"
+      "dim": "M",
+      "applies": ["fail"],
+      "need": "all",
+      "weight": 1,
+      "anchor": true,
+      "description": "失败画面出现 Caught；本条若看不到失败态必须打 0。"
     },
     {
       "id": "M6",
-      "description": "\u6301\u94a5\u5319\u5230\u8fbe\u51fa\u53e3\u901a\u5173\u3002"
+      "dim": "M",
+      "applies": ["clear"],
+      "need": "all",
+      "weight": 1,
+      "anchor": true,
+      "description": "通关画面出现 Vault open；本条若看不到通关态必须打 0。"
     },
     {
       "id": "D1",
-      "description": "\u94a5\u5319\u3001\u7bb1\u5b50\u3001\u5b88\u536b\u3001\u8b66\u62a5\u3001\u51fa\u53e3\u5728\u753b\u9762\u4e0a\u804c\u8d23\u4e0d\u540c\u3002"
+      "dim": "D",
+      "applies": ["loop", "intro"],
+      "need": "any",
+      "weight": 1,
+      "description": "钥匙、箱子、守卫、警报、出口在画面上职责不同。"
     },
     {
       "id": "D2",
-      "description": "\u5931\u8d25\u4e0e\u901a\u5173\u662f\u4e0d\u540c\u7ed3\u5c40\u753b\u9762\uff0c\u4e0d\u662f\u540c\u4e00\u53e5 HUD\u3002"
+      "dim": "D",
+      "applies": ["fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "失败与通关是不同结局画面，不是同一句状态字。"
     },
     {
       "id": "V1",
-      "description": "\u68cb\u76d8\u7ea6\u5728\u753b\u9762\u4e2d\u90e8\uff0c\u683c\u5b50\u53ef\u6570\u3002"
+      "dim": "V",
+      "applies": ["intro", "loop"],
+      "need": "any",
+      "weight": 1,
+      "description": "棋盘约在画面中部，格子可数。"
     },
     {
       "id": "V2",
-      "description": "HUD \u80fd\u8bfb\u51fa\u4f4d\u7f6e\u3001\u662f\u5426\u6301\u94a5\u5319\u3001\u5b88\u536b\u4f4d\u7f6e\u3002"
+      "dim": "V",
+      "applies": ["loop", "fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "不读调试字段也能分辨玩家、守卫与箱子，并看出是否已经结束。"
     },
     {
       "id": "A1",
-      "description": "\u5730\u7262/\u91d1\u5e93\u914d\u8272\u7edf\u4e00\u3002"
+      "dim": "A",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "地牢或金库配色统一。"
     },
     {
       "id": "A2",
-      "description": "\u73a9\u5bb6\u3001\u5b88\u536b\u3001\u7bb1\u5b50\u4e0d\u662f\u4e09\u4e2a\u65e0\u6cd5\u5206\u8fa8\u7684\u8272\u5757\u514b\u9686\u3002"
+      "dim": "A",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "玩家、守卫、箱子不是三个无法分辨的色块克隆。"
     }
   ]
 }

@@ -4,7 +4,6 @@ import { spawnSync } from 'node:child_process';
 import {
   aggregateLooks,
   buildLooksUserPrompt,
-  gameplayView,
   parseLooksVerdict,
   promptHasBannedWords,
   stripInstruction,
@@ -12,7 +11,8 @@ import {
 } from './looks-rubric.mjs';
 import { heuristicDepth, heuristicFrame, round01, average01 } from './looks.mjs';
 import { scoreLooksWorker } from './looks-worker.mjs';
-import { aggregateRubric, emptyRubricScores } from './rubric.mjs';
+import { aggregateRubric, emptyRubricScores, requirementsForScenario } from './rubric.mjs';
+import { capLooksStills, stillPlayMeta } from './p1-trace.mjs';
 
 let registeredInvoker = null;
 
@@ -35,22 +35,30 @@ export function buildLooksJob({
   variant_regions,
   jobDir,
   rubric,
+  scenario,
+  sample_policy,
 }) {
-  const frames = (stills ?? []).map((s) => ({
-    id: s.id,
-    path: s.path,
-    dump: gameplayView(s.dump),
-    dump_ok: s.dump_ok ?? 0,
-  }));
+  const frames = (stills ?? []).map((s) => {
+    const meta = stillPlayMeta(s);
+    return {
+      id: s.id,
+      path: s.path,
+      dump: { scenario: meta.scenario, frame: meta.frame, t_ms: meta.t_ms },
+      dump_ok: 0,
+    };
+  });
+  const scoped = scenario ? { ...rubric, requirements: requirementsForScenario(rubric, scenario) } : rubric;
   const job = {
     schema: 'eval.looks-job/1',
     taskId,
+    scenario: scenario || undefined,
+    sample_policy: sample_policy || 'fps2',
     instruction: stripInstruction(instruction),
     labels: geometry?.labels ?? {},
     regions: geometry?.regions ?? {},
     variant_regions: variant_regions ?? [],
     stills: frames,
-    rubric: rubric ?? undefined,
+    rubric: scoped ?? undefined,
   };
   const banned = promptHasBannedWords(buildLooksUserPrompt(job));
   if (banned.length) {
@@ -200,6 +208,8 @@ export async function scoreVisuals({
   engine,
   jobDir,
   rubric,
+  scenario,
+  sample_policy,
 }) {
   const okStills = (stills ?? []).filter((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))));
   if (!okStills.length) {
@@ -212,16 +222,21 @@ export async function scoreVisuals({
       source: 'none',
     };
   }
+  const capped = capLooksStills(okStills);
   const job = buildLooksJob({
     taskId,
     engine,
     instruction,
     geometry,
-    stills: okStills,
+    stills: capped.stills,
     variant_regions: depthKeys,
     jobDir,
     rubric,
+    scenario,
+    sample_policy: sample_policy || capped.sample_policy,
   });
-  const vis = await judgeLooksJob(job, okStills);
+  const vis = await judgeLooksJob(job, capped.stills);
+  vis.sample_policy = job.sample_policy;
+  vis.scenario = scenario;
   return vis;
 }

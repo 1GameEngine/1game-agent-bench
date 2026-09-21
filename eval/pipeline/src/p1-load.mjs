@@ -4,6 +4,7 @@ import { taskDir } from './paths.mjs';
 import { P1_TASKS } from './product-100.mjs';
 import { loadYaml, loadJson } from './load.mjs';
 import { EvalError } from './util.mjs';
+import { validateRubric } from './rubric.mjs';
 
 export { P1_TASKS };
 
@@ -36,8 +37,7 @@ export function loadP1Task(taskId) {
   if (rubric.score_formula !== 'G * (40*M + 10*D + 20*V + 30*A)') {
     throw new EvalError('EVAL_INTERNAL', `${taskId} rubric formula`);
   }
-  if (!Array.isArray(rubric.requirements) || rubric.requirements.length < 8 || rubric.requirements.length > 24) {
-    throw new EvalError('EVAL_INTERNAL', `${taskId} rubric size`);
-  }
+  const vr = validateRubric(rubric);
+  if (!vr.ok) throw new EvalError('EVAL_INTERNAL', `${taskId} rubric ${vr.issues.join('; ')}`);
   return { task, instruction, rubric, geometry: { regions: {}, labels: {} } };
 }

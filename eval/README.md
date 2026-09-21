@@ -10,7 +10,7 @@ Headline 三题在 `compare_tasks`：`p1-night-stall` `p1-vault-crawl` `p1-chart
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps），抽帧后按量表打 M/D/V/A。缺 intro/loop/fail/clear 任一场景则 M、D 封顶 0.5。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps），按 scenario 抽帧后打 M/D/V/A。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。
 
 ## 读者与隔离
 

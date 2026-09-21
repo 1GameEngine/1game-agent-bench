@@ -52,16 +52,19 @@ test('stripInstruction drops 实现约束; gameplayView drops eval.*', () => {
   assert.deepEqual(gameplayView({ on: true, 'eval.schema_id': 'x', 'eval.schema_sha256': 'y' }), { on: true });
 });
 
-test('looks job prompt includes dump, not engine APIs', () => {
+test('looks job prompt is per-scenario play tags, not engine APIs', () => {
   const job = buildLooksJob({
-    taskId: 'p1-rail-desk',
+    taskId: 'p1-night-stall',
     engine: 'godot',
+    scenario: 'intro',
     instruction: 'Toggle the lamp. ## 实现约束\nUse Sprite2D',
     geometry: { labels: { lamp: 'LAMP' }, regions: { lamp: { x: 0, y: 0, w: 10, h: 10 } } },
-    stills: [{ id: 'final', path: '/tmp/final.png', dump: { on: true, 'eval.schema_id': 'hide' }, dump_ok: 1, ok: true }],
+    stills: [{ id: 'intro_f0', path: '/tmp/final.png', dump: { scenario: 'intro', frame: 0, t_ms: 0, on: true, 'eval.schema_id': 'hide' }, dump_ok: 1, ok: true }],
   });
   const prompt = buildLooksUserPrompt(job);
-  assert.match(prompt, /"on":true/);
+  assert.match(prompt, /scenario="intro"/);
+  assert.match(prompt, /Play tag:/);
+  assert.doesNotMatch(prompt, /"on":true/);
   assert.doesNotMatch(prompt, /eval\.schema_id/);
   assert.doesNotMatch(prompt, /Sprite2D/);
   assert.equal(promptHasBannedWords(prompt).length, 0);

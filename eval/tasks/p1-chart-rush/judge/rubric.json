@@ -3,47 +3,101 @@
   "requirements": [
     {
       "id": "M1",
-      "description": "\u672a\u5f00\u59cb\u65f6\u6709 Chart Rush \u4e0e Start\uff1b\u5012\u8ba1\u65f6 3000ms \u540e\u624d\u8fdb\u5165\u8c31\u9762\u3002"
+      "dim": "M",
+      "applies": ["intro"],
+      "need": "all",
+      "weight": 1,
+      "description": "未开始时有 Chart Rush 与 Start；谱面尚未进入游玩判定。"
     },
     {
       "id": "M2",
-      "description": "\u56db\u8f68\u952e\u4f4d\u4e0e\u8f68\u9053\u5de6\u53f3\u987a\u5e8f\u4e00\u81f4\u3002"
+      "dim": "M",
+      "applies": ["intro", "loop"],
+      "need": "any",
+      "weight": 1,
+      "description": "四轨从左到右排开，键位顺序与轨道一致。"
     },
     {
       "id": "M3",
-      "description": "\u97f3\u7b26\u6309\u56fa\u5b9a\u8c31\u9762\u4e0b\u843d\uff0c\u4e0d\u662f\u968f\u673a\u3002"
+      "dim": "M",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "音符按固定谱面接近判定线，连续帧位置在变，不是随机乱跳。"
     },
     {
       "id": "M4",
-      "description": "\u7a97\u5185\u6253\u5bf9\u8f68\u4f1a hits+1\uff1b\u9519\u8fc7\u6216\u6253\u9519\u4f1a misses+1\u3002"
+      "dim": "M",
+      "applies": ["loop"],
+      "need": "any",
+      "weight": 1,
+      "description": "窗内打中或错过能从音符消失、轨道反馈或计数变化看出来。"
     },
     {
       "id": "M5",
-      "description": "\u6f0f\u51fb\u8fc7\u591a\u5931\u8d25\uff0c\u6253\u5b8c\u4e14\u547d\u4e2d\u8db3\u591f\u5219\u901a\u5173\u3002"
+      "dim": "M",
+      "applies": ["fail"],
+      "need": "all",
+      "weight": 1,
+      "anchor": true,
+      "description": "失败画面出现 Chart miss；本条若看不到失败态必须打 0。"
+    },
+    {
+      "id": "M6",
+      "dim": "M",
+      "applies": ["clear"],
+      "need": "all",
+      "weight": 1,
+      "anchor": true,
+      "description": "通关画面出现 Chart clear；本条若看不到通关态必须打 0。"
     },
     {
       "id": "D1",
-      "description": "\u5012\u8ba1\u65f6\u3001\u6e38\u73a9\u3001\u5931\u8d25\u3001\u901a\u5173\u56db\u79cd\u9636\u6bb5\u5916\u89c2\u53ef\u5206\u3002"
+      "dim": "D",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "倒计时、游玩、失败、通关至少两种阶段外观可分。"
     },
     {
       "id": "D2",
-      "description": "16 \u97f3\u957f\u5ea6\u4e0e\u56db\u8f68\u540c\u65f6\u5b58\u5728\uff0c\u4e0d\u662f\u5355\u952e\u5355\u97f3\u73a9\u5177\u3002"
+      "dim": "D",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "四轨与多音符同时存在，不是单键单音玩具。"
     },
     {
       "id": "V1",
-      "description": "\u56db\u8f68\u5728\u753b\u9762\u4e0b\u65b9\u6392\u5f00\uff0cStart \u5728\u6307\u5b9a\u77e9\u5f62\u3002"
+      "dim": "V",
+      "applies": ["intro", "loop"],
+      "need": "any",
+      "weight": 1,
+      "description": "四轨在画面下方排开，Start 在未开始时可见。"
     },
     {
       "id": "V2",
-      "description": "HUD \u80fd\u8bfb phase\u3001remainMs \u6216 clockMs\u3001hits\u3001misses\u3002"
+      "dim": "V",
+      "applies": ["loop", "fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "不读调试字段也能看出是否在打谱、是否已经失败或通关。"
     },
     {
       "id": "A1",
-      "description": "\u591c\u5e97/\u8c31\u9762\u98ce\u683c\u7edf\u4e00\u3002"
+      "dim": "A",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "夜店或谱面风格统一。"
     },
     {
       "id": "A2",
-      "description": "\u97f3\u7b26\u6709\u4e0b\u843d\u6216\u63a5\u8fd1\u5224\u5b9a\u7ebf\u7684\u56fe\u5f62\uff0c\u4e0d\u53ea\u6570\u5b57\u52a0\u4e00\u3002"
+      "dim": "A",
+      "applies": ["loop", "clear"],
+      "need": "any",
+      "weight": 1,
+      "description": "音符有下落或接近判定线的图形，不只数字加一。"
     }
   ]
 }

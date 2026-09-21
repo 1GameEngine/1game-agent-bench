@@ -310,10 +310,6 @@ def emit_game(spec: dict, traces: list[dict]) -> None:
     tdir.mkdir(parents=True, exist_ok=True)
     (tdir / "task.yaml").write_text(task_yaml(tid), encoding="utf-8")
     (tdir / "instruction.md").write_text(spec["instruction"].strip() + "\n\n" + CONSTRAINT + "\n", encoding="utf-8")
-    write_json(
-        tdir / "judge" / "rubric.json",
-        {"score_formula": FORMULA, "requirements": spec["rubric"]},
-    )
     write_traces(tid, traces)
     for engine_short in ("nightstall", "vaultcrawl", "chartrush"):
         pass

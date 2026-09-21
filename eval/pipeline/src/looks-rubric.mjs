@@ -127,10 +127,21 @@ function avg(xs) {
   return xs.reduce((a, b) => a + b, 0) / xs.length;
 }
 
+export function stillPlayTag(still) {
+  const dump = still?.dump && typeof still.dump === 'object' ? still.dump : {};
+  const scenario = dump.scenario;
+  const frame = dump.frame;
+  const t_ms = dump.t_ms;
+  const parts = [];
+  if (scenario) parts.push(`scenario=${scenario}`);
+  if (Number.isInteger(frame)) parts.push(`frame=${frame}`);
+  if (Number.isFinite(t_ms)) parts.push(`t_ms=${t_ms}`);
+  return parts.join(' ') || still?.id || '';
+}
+
 export function buildLooksUserPrompt(job) {
   const frames = (job.stills ?? []).map((s, i) => {
-    const dump = JSON.stringify(s.dump ?? {}, null, 0);
-    return `Frame ${i + 1}: freeze_id=${s.id}\nObserved play tag: ${dump}\nImage file: ${s.path}`;
+    return `Frame ${i + 1}: freeze_id=${s.id}\nPlay tag: ${stillPlayTag(s)}\nImage file: ${s.path}`;
   });
   const rubricReqs = job.rubric?.requirements ?? [];
   const reqs = (
@@ -140,18 +151,21 @@ export function buildLooksUserPrompt(job) {
   ).join('\n');
   const ids = rubricReqs.length ? rubricReqs.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
   const shape = `{${ids.map((id) => `"${id}":0`).join(',')}}`;
+  const scenario = job.scenario || 'play';
   return [
     'You are a strict but fair evaluator of observed play. Score only what is visible in the attached 1280x720 replay stills.',
     'The window and gameplay are 1280x720. Score only those pixels.',
     'Do not name engines or widget APIs. Do not compare two engines. Score this submission alone.',
-    'Use only 0, 0.5, or 1 per item. Mechanical items (M*) must be evidenced by the stills, not by guessing hidden state.',
+    'Use only 0, 0.5, or 1 per item. Score only this one submitted scenario. Do not assume other demos exist.',
+    `This job is scenario="${scenario}". If this scenario is fail and no failure state is visible, fail-related items must be 0. If this scenario is clear and no clear state is visible, clear-related items must be 0.`,
+    'Mechanical items must be evidenced by these stills, not by guessing hidden state or HUD field names.',
     '',
     'Task instruction (playable spec only):',
     job.instruction || '(none)',
     '',
     frames.join('\n\n'),
     '',
-    'Hidden rubric requirements:',
+    'Hidden rubric requirements (only items that apply to this scenario):',
     reqs,
     '',
     'Return JSON only, shape:',

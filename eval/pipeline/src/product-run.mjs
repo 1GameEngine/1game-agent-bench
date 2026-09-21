@@ -17,7 +17,7 @@ import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { missingRequiredScenarios, readTraces } from './p1-trace.mjs';
+import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTraces } from './p1-trace.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -132,13 +132,15 @@ export async function mechP1Onegame(taskId, runId) {
     gameDir: boot.gameDir,
     stillsDir,
   });
-  const G = replay.g0_ok === 1 && hyg.ok && (replay.traces ?? []).some((t) => t.audit.ok);
+  const valid = (replay.traces ?? []).filter((t) => t.audit.ok);
+  const G = replay.g0_ok === 1 && hyg.ok && valid.length > 0 && replay.primary === 'TRACE_OK';
   return {
     bundle,
     G,
     stills: replay.stills,
     traces: replay.traces,
     scenarios: replay.scenarios,
+    replayed_scenarios: replay.replayed_scenarios,
     missing_scenarios: replay.missing_scenarios,
     primary: hyg.ok ? replay.primary : 'HYGIENE_FAIL',
     g0_ok: replay.g0_ok,
@@ -192,15 +194,16 @@ export async function mechP1Godot(taskId, runId) {
     judged.primary = jobRun.code || judged.primary || 'BOOT_FAIL';
     judged.notes = [...(judged.notes ?? []), ...(jobRun.notes ?? [])];
   }
-  const valid = traces.some((t) => t.audit.ok);
-  const G = judged.g0_ok === 1 && valid;
-  const missing = missingRequiredScenarios(traces.filter((t) => t.audit.ok));
+  const valid = traces.filter((t) => t.audit.ok);
+  const G = judged.g0_ok === 1 && valid.length > 0 && judged.primary === 'TRACE_OK';
+  const missing = missingRequiredScenarios(valid, { replayedScenarios: judged.replayed_scenarios });
   return {
     bundle,
     G,
     stills: judged.stills,
     traces,
     scenarios: judged.scenarios,
+    replayed_scenarios: judged.replayed_scenarios,
     missing_scenarios: missing,
     primary: judged.primary,
     g0_ok: judged.g0_ok,
@@ -227,7 +230,7 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_source: vis.looks_source,
     stills: mech.stills,
     looks_items: vis.items,
-    scenarios: mech.scenarios,
+    scenarios: vis.observed_scenarios ?? mech.scenarios,
     missing_scenarios: vis.missing_scenarios ?? mech.missing_scenarios,
   });
 }
@@ -255,26 +258,34 @@ function prepareLooksJobs(taskId, og, gd) {
     { engine: 'godot', mech: gd },
   ]) {
     if (!side.mech.G) continue;
-    const stills = stillsForJob(side.mech.stills);
-    if (!stills.length) continue;
-    const job = buildLooksJob({
-      taskId,
-      engine: side.engine,
-      instruction,
-      geometry,
-      stills,
-      jobDir: side.mech.jobDir,
-      rubric,
-    });
-    jobs.push({
-      taskId,
-      engine: side.engine,
-      jobDir: side.mech.jobDir,
-      requestPath: job.requestPath,
-      promptPath: job.promptPath,
-      verdictPath: job.verdictPath,
-      stills: stills.map((s) => ({ id: s.id, path: s.path, dump: s.dump, dump_ok: s.dump_ok })),
-    });
+    const by = groupStillsByScenario(stillsForJob(side.mech.stills));
+    for (const [scenario, list] of by) {
+      if (!list.length) continue;
+      const capped = capLooksStills(list);
+      const jobDir = path.join(side.mech.jobDir, scenario);
+      const job = buildLooksJob({
+        taskId,
+        engine: side.engine,
+        instruction,
+        geometry,
+        stills: capped.stills,
+        jobDir,
+        rubric,
+        scenario,
+        sample_policy: capped.sample_policy,
+      });
+      jobs.push({
+        taskId,
+        engine: side.engine,
+        scenario,
+        sample_policy: capped.sample_policy,
+        jobDir,
+        requestPath: job.requestPath,
+        promptPath: job.promptPath,
+        verdictPath: job.verdictPath,
+        stills: capped.stills.map((s) => ({ id: s.id, path: s.path, dump: s.dump })),
+      });
+    }
   }
   return jobs;
 }
@@ -297,6 +308,7 @@ function serializeMech(mech) {
     mechanical: mech.mechanical,
     traces: mech.traces,
     scenarios: mech.scenarios,
+    replayed_scenarios: mech.replayed_scenarios,
     missing_scenarios: mech.missing_scenarios,
   };
 }

@@ -1,12 +1,22 @@
 import fs from 'node:fs';
-import { hasDepth } from './product-100.mjs';
+import path from 'node:path';
 import { scoreVisuals } from './looks-judge.mjs';
-import { applyScenarioCap } from './rubric.mjs';
+import { finalizeObservedScores } from './rubric.mjs';
+import { capLooksStills, groupStillsByScenario } from './p1-trace.mjs';
 
 export function stillsComplete(stills) {
   const list = stills ?? [];
   if (!list.length) return false;
   return list.every((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))));
+}
+
+export function scenarioStillsMap(stills) {
+  const by = groupStillsByScenario(stills ?? []);
+  const out = {};
+  for (const [sc, list] of by) {
+    out[sc] = list.filter((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))));
+  }
+  return out;
 }
 
 function emptyVis(looks_status, looks_source) {
@@ -20,35 +30,71 @@ function emptyVis(looks_status, looks_source) {
   };
 }
 
-async function scoreVisualsSide({ taskId, engine, instruction, geometry, stills, jobDir, rubric, traces }) {
-  const vis = await scoreVisuals({
-    stills: (stills ?? []).filter((s) => s.ok),
-    geometry,
-    instruction,
-    taskId,
-    engine,
-    jobDir,
+async function scoreVisualsSide({
+  taskId,
+  engine,
+  instruction,
+  geometry,
+  stills,
+  jobDir,
+  rubric,
+  traces,
+  replayed_scenarios,
+}) {
+  const by = scenarioStillsMap(stills);
+  const scenarios = Object.keys(by).filter((sc) => by[sc].length);
+  if (!scenarios.length) {
+    return { ...emptyVis('CAPTURE_FAIL', 'none'), sample_policy: 'none' };
+  }
+  const byScenario = {};
+  let looks_status = 'OK';
+  let looks_source;
+  const policies = [];
+  for (const sc of scenarios) {
+    const capped = capLooksStills(by[sc]);
+    policies.push(capped.sample_policy);
+    const vis = await scoreVisuals({
+      stills: capped.stills,
+      geometry,
+      instruction,
+      taskId,
+      engine,
+      jobDir: jobDir ? path.join(jobDir, sc) : undefined,
+      rubric,
+      scenario: sc,
+      sample_policy: capped.sample_policy,
+    });
+    looks_source = vis.source;
+    if (vis.looks_status !== 'OK') {
+      looks_status = vis.looks_status;
+      looks_source = vis.source;
+      break;
+    }
+    byScenario[sc] = vis.items ?? {};
+  }
+  if (looks_status !== 'OK') {
+    return { ...emptyVis(looks_status, looks_source ?? 'none'), sample_policy: policies[0] };
+  }
+  const uniqPolicy = [...new Set(policies)];
+  const sample_policy = uniqPolicy.length === 1 ? uniqPolicy[0] : uniqPolicy.join(',');
+  const agg = finalizeObservedScores({
+    byScenario,
     rubric,
-  });
-  const agg = applyScenarioCap(
-    {
-      M: vis.M ?? 0,
-      D: vis.D ?? vis.D_visual ?? 0,
-      V: vis.V ?? 0,
-      A: vis.A ?? 0,
-      items: vis.items,
-    },
     traces,
-  );
+    replayedScenarios: replayed_scenarios,
+  });
   return {
     V: agg.V,
     A: agg.A,
     M: agg.M,
     D: agg.D,
-    looks_status: vis.looks_status,
-    looks_source: vis.source,
-    items: vis.items ?? agg.items,
+    looks_status: 'OK',
+    looks_source,
+    items: agg.items,
     missing_scenarios: agg.missing_scenarios,
+    observed_scenarios: agg.observed_scenarios,
+    sample_policy,
+    jobs: scenarios.length,
   };
 }
 
@@ -73,6 +119,12 @@ export async function scorePairedLooks({
       const z = emptyVis('INCOMPARABLE_VISUAL', 'pair');
       return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_VISUAL' };
     }
+    const ogKeys = Object.keys(scenarioStillsMap(og.stills)).sort().join(',');
+    const gdKeys = Object.keys(scenarioStillsMap(gd.stills)).sort().join(',');
+    if (ogKeys !== gdKeys) {
+      const z = emptyVis('INCOMPARABLE_VISUAL', 'pair');
+      return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_VISUAL' };
+    }
     const ogVis = await scoreVisualsSide({
       taskId,
       engine: 'onegame',
@@ -82,6 +134,7 @@ export async function scorePairedLooks({
       jobDir: ogJobDir,
       rubric,
       traces: og.traces,
+      replayed_scenarios: og.replayed_scenarios,
     });
     const gdVis = await scoreVisualsSide({
       taskId,
@@ -92,8 +145,13 @@ export async function scorePairedLooks({
       jobDir: gdJobDir,
       rubric,
       traces: gd.traces,
+      replayed_scenarios: gd.replayed_scenarios,
     });
     if (ogVis.looks_status !== gdVis.looks_status || ogVis.looks_source !== gdVis.looks_source) {
+      const z = emptyVis('INCOMPARABLE_LOOKS', 'pair');
+      return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_LOOKS' };
+    }
+    if (ogVis.sample_policy !== gdVis.sample_policy || ogVis.jobs !== gdVis.jobs) {
       const z = emptyVis('INCOMPARABLE_LOOKS', 'pair');
       return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_LOOKS' };
     }
@@ -109,6 +167,7 @@ export async function scorePairedLooks({
         jobDir: ogJobDir,
         rubric,
         traces: og.traces,
+        replayed_scenarios: og.replayed_scenarios,
       })
     : emptyVis('SKIP', 'none');
   const gdVis = gdG
@@ -121,6 +180,7 @@ export async function scorePairedLooks({
         jobDir: gdJobDir,
         rubric,
         traces: gd.traces,
+        replayed_scenarios: gd.replayed_scenarios,
       })
     : emptyVis('SKIP', 'none');
   return { og: ogVis, gd: gdVis, pair: 'G_ASYMMETRIC' };
