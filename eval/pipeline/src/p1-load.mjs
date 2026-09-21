@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { EVAL_DIR, taskDir } from './paths.mjs';
+import { P1_TASKS } from './product-100.mjs';
 import { loadYaml, loadJson } from './load.mjs';
 import { EvalError } from './util.mjs';
 import { auditClosedPlayplan } from './p1-closed.mjs';
 import { loadSchemaFile } from './p1-schema.mjs';
 
-export const P1_TASKS = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
+export { P1_TASKS };
 
 const ENGINE_WORDS = ['ColorRect', 'Autoload', 'bindStore', 'CharacterBody2D', '<node>', 'For'];
 

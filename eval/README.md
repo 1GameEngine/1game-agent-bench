@@ -2,11 +2,11 @@
 
 私有评测产品。不要发到 npm，不要做成 `1game-*` skill。
 
-**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（信号台 / 格子探路 / 开局街机）。结论句只引用两个套件分。
+**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（调度台 / 库房推移 / 节拍窗）。结论句只引用两个套件分。
 
 过程指标仍产出、不决定胜负：P0 四题五维表（夹具，不进 headline）、`COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
 
-Headline 三题在 `compare_tasks`：`p1-signal-desk` `p1-grid-scout` `p1-ready-run`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
+Headline 三题在 `compare_tasks`：`p1-rail-desk` `p1-stock-push` `p1-beat-window`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
@@ -93,11 +93,11 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。M 来自官方 dump。V/A 来自 **同一真实 looks subagent** 打冻结静帧（不是内置 worker）。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。\(M\) 是正例与负例 checkpoint 切片 0/1 的未量化均值（再对半平均）。\(D = 0.5 D_{mech} + 0.5 D_{looks}\)：\(D_{mech}\) 来自命名正例切片，\(D_{looks}\) 来自 looks D1。V/A 来自 **同一真实 looks subagent** 打冻结静帧（不是内置 worker）。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 
-Headline 三题：`p1-signal-desk`（规则/状态）`p1-grid-scout`（空间）`p1-ready-run`（街机节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
+Headline 三题：`p1-rail-desk`（规则/状态）`p1-stock-push`（空间）`p1-beat-window`（街机节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
 
 ## 本仓不包含
 

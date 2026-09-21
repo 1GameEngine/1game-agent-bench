@@ -3,6 +3,7 @@ import path from 'node:path';
 import YAML from 'yaml';
 import { EVAL_DIR, PIN, taskDir } from './paths.mjs';
 import { EvalError } from './util.mjs';
+import { P1_TASKS } from './product-100.mjs';
 import { allowedClickCenters, auditPlayplanStep } from './argv-audit.mjs';
 
 export function loadYaml(file) {
@@ -50,8 +51,7 @@ export function loadSuite() {
     throw new EvalError('EVAL_INTERNAL', 'scoring.dimensions must be the frozen five');
   }
   const compare = suite.compare_tasks ?? [];
-  const headline = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
-  if (JSON.stringify(compare) !== JSON.stringify(headline)) {
+  if (JSON.stringify(compare) !== JSON.stringify(P1_TASKS)) {
     throw new EvalError('EVAL_INTERNAL', 'compare_tasks must be the 3 headline games');
   }
   return suite;

@@ -1,0 +1,35 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "dead",
+      "click": "dead"
+    },
+    {
+      "id": "f0",
+      "click": "fire"
+    },
+    {
+      "id": "a0",
+      "click": "arm"
+    },
+    {
+      "id": "t2",
+      "click": "t2"
+    },
+    {
+      "id": "f1",
+      "click": "fire"
+    },
+    {
+      "id": "cp1",
+      "checkpoint": "neg_final"
+    }
+  ]
+}

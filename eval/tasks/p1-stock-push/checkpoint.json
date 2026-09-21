@@ -1,0 +1,91 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "dump",
+  "compare": {
+    "mode": "schema_strict",
+    "extras": "fail"
+  },
+  "slices": {
+    "init": {
+      "px": 0,
+      "py": 0,
+      "b0x": 1,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "blocked_left": {
+      "px": 0,
+      "py": 0,
+      "b0x": 1,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "box0_goal": {
+      "px": 1,
+      "py": 0,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "blocked_down": {
+      "px": 1,
+      "py": 0,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "after_back": {
+      "px": 0,
+      "py": 0,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "after_up": {
+      "px": 0,
+      "py": 1,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "blocked_up": {
+      "px": 0,
+      "py": 1,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    },
+    "box1_goal": {
+      "px": 1,
+      "py": 1,
+      "b0x": 2,
+      "b0y": 0,
+      "b1x": 2,
+      "b1y": 1,
+      "cleared": true
+    },
+    "neg_final": {
+      "px": 0,
+      "py": 0,
+      "b0x": 1,
+      "b0y": 0,
+      "b1x": 1,
+      "b1y": 1,
+      "cleared": false
+    }
+  }
+}

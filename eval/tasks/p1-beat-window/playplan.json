@@ -1,0 +1,91 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "st",
+      "click": "start"
+    },
+    {
+      "id": "c_st",
+      "checkpoint": "after_start"
+    },
+    {
+      "id": "wait",
+      "tick": 188
+    },
+    {
+      "id": "c_pl",
+      "checkpoint": "after_play"
+    },
+    {
+      "id": "w0",
+      "tick": 8
+    },
+    {
+      "id": "s0d",
+      "keydown": "Space"
+    },
+    {
+      "id": "s0u",
+      "keyup": "Space"
+    },
+    {
+      "id": "c_h0",
+      "checkpoint": "hit0"
+    },
+    {
+      "id": "wg",
+      "tick": 30
+    },
+    {
+      "id": "smd",
+      "keydown": "Space"
+    },
+    {
+      "id": "smu",
+      "keyup": "Space"
+    },
+    {
+      "id": "c_m",
+      "checkpoint": "after_miss"
+    },
+    {
+      "id": "w1",
+      "tick": 20
+    },
+    {
+      "id": "s1d",
+      "keydown": "Space"
+    },
+    {
+      "id": "s1u",
+      "keyup": "Space"
+    },
+    {
+      "id": "c_h1",
+      "checkpoint": "hit1"
+    },
+    {
+      "id": "w2",
+      "tick": 45
+    },
+    {
+      "id": "s2d",
+      "keydown": "Space"
+    },
+    {
+      "id": "s2u",
+      "keyup": "Space"
+    },
+    {
+      "id": "c_h2",
+      "checkpoint": "hit2"
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import {
   parseTaskCopy,
   packSides,
 } from '../src/scoreboard.mjs';
-import { scoreAttempt, SUITE_TASKS } from '../src/product-100.mjs';
+import { scoreAttempt, SUITE_TASKS, P1_TASKS } from '../src/product-100.mjs';
 
 function fakeReport(engineIds, taskIds, extra = {}) {
   const engines = {};
@@ -63,7 +63,7 @@ test('scoreboard view: one card per game, labeled engine summaries, extra engine
         sliceScores: [1],
         V: 1,
         A: 0.5,
-        D: id === 'p1-ready-run' ? undefined : 0.5,
+        D: 0.5,
         primary: 'CHECKPOINTS_OK',
         g0_ok: 1,
         looks_status: 'OK',
@@ -85,7 +85,7 @@ test('scoreboard view: one card per game, labeled engine summaries, extra engine
   assert.equal(view.engines[2].id, 'unity');
   assert.equal(view.engines[2].label, 'unity');
   assert.equal(view.games.length, 4);
-  assert.equal(view.games[0].id, 'p1-signal-desk');
+  assert.equal(view.games[0].id, P1_TASKS[0]);
   assert.ok(view.games.every((g) => Object.keys(g.scores).join(',') === 'onegame,godot,unity'));
   assert.equal(view.games[0].stills[0].shots.length, 3);
   assert.equal(view.games[0].metrics[0].values.unity, 1);
@@ -143,5 +143,5 @@ test('writeScoreboard emits index.html with N game cards from template', () => {
   assert.match(html, /套件总览/);
   assert.match(html, /1Game/);
   assert.match(html, /Godot/);
-  assert.ok(html.includes('id=\\"p1-signal-desk\\"') || html.includes('"id":"p1-signal-desk"'));
+  assert.ok(html.includes(`id=\\"${P1_TASKS[0]}\\"`) || html.includes(`"id":"${P1_TASKS[0]}"`));
 });

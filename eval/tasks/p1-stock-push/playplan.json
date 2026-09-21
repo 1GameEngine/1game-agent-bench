@@ -1,0 +1,95 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "kl",
+      "keydown": "ArrowLeft"
+    },
+    {
+      "id": "ul",
+      "keyup": "ArrowLeft"
+    },
+    {
+      "id": "c_bl",
+      "checkpoint": "blocked_left"
+    },
+    {
+      "id": "kr",
+      "keydown": "ArrowRight"
+    },
+    {
+      "id": "ur",
+      "keyup": "ArrowRight"
+    },
+    {
+      "id": "c_b0",
+      "checkpoint": "box0_goal"
+    },
+    {
+      "id": "kd",
+      "keydown": "ArrowDown"
+    },
+    {
+      "id": "ud",
+      "keyup": "ArrowDown"
+    },
+    {
+      "id": "c_bd",
+      "checkpoint": "blocked_down"
+    },
+    {
+      "id": "kl2",
+      "keydown": "ArrowLeft"
+    },
+    {
+      "id": "ul2",
+      "keyup": "ArrowLeft"
+    },
+    {
+      "id": "c_back",
+      "checkpoint": "after_back"
+    },
+    {
+      "id": "ku",
+      "keydown": "ArrowUp"
+    },
+    {
+      "id": "uu",
+      "keyup": "ArrowUp"
+    },
+    {
+      "id": "c_up",
+      "checkpoint": "after_up"
+    },
+    {
+      "id": "ku2",
+      "keydown": "ArrowUp"
+    },
+    {
+      "id": "uu2",
+      "keyup": "ArrowUp"
+    },
+    {
+      "id": "c_bu",
+      "checkpoint": "blocked_up"
+    },
+    {
+      "id": "kr2",
+      "keydown": "ArrowRight"
+    },
+    {
+      "id": "ur2",
+      "keyup": "ArrowRight"
+    },
+    {
+      "id": "c_b1",
+      "checkpoint": "box1_goal"
+    }
+  ]
+}

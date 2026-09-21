@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.p1-stock-push/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eval.schema_id",
+    "eval.schema_sha256",
+    "px",
+    "py",
+    "b0x",
+    "b0y",
+    "b1x",
+    "b1y",
+    "cleared"
+  ],
+  "properties": {
+    "eval.schema_id": {
+      "const": "eval.p1-stock-push/1"
+    },
+    "eval.schema_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "px": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "py": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "b0x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "b0y": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "b1x": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "b1y": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "cleared": {
+      "type": "boolean"
+    }
+  }
+}

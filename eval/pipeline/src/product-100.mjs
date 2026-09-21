@@ -1,13 +1,20 @@
 export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
 export const P0_TASKS = [];
 
-export const P1_TASKS = ['p1-signal-desk', 'p1-grid-scout', 'p1-ready-run'];
+export const P1_TASKS = ['p1-rail-desk', 'p1-stock-push', 'p1-beat-window'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 
 export const DEPTH_TASKS = {
-  'p1-signal-desk': ['chanA', 'chanB', 'chanC'],
-  'p1-grid-scout': ['cell0', 'cell1', 'cell2'],
+  'p1-rail-desk': ['t0', 't1', 't2'],
+  'p1-stock-push': ['goal0', 'goal1', 'cell_1_0'],
+  'p1-beat-window': ['note0', 'note1', 'note2'],
+};
+
+export const DEPTH_COVER = {
+  'p1-rail-desk': ['fired0', 'fired1', 'fired2'],
+  'p1-stock-push': ['box0_goal', 'box1_goal'],
+  'p1-beat-window': ['hit0', 'hit1', 'hit2'],
 };
 
 export const WEIGHTS = { M: 40, D: 10, V: 20, A: 30 };
@@ -178,6 +185,7 @@ export function scoreAttempt({
   G,
   sliceScores,
   negSliceScores,
+  sliceIds,
   V,
   A,
   D,
@@ -190,10 +198,19 @@ export function scoreAttempt({
 }) {
   const pos = mean(sliceScores?.length ? sliceScores : [0]);
   const neg = negSliceScores?.length ? mean(negSliceScores) : pos;
-  const M = quantize01((pos + neg) / 2);
+  const M = clamp01((pos + neg) / 2);
   const hasD = hasDepth(id);
-  let d = hasD ? D ?? 0 : 0;
-  if (hasD && D == null) d = 0;
+  const dLooks = hasD ? D ?? 0 : 0;
+  let dMech;
+  const cover = DEPTH_COVER[id] ?? [];
+  if (hasD && cover.length && sliceIds?.length) {
+    const byName = {};
+    sliceIds.forEach((name, i) => {
+      byName[name] = sliceScores?.[i] ?? 0;
+    });
+    dMech = mean(cover.map((name) => byName[name] ?? 0));
+  }
+  const d = hasD ? (dMech == null ? dLooks : 0.5 * dMech + 0.5 * dLooks) : 0;
   const product_100 = roundScore(taskScore100({ G: G ? 1 : 0, M, D: d, V: V ?? 0, A: A ?? 0, hasD }), 1);
   const row = {
     id,
@@ -201,14 +218,24 @@ export function scoreAttempt({
     primary,
     G: G ? 1 : 0,
     g0_ok: g0_ok ?? (G ? 1 : 0),
-    M,
+    M: roundScore(M, 3),
+    M_pos: roundScore(pos, 3),
+    M_neg: roundScore(neg, 3),
     V: V ?? 0,
     A: A ?? 0,
     product_100,
     looks_status: looks_status ?? 'SKIP',
     looks_source: looks_source ?? 'none',
+    slice_count: {
+      pos: sliceScores?.length ?? 0,
+      neg: negSliceScores?.length ?? 0,
+    },
   };
-  if (hasD) row.D = d;
+  if (hasD) {
+    row.D = roundScore(d, 3);
+    row.D_looks = dLooks;
+    if (dMech != null) row.D_mech = roundScore(dMech, 3);
+  }
   if (stills?.length) {
     row.stills = stills.map((s) => ({
       id: s.id,

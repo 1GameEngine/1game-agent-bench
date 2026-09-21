@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { P1_TASKS, loadP1Task } from '../src/p1-load.mjs';
+import { DEPTH_COVER, DEPTH_TASKS } from '../src/product-100.mjs';
 import { auditClosedPlayplan } from '../src/p1-closed.mjs';
 import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
@@ -19,6 +20,13 @@ test('P1 compare_tasks are 3 headline games', () => {
     assert.equal(b.task.scene.height, 720);
     assert.equal(auditClosedPlayplan(b.playplan, b.geometry).ok, true);
     assert.equal(auditClosedPlayplan(b.playplanNeg, b.geometry).ok, true);
+    assert.equal(b.task.judge, 'schema_strict');
+    for (const name of DEPTH_COVER[id]) {
+      assert.ok(b.checkpoint.slices[name], `${id} missing DEPTH_COVER slice ${name}`);
+    }
+    for (const name of DEPTH_TASKS[id]) {
+      assert.ok(b.geometry.regions[name], `${id} missing DEPTH_TASKS region ${name}`);
+    }
   }
 });
 

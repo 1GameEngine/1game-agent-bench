@@ -68,6 +68,63 @@ test('buildProduct100 withholds winner when looks unpaired', () => {
   assert.match(report.winner_sentence, /不可比/);
 });
 
+test('M is unquantized mean of pos and neg slices', () => {
+  const row = scoreAttempt({
+    id: 'p1-rail-desk',
+    engine: 'onegame',
+    G: 1,
+    sliceScores: [1, 1, 0],
+    negSliceScores: [1, 1],
+    V: 0,
+    A: 0,
+    D: 0,
+    primary: 'CHECKPOINT_FAIL',
+    g0_ok: 1,
+    looks_status: 'SKIP',
+    looks_source: 'none',
+  });
+  assert.equal(row.M_pos, 0.667);
+  assert.equal(row.M_neg, 1);
+  assert.equal(row.M, 0.833);
+  assert.equal(row.slice_count.pos, 3);
+  assert.equal(row.slice_count.neg, 2);
+});
+
+test('D blends named mechanical cover with looks D', () => {
+  const withIds = scoreAttempt({
+    id: 'p1-rail-desk',
+    engine: 'onegame',
+    G: 1,
+    sliceScores: [1, 0, 1, 0, 1],
+    sliceIds: ['init', 'fired0', 'fired1', 'after_arm', 'fired2'],
+    V: 0,
+    A: 0,
+    D: 1,
+    primary: 'CHECKPOINTS_OK',
+    g0_ok: 1,
+    looks_status: 'SKIP',
+    looks_source: 'none',
+  });
+  assert.equal(withIds.D_mech, 0.667);
+  assert.equal(withIds.D_looks, 1);
+  assert.equal(withIds.D, 0.833);
+  const noIds = scoreAttempt({
+    id: 'p1-rail-desk',
+    engine: 'godot',
+    G: 1,
+    sliceScores: [1, 0, 1],
+    V: 0,
+    A: 0,
+    D: 0.5,
+    primary: 'CHECKPOINTS_OK',
+    g0_ok: 1,
+    looks_status: 'SKIP',
+    looks_source: 'none',
+  });
+  assert.equal(noIds.D, 0.5);
+  assert.equal(noIds.D_mech, undefined);
+});
+
 test('window lock 1280x720; 320x180 stills rejected', () => {
   const w = 1280;
   const h = 720;

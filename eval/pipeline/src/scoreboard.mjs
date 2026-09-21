@@ -33,7 +33,11 @@ export const LOOKS_ZH = {
 export const METRIC_DEFS = [
   { key: 'G', label: '能跑起来 G' },
   { key: 'M', label: '机械对错 M' },
+  { key: 'M_pos', label: '正例切片', optional: true },
+  { key: 'M_neg', label: '负例切片', optional: true },
   { key: 'D', label: '深度 D', optional: true },
+  { key: 'D_mech', label: '机械深度', optional: true },
+  { key: 'D_looks', label: '观感深度', optional: true },
   { key: 'V', label: '能看清 V' },
   { key: 'A', label: '好看 A' },
   { key: 'product_100', label: '本题 S' },

@@ -54,7 +54,7 @@ test('stripInstruction drops 实现约束; gameplayView drops eval.*', () => {
 
 test('looks job prompt includes dump, not engine APIs', () => {
   const job = buildLooksJob({
-    taskId: 'p1-signal-desk',
+    taskId: 'p1-rail-desk',
     engine: 'godot',
     instruction: 'Toggle the lamp. ## 实现约束\nUse Sprite2D',
     geometry: { labels: { lamp: 'LAMP' }, regions: { lamp: { x: 0, y: 0, w: 10, h: 10 } } },
@@ -83,7 +83,7 @@ test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', asyn
       stills: [{ ok: true, path: '/tmp/missing-still.png', dump: { on: false } }],
       geometry: { regions: {} },
       instruction: 'lamp',
-      taskId: 'p1-signal-desk',
+      taskId: 'p1-rail-desk',
     });
     assert.equal(vis.looks_status, 'CAPTURE_FAIL');
     const tmp = path.join(os.tmpdir(), `looks-${process.pid}.png`);
@@ -92,7 +92,7 @@ test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', asyn
       stills: [{ ok: true, path: tmp, dump: { on: false } }],
       geometry: { regions: {} },
       instruction: 'lamp',
-      taskId: 'p1-signal-desk',
+      taskId: 'p1-rail-desk',
     });
     assert.equal(vis2.looks_status, 'SUBAGENT_UNAVAILABLE');
     assert.equal(vis2.V, 0);
@@ -142,7 +142,7 @@ test('looks-job worker scores stills when no external invoker', async () => {
       stills: [{ ok: true, path: tmp, dump: { on: false }, dump_ok: 1 }],
       geometry: { labels: { toggle: 'Toggle' }, regions: { toggle: { x: 440, y: 280, w: 400, h: 160 } } },
       instruction: 'lamp',
-      taskId: 'p1-signal-desk',
+      taskId: 'p1-rail-desk',
     });
     assert.equal(vis.looks_status, 'OK');
     assert.equal(vis.source, 'worker');
@@ -170,7 +170,7 @@ test('registered invoker scores V3 from dump match items', async () => {
       stills: [{ ok: true, path: tmp, dump: { on: true } }],
       geometry: { regions: {} },
       instruction: 'lamp',
-      taskId: 'p1-signal-desk',
+      taskId: 'p1-rail-desk',
     });
     assert.equal(vis.looks_status, 'OK');
     assert.equal(vis.source, 'subagent');
@@ -196,7 +196,7 @@ test('paired looks zeros both when one side has no stills', async () => {
     ),
   );
   const vis = await scorePairedLooks({
-    taskId: 'p1-signal-desk',
+    taskId: 'p1-rail-desk',
     instruction: 'lamp',
     geometry: { regions: {} },
     og: { G: 1, stills: [{ ok: true, path: png }] },

@@ -1,0 +1,178 @@
+{
+  "schema": "eval.checkpoint/1",
+  "select": "dump",
+  "compare": {
+    "mode": "schema_strict",
+    "extras": "fail"
+  },
+  "slices": {
+    "init": {
+      "power": false,
+      "track": 0,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        0,
+        0
+      ]
+    },
+    "after_power": {
+      "power": true,
+      "track": 0,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        0,
+        0
+      ]
+    },
+    "after_t1": {
+      "power": true,
+      "track": 1,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        0,
+        0
+      ]
+    },
+    "after_arm1": {
+      "power": true,
+      "track": 1,
+      "armed": [
+        false,
+        true,
+        false
+      ],
+      "shots": [
+        0,
+        0,
+        0
+      ]
+    },
+    "fired1": {
+      "power": true,
+      "track": 1,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        1,
+        0
+      ]
+    },
+    "after_t2": {
+      "power": true,
+      "track": 2,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        1,
+        0
+      ]
+    },
+    "after_arm2": {
+      "power": true,
+      "track": 2,
+      "armed": [
+        false,
+        false,
+        true
+      ],
+      "shots": [
+        0,
+        1,
+        0
+      ]
+    },
+    "fired2": {
+      "power": true,
+      "track": 2,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        1,
+        1
+      ]
+    },
+    "after_t0": {
+      "power": true,
+      "track": 0,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        1,
+        1
+      ]
+    },
+    "after_arm0": {
+      "power": true,
+      "track": 0,
+      "armed": [
+        true,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        1,
+        1
+      ]
+    },
+    "fired0": {
+      "power": true,
+      "track": 0,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        1,
+        1,
+        1
+      ]
+    },
+    "neg_final": {
+      "power": false,
+      "track": 2,
+      "armed": [
+        false,
+        false,
+        false
+      ],
+      "shots": [
+        0,
+        0,
+        0
+      ]
+    }
+  }
+}

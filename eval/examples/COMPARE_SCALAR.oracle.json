@@ -24,37 +24,37 @@
   },
   "tasks": [
     {
-      "id": "p1-signal-desk",
+      "id": "p1-rail-desk",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-signal-desk",
+      "id": "p1-rail-desk",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-grid-scout",
+      "id": "p1-stock-push",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-grid-scout",
+      "id": "p1-stock-push",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-ready-run",
+      "id": "p1-beat-window",
       "engine": "onegame",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-ready-run",
+      "id": "p1-beat-window",
       "engine": "godot",
       "primary": "CHECKPOINTS_OK",
       "g0_ok": 1

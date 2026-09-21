@@ -182,6 +182,7 @@ export function makeJob({ bundle, steps, stillsDir }) {
 export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
   const notes = [];
   const sliceScores = [];
+  const sliceIds = [];
   const stills = [];
   const err = events.find((e) => e.event === 'error');
   if (err) return { primary: err.code || 'BOOT_FAIL', notes: [err.message || JSON.stringify(err)], g0_ok: 0, sliceScores, stills };
@@ -197,6 +198,7 @@ export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
     const errs = v.ok && expected ? checkpointMatch(ev.dump, expected, bundle.checkpoint.compare, { isFinal }) : ['bad checkpoint'];
     const dumpOk = Boolean(expected) && v.ok && errs.length === 0;
     sliceScores.push(dumpOk ? 1 : 0);
+    sliceIds.push(ev.id);
     if (!dumpOk && primary === 'CHECKPOINTS_OK') {
       primary = expected ? (v.ok ? 'CHECKPOINT_FAIL' : v.code) : 'CHECKPOINT_FAIL';
       notes.push(...(expected && v.ok ? errs : v.notes ?? [`unknown ${ev.id}`]));
@@ -209,5 +211,5 @@ export function judgeGodotEvents(events, bundle, playplanKind, stillsDir) {
       stills.push({ id: ev.id, dump_ok: dumpOk ? 1 : 0, dump: ev.dump, ok: false, status: 'CAPTURE_FAIL' });
     }
   }
-  return { primary, notes, g0_ok: 1, playplanKind, sliceScores, stills };
+  return { primary, notes, g0_ok: 1, playplanKind, sliceScores, sliceIds, stills };
 }

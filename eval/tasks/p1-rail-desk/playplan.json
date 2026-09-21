@@ -1,0 +1,91 @@
+{
+  "schema": "eval.playplan/1",
+  "closed_set": true,
+  "post_ticks_after_input": 1,
+  "steps": [
+    {
+      "id": "cp0",
+      "checkpoint": "init"
+    },
+    {
+      "id": "pw",
+      "click": "power"
+    },
+    {
+      "id": "c_pw",
+      "checkpoint": "after_power"
+    },
+    {
+      "id": "t1",
+      "click": "t1"
+    },
+    {
+      "id": "c_t1",
+      "checkpoint": "after_t1"
+    },
+    {
+      "id": "a1",
+      "click": "arm"
+    },
+    {
+      "id": "c_a1",
+      "checkpoint": "after_arm1"
+    },
+    {
+      "id": "f1",
+      "click": "fire"
+    },
+    {
+      "id": "c_f1",
+      "checkpoint": "fired1"
+    },
+    {
+      "id": "t2",
+      "click": "t2"
+    },
+    {
+      "id": "c_t2",
+      "checkpoint": "after_t2"
+    },
+    {
+      "id": "a2",
+      "click": "arm"
+    },
+    {
+      "id": "c_a2",
+      "checkpoint": "after_arm2"
+    },
+    {
+      "id": "f2",
+      "click": "fire"
+    },
+    {
+      "id": "c_f2",
+      "checkpoint": "fired2"
+    },
+    {
+      "id": "t0",
+      "click": "t0"
+    },
+    {
+      "id": "c_t0",
+      "checkpoint": "after_t0"
+    },
+    {
+      "id": "a0",
+      "click": "arm"
+    },
+    {
+      "id": "c_a0",
+      "checkpoint": "after_arm0"
+    },
+    {
+      "id": "f0",
+      "click": "fire"
+    },
+    {
+      "id": "c_f0",
+      "checkpoint": "fired0"
+    }
+  ]
+}

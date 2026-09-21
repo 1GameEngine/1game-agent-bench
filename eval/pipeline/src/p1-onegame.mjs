@@ -62,6 +62,7 @@ function applyStep(cwd, step, geometry) {
 export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   const notes = [];
   const sliceScores = [];
+  const sliceIds = [];
   const stills = [];
   let primary = 'CHECKPOINTS_OK';
   const created = createRecord(gameDir);
@@ -95,6 +96,7 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
       const errs = v.ok && expected ? checkpointMatch(proj.dump, expected) : ['invalid dump'];
       const dumpOk = v.ok && expected && errs.length === 0;
       sliceScores.push(dumpOk ? 1 : 0);
+      sliceIds.push(step.checkpoint);
       if (!dumpOk && primary === 'CHECKPOINTS_OK') {
         primary = v.ok ? 'CHECKPOINT_FAIL' : v.code;
         notes.push(...(v.ok ? errs : v.notes));
@@ -117,5 +119,5 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
       break;
     }
   }
-  return { primary, g0_ok: 1, notes, sliceScores, stills };
+  return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
 }

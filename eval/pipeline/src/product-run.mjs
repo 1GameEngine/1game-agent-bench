@@ -152,6 +152,7 @@ export async function mechP1Onegame(taskId, runId) {
     bundle,
     G,
     sliceScores: pos.sliceScores,
+    sliceIds: pos.sliceIds,
     negSliceScores: neg.sliceScores,
     stills: pos.stills,
     primary: hyg.ok ? merged.primary : 'HYGIENE_FAIL',
@@ -217,6 +218,7 @@ export async function mechP1Godot(taskId, runId) {
     bundle,
     G: pos.g0_ok === 1,
     sliceScores: pos.sliceScores,
+    sliceIds: pos.sliceIds,
     negSliceScores: neg.sliceScores,
     stills: pos.stills,
     primary: merged.primary,
@@ -236,6 +238,7 @@ function rowFromMech(taskId, engine, mech, vis) {
     G: mech.G,
     sliceScores: mech.sliceScores,
     negSliceScores: mech.negSliceScores,
+    sliceIds: mech.sliceIds,
     V: vis.V,
     A: vis.A,
     D: vis.D,
@@ -299,6 +302,7 @@ function serializeMech(mech) {
   return {
     G: Boolean(mech.G),
     sliceScores: mech.sliceScores ?? [],
+    sliceIds: mech.sliceIds ?? [],
     negSliceScores: mech.negSliceScores,
     stills: (mech.stills ?? []).map((s) => ({
       id: s.id,
