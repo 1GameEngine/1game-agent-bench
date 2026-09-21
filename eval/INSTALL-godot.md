@@ -1,6 +1,6 @@
-# Godot 4.4.x（dump + 1280×720 静帧）
+# Godot 4.4.x（P0 dump 夹具 + P1 30fps traces 抽帧）
 
-机械正确性仍跑 **headless dump**。场景、点击、观感视窗都是 **1280×720**。EvalRunner 从专用 SubViewport 出 PNG，避免 root/Dummy 空纹理。Xvfb 单帧（`--screen 1280x720`），不是录像。
+P0 夹具机械正确性仍跑 **headless dump**。Headline 三题改为 **submitted traces 30fps 重放抽帧**（`frame_dt=0.033`），隐藏量表打 M/D/V/A。场景、点击、观感视窗都是 **1280×720**。EvalRunner 从专用 SubViewport 出 PNG。Xvfb 单帧（`--screen 1280x720`），不是录像。
 
 两边都 `G=1` 的题若只有一侧有静帧，V/A 成对记 `INCOMPARABLE_VISUAL`（两边都 0），套件 `comparable=false`，不得宣布胜者。
 
@@ -26,7 +26,7 @@ eval/tools/godot/Godot_v4.4.1-stable_linux.x86_64 --version
 
 ## 时钟
 
-`dt_ms = 16`。Harness 每次 tick 对场景树调用 `_process(0.016)`。禁止 16.666 与 16 混用，禁止墙钟 `wait`。
+`dt_ms = 16` 只约束 P0 夹具。Harness 对 P0 每次 tick 调用 `_process(0.016)`。Headline traces 使用 `_process(0.033)`（30fps）。禁止墙钟 `wait`。
 
 点击：同一仿真步注入 `InputEventMouseButton` press+release，然后 `post_ticks: 1`。
 

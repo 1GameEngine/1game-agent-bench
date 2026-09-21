@@ -8,6 +8,17 @@ import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { captureOnegameStill } from './capture.mjs';
 import { loadArgvRules } from './load.mjs';
 import { allowedClickCenters } from './argv-audit.mjs';
+import {
+  FRAME_MS,
+  auditTrace,
+  capFrames,
+  eventsByFrame,
+  missingRequiredScenarios,
+  pickLooksStills,
+  readTraces,
+  sampleEvery,
+  scenarioSet,
+} from './p1-trace.mjs';
 
 function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
@@ -57,6 +68,41 @@ function applyStep(cwd, step, geometry) {
     return { ok: proc.status === 0, proc };
   }
   return { ok: false, proc: { stdout: 'ACTION_NOT_IN_CLOSED_SET' } };
+}
+
+function tickFrames(cwd, n) {
+  if (n < 1) return { ok: true };
+  const argv = ['1gameplay', 'step', RECORD_REL, '--ms', String(FRAME_MS)];
+  if (n > 1) argv.push('--repeat', String(n));
+  const proc = gp(cwd, argv);
+  return { ok: proc.status === 0, proc };
+}
+
+function applyTraceEvent(cwd, ev) {
+  if (ev.type === 'click') {
+    const coord = `${Math.round(Number(ev.x))},${Math.round(Number(ev.y))}`;
+    const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--click', coord]);
+    return { ok: proc.status === 0, proc };
+  }
+  const event = JSON.stringify({ type: ev.type, data: { code: ev.code } });
+  const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--ms', '1', '--event', event]);
+  return { ok: proc.status === 0, proc };
+}
+
+function nextBarrier(i, n, every, by) {
+  if (shouldSample(i, n, every)) return i + 1;
+  let stop = n;
+  const nextSample = Math.ceil((i + 1) / every) * every;
+  if (nextSample < stop) stop = nextSample;
+  for (const frame of by.keys()) {
+    if (frame > i && frame < stop) stop = frame;
+  }
+  if (n - 1 > i && n - 1 < stop) stop = n - 1;
+  return Math.max(i + 1, stop);
+}
+
+function shouldSample(i, n, every) {
+  return i % every === 0 || i === n - 1;
 }
 
 export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
@@ -120,4 +166,113 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
     }
   }
   return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
+}
+
+export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
+  const notes = [];
+  const stills = [];
+  const dir = tracesDir ?? path.join(gameDir, 'demo_outputs');
+  const submitted = readTraces(dir);
+  const valid = submitted.filter((t) => t.audit.ok);
+  if (!submitted.length) {
+    return {
+      primary: 'TRACE_MISSING',
+      g0_ok: 0,
+      notes: ['no submitted traces'],
+      stills,
+      traces: submitted,
+      scenarios: [],
+      missing_scenarios: missingRequiredScenarios([]),
+    };
+  }
+  if (!valid.length) {
+    return {
+      primary: 'TRACE_INVALID',
+      g0_ok: 0,
+      notes: submitted.flatMap((t) => t.audit.issues.map((i) => `${t.file}: ${i}`)).slice(0, 12),
+      stills,
+      traces: submitted,
+      scenarios: scenarioSet(submitted),
+      missing_scenarios: missingRequiredScenarios(submitted),
+    };
+  }
+
+  const created = createRecord(gameDir);
+  if (created.status !== 0) {
+    const msg = created.stdout + created.stderr;
+    if (/bindStore/i.test(msg)) {
+      return { primary: 'BIND_FAIL', g0_ok: 0, notes: [msg.slice(0, 300)], stills, traces: submitted };
+    }
+    return { primary: 'BUILD_FAIL', g0_ok: 0, notes: [msg.slice(0, 300)], stills, traces: submitted };
+  }
+  const q0 = queryStore(gameDir);
+  if (q0.store.empty) {
+    return { primary: 'BIND_FAIL', g0_ok: 0, notes: ['BINDSTORE_EMPTY'], stills, traces: submitted };
+  }
+
+  const rules = loadArgvRules();
+  const every = sampleEvery();
+  let primary = 'TRACE_OK';
+
+  for (const item of valid) {
+    const boot = createRecord(gameDir);
+    if (boot.status !== 0) {
+      primary = 'BOOT_FAIL';
+      notes.push(`replay create failed ${item.file}`);
+      break;
+    }
+    const n = capFrames(item.trace.duration_frames);
+    const by = eventsByFrame(item.trace);
+    let i = 0;
+    while (i < n) {
+      const evs = by.get(i) ?? [];
+      for (const ev of evs) {
+        const applied = applyTraceEvent(gameDir, ev);
+        if (!applied.ok) {
+          primary = 'TRACE_REPLAY_FAIL';
+          notes.push(`${item.trace.scenario} frame ${i} ${ev.type}`);
+          break;
+        }
+      }
+      if (primary !== 'TRACE_OK') break;
+      const stop = nextBarrier(i, n, every, by);
+      const run = Math.max(1, stop - i);
+      const ticked = tickFrames(gameDir, run);
+      if (!ticked.ok) {
+        primary = 'TRACE_REPLAY_FAIL';
+        notes.push(`${item.trace.scenario} tick ${i}+${run}`);
+        break;
+      }
+      const last = i + run - 1;
+      if (stillsDir && shouldSample(last, n, every)) {
+        const id = `${item.trace.scenario}_f${last}`;
+        const cap = captureOnegameStill({
+          gameDir,
+          outPng: path.join(stillsDir, `${id}.png`),
+          rules,
+          allowedClicks: [],
+        });
+        stills.push({
+          id,
+          dump_ok: 1,
+          dump: { scenario: item.trace.scenario, frame: last },
+          ...cap,
+        });
+      }
+      i += run;
+    }
+    if (primary !== 'TRACE_OK') break;
+  }
+
+  const looks = pickLooksStills(stills);
+  return {
+    primary,
+    g0_ok: 1,
+    notes,
+    stills: looks,
+    stills_all: stills,
+    traces: submitted,
+    scenarios: scenarioSet(valid),
+    missing_scenarios: missingRequiredScenarios(valid),
+  };
 }

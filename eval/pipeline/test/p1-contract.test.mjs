@@ -2,30 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { P1_TASKS, loadP1Task } from '../src/p1-load.mjs';
-import { DEPTH_COVER, DEPTH_TASKS } from '../src/product-100.mjs';
-import { auditClosedPlayplan } from '../src/p1-closed.mjs';
+import { auditTrace, missingRequiredScenarios, readTraces, REQUIRED_SCENARIOS } from '../src/p1-trace.mjs';
+import { applyScenarioCap } from '../src/rubric.mjs';
 import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
+import { oracleTraces } from '../src/paths.mjs';
 
-test('P1 compare_tasks are 3 headline games', () => {
+test('P1 compare_tasks are 3 headline games with hidden rubric and traces', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
   assert.equal(P1_TASKS.length, 3);
+  assert.equal(suite.replay.fps, 30);
+  assert.equal(suite.replay.traces, 'submitted');
   for (const id of P1_TASKS) {
     const b = loadP1Task(id);
     assert.equal(b.task.scene.width, 1280);
     assert.equal(b.task.scene.height, 720);
-    assert.equal(auditClosedPlayplan(b.playplan, b.geometry).ok, true);
-    assert.equal(auditClosedPlayplan(b.playplanNeg, b.geometry).ok, true);
-    assert.equal(b.task.judge, 'schema_strict');
-    for (const name of DEPTH_COVER[id]) {
-      assert.ok(b.checkpoint.slices[name], `${id} missing DEPTH_COVER slice ${name}`);
-    }
-    for (const name of DEPTH_TASKS[id]) {
-      assert.ok(b.geometry.regions[name], `${id} missing DEPTH_TASKS region ${name}`);
+    assert.equal(b.task.judge, 'rubric_replay');
+    assert.equal(b.task.traces, 'submitted');
+    assert.equal(b.rubric.score_formula, 'G * (40*M + 10*D + 20*V + 30*A)');
+    assert.ok(b.rubric.requirements.length >= 8);
+    for (const engine of ['onegame', 'godot']) {
+      const traces = readTraces(oracleTraces(id, engine));
+      assert.equal(traces.length, 4);
+      assert.equal(traces.every((t) => t.audit.ok), true);
+      assert.deepEqual(missingRequiredScenarios(traces), []);
     }
   }
 });
@@ -43,7 +47,7 @@ test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {
   const report = buildCompareScalar({
     runId: 't',
     attempts: [
-      { id: 'p1-a', engine: 'onegame', primary: 'CHECKPOINTS_OK', g0_ok: 1 },
+      { id: 'p1-a', engine: 'onegame', primary: 'TRACE_OK', g0_ok: 1 },
       { id: 'p1-a', engine: 'godot', primary: 'BOOT_FAIL', g0_ok: 0 },
     ],
   });
@@ -54,4 +58,13 @@ test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {
   assert.equal(report.winner, false);
   assert.ok(!('overall' in report));
   assert.throws(() => assertNoForbiddenScoreKeys({ overall: 1 }));
+});
+
+test('missing required scenarios cap M and D', () => {
+  const traces = [{ trace: { scenario: 'intro' } }];
+  const capped = applyScenarioCap({ M: 1, D: 1, V: 1, A: 1 }, traces);
+  assert.equal(capped.M, 0.5);
+  assert.equal(capped.D, 0.5);
+  assert.deepEqual(capped.missing_scenarios, REQUIRED_SCENARIOS.filter((s) => s !== 'intro'));
+  assert.equal(auditTrace({ schema: 'eval.trace/1' }).ok, false);
 });

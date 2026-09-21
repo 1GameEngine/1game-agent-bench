@@ -3,8 +3,8 @@
 Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 强制约定：
 
 1. Builder 工作区根 = `work/<runId>/game`，**不要**把 `eval/` add 进同一个 Cursor workspace。
-2. Judge 是评测仓里的 **另一个 Node 进程**，用绝对路径读 checkpoint。
-3. 不要把 checkpoint / playplan 复制进 `game/`。
+2. Judge 是评测仓里的 **另一个 Node 进程**。Headline 机械分来自 traces 重放抽帧 + 隐藏量表，不是 screenshot 当金标。
+3. 不要把 rubric / 官方 traces 当作 Builder 可见答案塞进 `game/`（oracle 验收除外）。
 4. 禁止 `1game-skill activate --global`。
 5. 下一题新 `runId`，禁止跨任务复用未校验 pin 的 `node_modules`。
 6. 不要求 Docker/user namespace（可选加固，非 P0 验收项）。
@@ -19,6 +19,6 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
-观感（好看 / 能否看清 / 静帧是否对得上 dump）走 **独立 looks-job**，角色不是 Capture，也不是机械 Judge。机械正确性仍只认 dump/checkpoint。**跑分必须由真实 looks subagent 写 `looks-verdict.json`（或 `EVAL_LOOKS_CMD` / 注册 invoker）**，`looks_source=subagent` 才可比。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
+观感与机械（M/D/V/A）走 **同一套 looks-job 隐藏量表**，输入是 traces 重放抽帧。**跑分必须由真实 looks subagent 写 `looks-verdict.json`**，`looks_source=subagent` 才可比。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
 
-两引擎都 `G=1` 时，静帧必须成对且均为 **1280×720**（与题面同一坐标系）；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。
+两引擎都 `G=1` 时，抽帧必须成对且均为 **1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

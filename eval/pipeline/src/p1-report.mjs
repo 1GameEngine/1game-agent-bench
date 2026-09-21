@@ -1,7 +1,7 @@
 import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
 
 export function buildCompareScalar({ runId, attempts }) {
-  const checkpoints_ok = attempts.filter((a) => a.primary === 'CHECKPOINTS_OK').length;
+  const checkpoints_ok = attempts.filter((a) => a.primary === 'TRACE_OK' || a.primary === 'CHECKPOINTS_OK').length;
   const g0_ok = attempts.filter((a) => a.g0_ok === 1).length;
   const report = {
     schema: 'eval.compare-scalar/1',
@@ -10,8 +10,7 @@ export function buildCompareScalar({ runId, attempts }) {
     comparable: true,
     winner: false,
     notice:
-      '过程指标：COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。',
-    winner: false,
+      '过程指标：COMPARE_SCALAR = TRACE_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。',
     checkpoints_ok,
     attempts: attempts.length,
     headline: `${checkpoints_ok}/${attempts.length}`,
@@ -38,7 +37,7 @@ export function buildCompareScalar({ runId, attempts }) {
 
 function summarize(rows) {
   return {
-    checkpoints_ok: rows.filter((a) => a.primary === 'CHECKPOINTS_OK').length,
+    checkpoints_ok: rows.filter((a) => a.primary === 'TRACE_OK' || a.primary === 'CHECKPOINTS_OK').length,
     attempts: rows.length,
     g0_ok: rows.filter((a) => a.g0_ok === 1).length,
   };

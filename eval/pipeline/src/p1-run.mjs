@@ -3,18 +3,11 @@ import path from 'node:path';
 import { WORK_DIR, oracleGodot } from './paths.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { P1_TASKS, loadP1Task } from './p1-load.mjs';
-import { runOnegamePlayplan } from './p1-onegame.mjs';
-import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
+import { runOnegameTraces } from './p1-onegame.mjs';
+import { stageGodotProject, runGodotJob, makeTraceJob, judgeTraceEvents } from './p1-godot.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { writeReport } from './report.mjs';
-
-function mergePlanResults(pos, neg) {
-  if (pos.g0_ok !== 1) return pos;
-  if (neg.g0_ok !== 1) return neg;
-  if (pos.primary !== 'CHECKPOINTS_OK') return pos;
-  if (neg.primary !== 'CHECKPOINTS_OK') return neg;
-  return { primary: 'CHECKPOINTS_OK', g0_ok: 1, notes: [] };
-}
+import { readTraces } from './p1-trace.mjs';
 
 export function runP1OnegameTask(taskId, runId) {
   const bundle = loadP1Task(taskId);
@@ -24,9 +17,8 @@ export function runP1OnegameTask(taskId, runId) {
     instruction: bundle.instruction,
     oracle: true,
   });
-  const pos = runOnegamePlayplan({ gameDir: boot.gameDir, bundle, steps: bundle.playplan.steps });
-  const neg = runOnegamePlayplan({ gameDir: boot.gameDir, bundle, steps: bundle.playplanNeg.steps });
-  return { id: taskId, engine: 'onegame', ...mergePlanResults(pos, neg), pos, neg };
+  const replay = runOnegameTraces({ gameDir: boot.gameDir });
+  return { id: taskId, engine: 'onegame', primary: replay.primary, g0_ok: replay.g0_ok, notes: replay.notes };
 }
 
 export function runP1GodotTask(taskId, runId) {
@@ -40,19 +32,19 @@ export function runP1GodotTask(taskId, runId) {
   if (staged.leak.length) return { id: taskId, engine: 'godot', primary: 'HARNESS_LEAK', g0_ok: 0, notes: staged.leak };
 
   const outDir = path.join(WORK_DIR, `${runId}-gd`);
-  const posJob = runGodotJob({
+  const traces = readTraces(path.join(staged.dest, 'demo_outputs'));
+  const job = runGodotJob({
     projectDir: staged.dest,
-    job: makeJob({ bundle, steps: bundle.playplan.steps }),
-    outPath: path.join(outDir, 'pos.jsonl'),
+    job: makeTraceJob({ traces }),
+    outPath: path.join(outDir, 'traces.jsonl'),
+    timeoutMs: 180_000,
   });
-  const pos = judgeGodotEvents(posJob.events, bundle, 'pos');
-  const negJob = runGodotJob({
-    projectDir: staged.dest,
-    job: makeJob({ bundle, steps: bundle.playplanNeg.steps }),
-    outPath: path.join(outDir, 'neg.jsonl'),
-  });
-  const neg = judgeGodotEvents(negJob.events, bundle, 'neg');
-  return { id: taskId, engine: 'godot', ...mergePlanResults(pos, neg), pos, neg };
+  const judged = judgeTraceEvents(job.events || []);
+  if (job.ok === false) {
+    judged.primary = job.code || judged.primary || 'BOOT_FAIL';
+    judged.notes = [...(judged.notes ?? []), ...(job.notes ?? [])];
+  }
+  return { id: taskId, engine: 'godot', primary: judged.primary, g0_ok: judged.g0_ok, notes: judged.notes };
 }
 
 export function runP1Compare(suiteRunId = `p1-${Date.now()}`) {

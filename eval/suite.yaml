@@ -5,6 +5,11 @@ clock:
   dt_ms: 16
   wait_means: N_ticks
   max_dt_ms: 16
+replay:
+  fps: 30
+  traces: submitted
+  sample_fps: 2
+  max_demo_seconds: 20
 physics: forbidden
 rng: forbidden
 engines:
@@ -17,13 +22,13 @@ engines:
     inject: EvalProbe
 tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
 compare_tasks:
-  - p1-rail-desk
-  - p1-stock-push
-  - p1-beat-window
+  - p1-night-stall
+  - p1-vault-crawl
+  - p1-chart-rush
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden
   product_100: required
   headline: product_100
   looks: subagent
-  looks_items: [V1, V2, V3, V4, A1, A2, A3, A4, D1]
+  rubric: hidden

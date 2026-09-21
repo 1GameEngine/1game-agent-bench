@@ -1,0 +1,81 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "fail",
+  "duration_frames": 50,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 2,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 3,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 8,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 9,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 14,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 15,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 20,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 21,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 26,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 27,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 32,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 33,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 38,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 39,
+      "type": "keyup",
+      "code": "ArrowDown"
+    }
+  ]
+}

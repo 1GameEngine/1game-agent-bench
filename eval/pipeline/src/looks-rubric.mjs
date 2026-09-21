@@ -93,20 +93,21 @@ export function quantizeLooks(x) {
   return 0;
 }
 
-export function parseLooksVerdict(text) {
+export function parseLooksVerdict(text, rubric) {
   const raw = String(text ?? '');
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('no JSON object in looks verdict');
   const data = JSON.parse(raw.slice(start, end + 1));
   const scores = data.scores && typeof data.scores === 'object' ? data.scores : data;
-  return { scores: normalizeLooksScores(scores), raw: data };
+  return { scores: normalizeLooksScores(scores, rubric), raw: data };
 }
 
-export function normalizeLooksScores(scores) {
+export function normalizeLooksScores(scores, rubric) {
+  const ids = rubric?.requirements?.length ? rubric.requirements.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
   const out = {};
-  for (const item of LOOKS_ITEMS) {
-    out[item.id] = quantizeLooks(scores?.[item.id]);
+  for (const id of ids) {
+    out[id] = quantizeLooks(scores?.[id]);
   }
   return out;
 }
@@ -129,32 +130,32 @@ function avg(xs) {
 export function buildLooksUserPrompt(job) {
   const frames = (job.stills ?? []).map((s, i) => {
     const dump = JSON.stringify(s.dump ?? {}, null, 0);
-    return `Frame ${i + 1}: freeze_id=${s.id}\nDump for this freeze: ${dump}\nImage file: ${s.path}`;
+    return `Frame ${i + 1}: freeze_id=${s.id}\nObserved play tag: ${dump}\nImage file: ${s.path}`;
   });
-  const labels = job.labels && Object.keys(job.labels).length ? JSON.stringify(job.labels) : '{}';
-  const regions = job.regions && Object.keys(job.regions).length ? JSON.stringify(job.regions) : '{}';
-  const variants = job.variant_regions?.length ? job.variant_regions.join(', ') : '(none — skip D1 or score 1)';
-  const reqs = LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`).join('\n');
+  const rubricReqs = job.rubric?.requirements ?? [];
+  const reqs = (
+    rubricReqs.length
+      ? rubricReqs.map((i) => `- ${i.id}: ${i.description}`)
+      : LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`)
+  ).join('\n');
+  const ids = rubricReqs.length ? rubricReqs.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
+  const shape = `{${ids.map((id) => `"${id}":0`).join(',')}}`;
   return [
-    'You are a strict but fair still-frame game evaluator. Score only what is visible in the attached 1280x720 stills.',
+    'You are a strict but fair evaluator of observed play. Score only what is visible in the attached 1280x720 replay stills.',
     'The window and gameplay are 1280x720. Score only those pixels.',
     'Do not name engines or widget APIs. Do not compare two engines. Score this submission alone.',
-    'Use only 0, 0.5, or 1 per item.',
+    'Use only 0, 0.5, or 1 per item. Mechanical items (M*) must be evidenced by the stills, not by guessing hidden state.',
     '',
     'Task instruction (playable spec only):',
     job.instruction || '(none)',
     '',
-    `Labels: ${labels}`,
-    `Geometry rectangles: ${regions}`,
-    `Variant regions for D1: ${variants}`,
-    '',
     frames.join('\n\n'),
     '',
-    'Requirements:',
+    'Hidden rubric requirements:',
     reqs,
     '',
     'Return JSON only, shape:',
-    '{"scores":{"V1":0,"V2":0,"V3":0,"V4":0,"A1":0,"A2":0,"A3":0,"A4":0,"D1":0},"rationales":{"V3":"<one sentence>"}}',
+    `{"scores":${shape},"rationales":{"${ids[0] || 'M1'}":"<one sentence>"}}`,
   ].join('\n');
 }
 

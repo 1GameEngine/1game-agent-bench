@@ -1,9 +1,0 @@
-id: p1-beat-window
-tier: P1
-engines: [onegame, godot]
-entry: src/game.tsx
-scene: { count: 1, width: 1280, height: 720 }
-schema: dump.schema.json
-judge: schema_strict
-rng: forbidden
-physics: forbidden

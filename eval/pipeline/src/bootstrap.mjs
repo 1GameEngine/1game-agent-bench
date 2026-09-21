@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { PIN, REQUIRED_ONEGAME, gameDir as gameDirFor, oracleGame } from './paths.mjs';
+import { PIN, REQUIRED_ONEGAME, gameDir as gameDirFor, oracleGame, oracleTraces } from './paths.mjs';
 import { EvalError } from './util.mjs';
 import { execFileOk, whichPnpm } from './exec.mjs';
 
@@ -124,6 +124,10 @@ export function bootstrap({ taskId, runId, instruction, oracle = false, replaceE
   if (oracle) {
     const src = oracleGame(taskId);
     fs.copyFileSync(src, path.join(cwd, 'src', 'game.tsx'));
+    const traces = oracleTraces(taskId, 'onegame');
+    if (fs.existsSync(traces)) {
+      fs.cpSync(traces, path.join(cwd, 'demo_outputs'), { recursive: true });
+    }
   }
   return { gameDir: cwd };
 }

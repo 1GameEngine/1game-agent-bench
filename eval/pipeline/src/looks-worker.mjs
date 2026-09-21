@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { decodePng } from './png-nn.mjs';
 import { aggregateLooks, gameplayView, quantizeLooks } from './looks-rubric.mjs';
+import { aggregateRubric } from './rubric.mjs';
 
 function quantKey(r, g, b) {
   return `${r >> 4},${g >> 4},${b >> 4}`;
@@ -144,6 +145,13 @@ export function scoreLooksWorker(job, stills) {
   const avgItems = {};
   for (const id of ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1']) {
     avgItems[id] = quantizeLooks(itemSets.reduce((a, it) => a + (it[id] ?? 0), 0) / itemSets.length);
+  }
+  if (job.rubric?.requirements?.length) {
+    const fill = {};
+    const mark = quantizeLooks((avgItems.V1 + avgItems.A1) / 2);
+    for (const req of job.rubric.requirements) fill[req.id] = mark;
+    const agg = aggregateRubric(fill, job.rubric);
+    return { ...agg, looks_status: 'OK', source: 'worker', looks_runner: 'looks-job-worker' };
   }
   const agg = aggregateLooks(avgItems, { hasDepth });
   return { ...agg, looks_status: 'OK', source: 'worker', looks_runner: 'looks-job-worker' };

@@ -38,3 +38,10 @@ export function oracleGame(taskId) {
 export function oracleGodot(taskId) {
   return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'godot');
 }
+
+export function oracleTraces(taskId, engine) {
+  if (engine === 'godot') {
+    return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'godot', 'demo_outputs');
+  }
+  return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'onegame', 'demo_outputs');
+}

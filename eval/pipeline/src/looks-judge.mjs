@@ -12,6 +12,7 @@ import {
 } from './looks-rubric.mjs';
 import { heuristicDepth, heuristicFrame, round01, average01 } from './looks.mjs';
 import { scoreLooksWorker } from './looks-worker.mjs';
+import { aggregateRubric, emptyRubricScores } from './rubric.mjs';
 
 let registeredInvoker = null;
 
@@ -33,6 +34,7 @@ export function buildLooksJob({
   stills,
   variant_regions,
   jobDir,
+  rubric,
 }) {
   const frames = (stills ?? []).map((s) => ({
     id: s.id,
@@ -48,6 +50,7 @@ export function buildLooksJob({
     regions: geometry?.regions ?? {},
     variant_regions: variant_regions ?? [],
     stills: frames,
+    rubric: rubric ?? undefined,
   };
   const banned = promptHasBannedWords(buildLooksUserPrompt(job));
   if (banned.length) {
@@ -67,7 +70,27 @@ export function buildLooksJob({
   return job;
 }
 
+function heuristicFromRubric(job, stills) {
+  const vs = [];
+  for (const s of stills) {
+    const png = s.png ?? (s.path && fs.existsSync(s.path) ? fs.readFileSync(s.path) : null);
+    if (!png) continue;
+    const h = heuristicFrame({ png, geometry: { regions: job.regions } });
+    vs.push((h.V + h.A) / 2);
+  }
+  if (!vs.length) {
+    return { ...emptyRubricScores(job.rubric), looks_status: 'CAPTURE_FAIL', source: 'heuristic' };
+  }
+  const mean = round01(average01(vs));
+  const mark = mean >= 0.75 ? 1 : mean >= 0.25 ? 0.5 : 0;
+  const scores = {};
+  for (const req of job.rubric?.requirements ?? []) scores[req.id] = mark;
+  const agg = aggregateRubric(scores, job.rubric);
+  return { ...agg, looks_status: 'OK', source: 'heuristic' };
+}
+
 function heuristicJob(job, stills) {
+  if (job.rubric?.requirements?.length) return heuristicFromRubric(job, stills);
   const vs = [];
   const as = [];
   const ds = [];
@@ -136,6 +159,8 @@ export async function judgeLooksJob(job, stills) {
       return {
         V: 0,
         A: 0,
+        M: 0,
+        D: 0,
         D_visual: hasDepth ? 0 : undefined,
         looks_status: 'SUBAGENT_UNAVAILABLE',
         source: 'subagent',
@@ -143,9 +168,11 @@ export async function judgeLooksJob(job, stills) {
     }
     const parsed =
       typeof text === 'object'
-        ? { scores: normalizeLooksScores(text.scores ?? text) }
-        : parseLooksVerdict(text);
-    const agg = aggregateLooks(parsed.scores, { hasDepth });
+        ? { scores: normalizeLooksScores(text.scores ?? text, job.rubric) }
+        : parseLooksVerdict(text, job.rubric);
+    const agg = job.rubric?.requirements?.length
+      ? aggregateRubric(parsed.scores, job.rubric)
+      : aggregateLooks(parsed.scores, { hasDepth });
     if (job.verdictPath) {
       fs.writeFileSync(job.verdictPath, `${JSON.stringify({ scores: parsed.scores }, null, 2)}\n`);
     }
@@ -154,6 +181,8 @@ export async function judgeLooksJob(job, stills) {
     return {
       V: 0,
       A: 0,
+      M: 0,
+      D: 0,
       D_visual: hasDepth ? 0 : undefined,
       looks_status: 'SUBAGENT_FAIL',
       source: 'subagent',
@@ -170,13 +199,15 @@ export async function scoreVisuals({
   taskId,
   engine,
   jobDir,
+  rubric,
 }) {
   const okStills = (stills ?? []).filter((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))));
   if (!okStills.length) {
     return {
       V: 0,
       A: 0,
-      D: depthKeys ? 0 : undefined,
+      M: 0,
+      D: 0,
       looks_status: 'CAPTURE_FAIL',
       source: 'none',
     };
@@ -189,8 +220,8 @@ export async function scoreVisuals({
     stills: okStills,
     variant_regions: depthKeys,
     jobDir,
+    rubric,
   });
   const vis = await judgeLooksJob(job, okStills);
-  if (depthKeys) vis.D_visual = vis.D_visual ?? 0;
   return vis;
 }

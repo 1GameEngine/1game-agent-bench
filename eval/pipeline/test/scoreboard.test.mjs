@@ -36,6 +36,8 @@ test('parseTaskCopy reads 标题 and first body line', () => {
   const copy = parseTaskCopy('标题：信号台\n\n做一个控制室微游戏。\n\n玩家体验：\n- x', 'p1-x');
   assert.equal(copy.title, '信号台');
   assert.match(copy.blurb, /控制室/);
+  const md = parseTaskCopy('# 夜市摊\n\n做一个摊位游戏。', 'p1-night-stall');
+  assert.equal(md.title, '夜市摊');
 });
 
 test('packSides understands og/gd and extra engine keys', () => {

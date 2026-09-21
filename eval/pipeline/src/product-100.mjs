@@ -1,26 +1,14 @@
 export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
 export const P0_TASKS = [];
 
-export const P1_TASKS = ['p1-rail-desk', 'p1-stock-push', 'p1-beat-window'];
+export const P1_TASKS = ['p1-night-stall', 'p1-vault-crawl', 'p1-chart-rush'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 
-export const DEPTH_TASKS = {
-  'p1-rail-desk': ['t0', 't1', 't2'],
-  'p1-stock-push': ['goal0', 'goal1', 'cell_1_0'],
-  'p1-beat-window': ['note0', 'note1', 'note2'],
-};
-
-export const DEPTH_COVER = {
-  'p1-rail-desk': ['fired0', 'fired1', 'fired2'],
-  'p1-stock-push': ['box0_goal', 'box1_goal'],
-  'p1-beat-window': ['hit0', 'hit1', 'hit2'],
-};
-
 export const WEIGHTS = { M: 40, D: 10, V: 20, A: 30 };
 
-export function hasDepth(taskId) {
-  return Object.prototype.hasOwnProperty.call(DEPTH_TASKS, taskId);
+export function hasDepth(_taskId) {
+  return true;
 }
 
 export function roundScore(x, digits = 1) {
@@ -113,7 +101,8 @@ export function buildProduct100({ runId, rows }) {
       window_lock: true,
       video: false,
       looks: 'subagent',
-      looks_items: ['V1', 'V2', 'V3', 'V4', 'A1', 'A2', 'A3', 'A4', 'D1'],
+      replay_fps: 30,
+      traces: 'submitted',
     },
     weights: { ...WEIGHTS },
     task_count: 3,
@@ -125,7 +114,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      '胜负只看可比的 product_100（3 题等权）。两边都 G=1 的题必须同有 1280×720 静帧且同一 looks-job。COMPARE_SCALAR 与 P0 五维表是过程指标。禁止 overall / total_score / vlm_*。',
+      '胜负只看可比的 product_100（3 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。',
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {
@@ -169,7 +158,7 @@ export function zeroRow(id, engine, primary) {
     primary,
     G: 0,
     M: 0,
-    D: hasDepth(id) ? 0 : undefined,
+    D: 0,
     V: 0,
     A: 0,
     product_100: 0,
@@ -183,59 +172,41 @@ export function scoreAttempt({
   id,
   engine,
   G,
-  sliceScores,
-  negSliceScores,
-  sliceIds,
+  M,
+  D,
   V,
   A,
-  D,
   primary,
   g0_ok,
   looks_status,
   looks_source,
   stills,
   looks_items,
+  scenarios,
+  missing_scenarios,
 }) {
-  const pos = mean(sliceScores?.length ? sliceScores : [0]);
-  const neg = negSliceScores?.length ? mean(negSliceScores) : pos;
-  const M = clamp01((pos + neg) / 2);
-  const hasD = hasDepth(id);
-  const dLooks = hasD ? D ?? 0 : 0;
-  let dMech;
-  const cover = DEPTH_COVER[id] ?? [];
-  if (hasD && cover.length && sliceIds?.length) {
-    const byName = {};
-    sliceIds.forEach((name, i) => {
-      byName[name] = sliceScores?.[i] ?? 0;
-    });
-    dMech = mean(cover.map((name) => byName[name] ?? 0));
-  }
-  const d = hasD ? (dMech == null ? dLooks : 0.5 * dMech + 0.5 * dLooks) : 0;
-  const product_100 = roundScore(taskScore100({ G: G ? 1 : 0, M, D: d, V: V ?? 0, A: A ?? 0, hasD }), 1);
+  const hasD = true;
+  const m = clamp01(M ?? 0);
+  const d = clamp01(D ?? 0);
+  const v = clamp01(V ?? 0);
+  const a = clamp01(A ?? 0);
+  const product_100 = roundScore(taskScore100({ G: G ? 1 : 0, M: m, D: d, V: v, A: a, hasD }), 1);
   const row = {
     id,
     engine,
     primary,
     G: G ? 1 : 0,
     g0_ok: g0_ok ?? (G ? 1 : 0),
-    M: roundScore(M, 3),
-    M_pos: roundScore(pos, 3),
-    M_neg: roundScore(neg, 3),
-    V: V ?? 0,
-    A: A ?? 0,
+    M: roundScore(m, 3),
+    D: roundScore(d, 3),
+    V: roundScore(v, 3),
+    A: roundScore(a, 3),
     product_100,
     looks_status: looks_status ?? 'SKIP',
     looks_source: looks_source ?? 'none',
-    slice_count: {
-      pos: sliceScores?.length ?? 0,
-      neg: negSliceScores?.length ?? 0,
-    },
+    scenarios: scenarios ?? [],
   };
-  if (hasD) {
-    row.D = roundScore(d, 3);
-    row.D_looks = dLooks;
-    if (dMech != null) row.D_mech = roundScore(dMech, 3);
-  }
+  if (missing_scenarios?.length) row.missing_scenarios = missing_scenarios;
   if (stills?.length) {
     row.stills = stills.map((s) => ({
       id: s.id,

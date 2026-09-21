@@ -1,6 +1,7 @@
 import fs from 'node:fs';
-import { DEPTH_TASKS, hasDepth } from './product-100.mjs';
+import { hasDepth } from './product-100.mjs';
 import { scoreVisuals } from './looks-judge.mjs';
+import { applyScenarioCap } from './rubric.mjs';
 
 export function stillsComplete(stills) {
   const list = stills ?? [];
@@ -8,38 +9,47 @@ export function stillsComplete(stills) {
   return list.every((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))));
 }
 
-function emptyVis(looks_status, looks_source, taskId) {
+function emptyVis(looks_status, looks_source) {
   return {
     V: 0,
     A: 0,
-    D: hasDepth(taskId) ? 0 : undefined,
+    M: 0,
+    D: 0,
     looks_status,
     looks_source,
   };
 }
 
-async function oneSide({ taskId, engine, instruction, geometry, stills, jobDir, G }) {
-  if (!G) return emptyVis('SKIP', 'none', taskId);
-  return scoreVisualsSide({ taskId, engine, instruction, geometry, stills, jobDir });
-}
-
-async function scoreVisualsSide({ taskId, engine, instruction, geometry, stills, jobDir }) {
-  const keys = DEPTH_TASKS[taskId];
-  const depthKeys = Array.isArray(keys) && keys.length ? keys : undefined;
+async function scoreVisualsSide({ taskId, engine, instruction, geometry, stills, jobDir, rubric, traces }) {
   const vis = await scoreVisuals({
     stills: (stills ?? []).filter((s) => s.ok),
     geometry,
-    depthKeys,
     instruction,
     taskId,
     engine,
     jobDir,
+    rubric,
   });
-  let D;
-  if (hasDepth(taskId)) {
-    D = depthKeys ? vis.D_visual ?? 0 : vis.V;
-  }
-  return { V: vis.V, A: vis.A, D, looks_status: vis.looks_status, looks_source: vis.source };
+  const agg = applyScenarioCap(
+    {
+      M: vis.M ?? 0,
+      D: vis.D ?? vis.D_visual ?? 0,
+      V: vis.V ?? 0,
+      A: vis.A ?? 0,
+      items: vis.items,
+    },
+    traces,
+  );
+  return {
+    V: agg.V,
+    A: agg.A,
+    M: agg.M,
+    D: agg.D,
+    looks_status: vis.looks_status,
+    looks_source: vis.source,
+    items: vis.items ?? agg.items,
+    missing_scenarios: agg.missing_scenarios,
+  };
 }
 
 export async function scorePairedLooks({
@@ -50,16 +60,17 @@ export async function scorePairedLooks({
   gd,
   ogJobDir,
   gdJobDir,
+  rubric,
 }) {
   const ogG = Boolean(og.G);
   const gdG = Boolean(gd.G);
   if (!ogG && !gdG) {
-    const skip = emptyVis('SKIP', 'none', taskId);
+    const skip = emptyVis('SKIP', 'none');
     return { og: skip, gd: skip, pair: 'BOTH_G0' };
   }
   if (ogG && gdG) {
     if (!stillsComplete(og.stills) || !stillsComplete(gd.stills)) {
-      const z = emptyVis('INCOMPARABLE_VISUAL', 'pair', taskId);
+      const z = emptyVis('INCOMPARABLE_VISUAL', 'pair');
       return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_VISUAL' };
     }
     const ogVis = await scoreVisualsSide({
@@ -69,6 +80,8 @@ export async function scorePairedLooks({
       geometry,
       stills: og.stills,
       jobDir: ogJobDir,
+      rubric,
+      traces: og.traces,
     });
     const gdVis = await scoreVisualsSide({
       taskId,
@@ -77,31 +90,39 @@ export async function scorePairedLooks({
       geometry,
       stills: gd.stills,
       jobDir: gdJobDir,
+      rubric,
+      traces: gd.traces,
     });
     if (ogVis.looks_status !== gdVis.looks_status || ogVis.looks_source !== gdVis.looks_source) {
-      const z = emptyVis('INCOMPARABLE_LOOKS', 'pair', taskId);
+      const z = emptyVis('INCOMPARABLE_LOOKS', 'pair');
       return { og: z, gd: { ...z }, pair: 'INCOMPARABLE_LOOKS' };
     }
     return { og: ogVis, gd: gdVis, pair: ogVis.looks_status };
   }
-  const ogVis = await oneSide({
-    taskId,
-    engine: 'onegame',
-    instruction,
-    geometry,
-    stills: og.stills,
-    jobDir: ogJobDir,
-    G: ogG,
-  });
-  const gdVis = await oneSide({
-    taskId,
-    engine: 'godot',
-    instruction,
-    geometry,
-    stills: gd.stills,
-    jobDir: gdJobDir,
-    G: gdG,
-  });
+  const ogVis = ogG
+    ? await scoreVisualsSide({
+        taskId,
+        engine: 'onegame',
+        instruction,
+        geometry,
+        stills: og.stills,
+        jobDir: ogJobDir,
+        rubric,
+        traces: og.traces,
+      })
+    : emptyVis('SKIP', 'none');
+  const gdVis = gdG
+    ? await scoreVisualsSide({
+        taskId,
+        engine: 'godot',
+        instruction,
+        geometry,
+        stills: gd.stills,
+        jobDir: gdJobDir,
+        rubric,
+        traces: gd.traces,
+      })
+    : emptyVis('SKIP', 'none');
   return { og: ogVis, gd: gdVis, pair: 'G_ASYMMETRIC' };
 }
 

@@ -81,6 +81,9 @@ func _run() -> void:
 		_emit({"event": "error", "code": "INJECT_TAMPER", "message": "EvalProbe missing"})
 		get_tree().quit(4)
 		return
+	if _job.has("traces"):
+		await _run_traces()
+		return
 	var g0: Dictionary = probe.dump(String(_job["schema_id"]), String(_job["schema_sha256"]), _schema_keys)
 	_emit({"event": "g0", "dump": g0})
 	for step in _job.get("steps", []):
@@ -93,6 +96,57 @@ func _run() -> void:
 	var frozen: Dictionary = probe.dump(String(_job["schema_id"]), String(_job["schema_sha256"]), _schema_keys)
 	_emit({"event": "frozen", "dump": frozen})
 	get_tree().quit(0)
+
+func _run_traces() -> void:
+	_emit({"event": "g0", "dump": {}})
+	var sample_every := int(_job.get("sample_every", 15))
+	var max_frames := int(_job.get("max_frames", 600))
+	var dt := float(_job.get("frame_dt", 0.033))
+	for trace in _job.get("traces", []):
+		get_tree().reload_current_scene()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_lock_window()
+		var n := mini(int(trace.get("duration_frames", 1)), max_frames)
+		var scenario := String(trace.get("scenario", "play"))
+		var by := {}
+		for ev in trace.get("events", []):
+			var fr := int(ev.get("frame", 0))
+			if not by.has(fr):
+				by[fr] = []
+			by[fr].append(ev)
+		for f in n:
+			if by.has(f):
+				for ev in by[f]:
+					var err := _apply_trace_event(ev)
+					if err != "":
+						_emit({"event": "error", "code": err, "scenario": scenario, "frame": f})
+						get_tree().quit(5)
+						return
+			_ticks_dt(1, dt)
+			if sample_every > 0 and (f % sample_every == 0 or f == n - 1):
+				await _snapshot("%s_f%s" % [scenario, f])
+		_emit({"event": "trace_done", "scenario": scenario, "frames": n})
+	get_tree().paused = true
+	get_tree().quit(0)
+
+func _apply_trace_event(ev: Dictionary) -> String:
+	var kind := String(ev.get("type", ""))
+	if kind == "click":
+		_click(float(ev.get("x", 0)), float(ev.get("y", 0)))
+		return ""
+	if kind == "keydown":
+		_key(String(ev.get("code", "")), true)
+		return ""
+	if kind == "keyup":
+		_key(String(ev.get("code", "")), false)
+		return ""
+	return "ACTION_NOT_IN_CLOSED_SET"
+
+func _ticks_dt(n: int, dt: float) -> void:
+	var root := get_tree().current_scene
+	for i in n:
+		_process_tree(root, dt)
 
 func _apply_step(step: Dictionary, probe: Node) -> String:
 	if step.has("checkpoint"):

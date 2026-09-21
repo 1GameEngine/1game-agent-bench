@@ -40,8 +40,8 @@ test('low M caps A contribution', () => {
 
 test('buildProduct100 6 rows and winner sentence', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
-    scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1, 1], V: 1, A: 0.5, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
-    scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1, 1], V: 1, A: 1, D: 1, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, V: 1, A: 0.5, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, M: 1, V: 1, A: 1, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
   ]);
   const report = buildProduct100({ runId: 'unit', rows });
   assert.equal(report.tasks.length, 6);
@@ -54,12 +54,14 @@ test('buildProduct100 6 rows and winner sentence', () => {
   assert.ok(!('overall' in report));
   assert.doesNotThrow(() => assertNoForbiddenScoreKeys(report));
   assert.equal(winnerOf(10, 10), 'tie');
+  assert.equal(report.still.replay_fps, 30);
+  assert.equal(report.still.traces, 'submitted');
 });
 
 test('buildProduct100 withholds winner when looks unpaired', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
-    scoreAttempt({ id, engine: 'onegame', G: 1, sliceScores: [1], V: 1, A: 1, D: 1, primary: 'PASS', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
-    scoreAttempt({ id, engine: 'godot', G: 1, sliceScores: [1], V: 0, A: 0, D: 0, primary: 'CHECKPOINTS_OK', g0_ok: 1, looks_status: 'CAPTURE_FAIL', looks_source: 'none' }),
+    scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, V: 1, A: 1, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, M: 0, V: 0, A: 0, D: 0, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'CAPTURE_FAIL', looks_source: 'none' }),
   ]);
   const report = buildProduct100({ runId: 'gap', rows });
   assert.equal(report.comparable, false);
@@ -68,61 +70,29 @@ test('buildProduct100 withholds winner when looks unpaired', () => {
   assert.match(report.winner_sentence, /不可比/);
 });
 
-test('M is unquantized mean of pos and neg slices', () => {
+test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   const row = scoreAttempt({
-    id: 'p1-rail-desk',
+    id: 'p1-night-stall',
     engine: 'onegame',
     G: 1,
-    sliceScores: [1, 1, 0],
-    negSliceScores: [1, 1],
-    V: 0,
-    A: 0,
-    D: 0,
-    primary: 'CHECKPOINT_FAIL',
-    g0_ok: 1,
-    looks_status: 'SKIP',
-    looks_source: 'none',
-  });
-  assert.equal(row.M_pos, 0.667);
-  assert.equal(row.M_neg, 1);
-  assert.equal(row.M, 0.833);
-  assert.equal(row.slice_count.pos, 3);
-  assert.equal(row.slice_count.neg, 2);
-});
-
-test('D blends named mechanical cover with looks D', () => {
-  const withIds = scoreAttempt({
-    id: 'p1-rail-desk',
-    engine: 'onegame',
-    G: 1,
-    sliceScores: [1, 0, 1, 0, 1],
-    sliceIds: ['init', 'fired0', 'fired1', 'after_arm', 'fired2'],
-    V: 0,
-    A: 0,
-    D: 1,
-    primary: 'CHECKPOINTS_OK',
-    g0_ok: 1,
-    looks_status: 'SKIP',
-    looks_source: 'none',
-  });
-  assert.equal(withIds.D_mech, 0.667);
-  assert.equal(withIds.D_looks, 1);
-  assert.equal(withIds.D, 0.833);
-  const noIds = scoreAttempt({
-    id: 'p1-rail-desk',
-    engine: 'godot',
-    G: 1,
-    sliceScores: [1, 0, 1],
-    V: 0,
-    A: 0,
+    M: 0.75,
     D: 0.5,
-    primary: 'CHECKPOINTS_OK',
+    V: 1,
+    A: 0.5,
+    primary: 'TRACE_OK',
     g0_ok: 1,
-    looks_status: 'SKIP',
-    looks_source: 'none',
+    looks_status: 'OK',
+    looks_source: 'subagent',
+    scenarios: ['intro', 'loop', 'fail', 'clear'],
   });
-  assert.equal(noIds.D, 0.5);
-  assert.equal(noIds.D_mech, undefined);
+  assert.equal(row.M, 0.75);
+  assert.equal(row.D, 0.5);
+  assert.equal(row.V, 1);
+  assert.equal(row.A, 0.5);
+  assert.equal(row.product_100, 70);
+  assert.deepEqual(row.scenarios, ['intro', 'loop', 'fail', 'clear']);
+  assert.equal(row.M_pos, undefined);
+  assert.equal(row.D_mech, undefined);
 });
 
 test('window lock 1280x720; 320x180 stills rejected', () => {

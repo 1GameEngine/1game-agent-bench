@@ -1,0 +1,151 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "clear",
+  "duration_frames": 460,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 0,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 1,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 3,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 4,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 64,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 65,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 68,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 69,
+      "type": "keyup",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 72,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 73,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 76,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 77,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 155,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 156,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 160,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 161,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 164,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 165,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 250,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 251,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 255,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 256,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 259,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 260,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 263,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 264,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 340,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 341,
+      "type": "keyup",
+      "code": "Space"
+    }
+  ]
+}

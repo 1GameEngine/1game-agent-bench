@@ -4,60 +4,22 @@
   "report_id": "COMPARE_SCALAR_p1-oracle-full",
   "comparable": true,
   "winner": false,
-  "notice": "过程指标：COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。",
+  "notice": "过程指标：COMPARE_SCALAR = TRACE_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。",
   "checkpoints_ok": 6,
   "attempts": 6,
   "headline": "6/6",
   "g0_ok": 6,
   "g0_conditional": "6/6",
   "engines": {
-    "onegame": {
-      "checkpoints_ok": 3,
-      "attempts": 3,
-      "g0_ok": 3
-    },
-    "godot": {
-      "checkpoints_ok": 3,
-      "attempts": 3,
-      "g0_ok": 3
-    }
+    "onegame": { "checkpoints_ok": 3, "attempts": 3, "g0_ok": 3 },
+    "godot": { "checkpoints_ok": 3, "attempts": 3, "g0_ok": 3 }
   },
   "tasks": [
-    {
-      "id": "p1-rail-desk",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-rail-desk",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-stock-push",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-stock-push",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-beat-window",
-      "engine": "onegame",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    },
-    {
-      "id": "p1-beat-window",
-      "engine": "godot",
-      "primary": "CHECKPOINTS_OK",
-      "g0_ok": 1
-    }
+    { "id": "p1-night-stall", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
+    { "id": "p1-night-stall", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 },
+    { "id": "p1-vault-crawl", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
+    { "id": "p1-vault-crawl", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 },
+    { "id": "p1-chart-rush", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
+    { "id": "p1-chart-rush", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 }
   ]
 }

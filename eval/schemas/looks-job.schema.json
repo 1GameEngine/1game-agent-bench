@@ -11,6 +11,7 @@
     "labels": { "type": "object" },
     "regions": { "type": "object" },
     "variant_regions": { "type": "array", "items": { "type": "string" } },
+    "rubric": { "type": "object" },
     "stills": {
       "type": "array",
       "items": {

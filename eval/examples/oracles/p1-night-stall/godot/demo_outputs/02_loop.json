@@ -1,0 +1,71 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "loop",
+  "duration_frames": 180,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 0,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 1,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 3,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 4,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 64,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 65,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 68,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 69,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 72,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 73,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 155,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 156,
+      "type": "keyup",
+      "code": "Space"
+    }
+  ]
+}

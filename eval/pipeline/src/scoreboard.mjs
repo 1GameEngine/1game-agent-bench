@@ -83,12 +83,15 @@ export function engineDisplay(id, index = 0) {
 
 export function parseTaskCopy(instruction, fallbackId) {
   const text = String(instruction ?? '');
-  const title = (text.match(/^标题：\s*(.+)/m) || [])[1]?.trim() || fallbackId;
+  const title =
+    (text.match(/^标题：\s*(.+)/m) || [])[1]?.trim() ||
+    (text.match(/^#\s+(.+)/m) || [])[1]?.trim() ||
+    fallbackId;
   const lines = text
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean)
-    .filter((l) => !l.startsWith('标题：') && !l.startsWith('##'));
+    .filter((l) => !l.startsWith('标题：') && !l.startsWith('#'));
   const blurb = lines[0] ?? '';
   return { title, blurb };
 }
@@ -213,9 +216,16 @@ export function buildScoreboardView({ report, rows, packs }) {
       });
       return { label: m.label, values };
     });
-    const looksKeys = Object.keys(LOOKS_ZH).filter((k) => k !== 'D1' || hasDepth(taskId));
+    const looksKeys = [];
+    for (const e of engines) {
+      const side = sides.find((s) => s.engine === e.id);
+      const items = byEngine[e.id].looks_items ?? readLooksItems(side) ?? {};
+      for (const k of Object.keys(items)) {
+        if (!looksKeys.includes(k)) looksKeys.push(k);
+      }
+    }
     const looks = looksKeys.map((k) => ({
-      label: LOOKS_ZH[k],
+      label: LOOKS_ZH[k] || k,
       values: valuesFor(engines, (id) => {
         const side = sides.find((s) => s.engine === id);
         const items = byEngine[id].looks_items ?? readLooksItems(side);

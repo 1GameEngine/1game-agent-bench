@@ -1,0 +1,181 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "clear",
+  "duration_frames": 310,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 0,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 1,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 103,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 104,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 115,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 116,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 127,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 128,
+      "type": "keyup",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 139,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 140,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 152,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 153,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 164,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 165,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 176,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 177,
+      "type": "keyup",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 188,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 189,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 200,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 201,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 212,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 213,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 224,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 225,
+      "type": "keyup",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 236,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 237,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 249,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 250,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 261,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 262,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 273,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 274,
+      "type": "keyup",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 285,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 286,
+      "type": "keyup",
+      "code": "ArrowRight"
+    }
+  ]
+}

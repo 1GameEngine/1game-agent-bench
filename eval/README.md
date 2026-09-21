@@ -2,22 +2,22 @@
 
 私有评测产品。不要发到 npm，不要做成 `1game-*` skill。
 
-**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（调度台 / 库房推移 / 节拍窗）。结论句只引用两个套件分。
+**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（夜市摊 / 金库爬行 / 谱面冲刺）。结论句只引用两个套件分。
 
-过程指标仍产出、不决定胜负：P0 四题五维表（夹具，不进 headline）、`COMPARE_SCALAR = CHECKPOINTS_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
+过程指标仍产出、不决定胜负：P0 四题五维表（夹具，不进 headline）、`COMPARE_SCALAR = TRACE_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
 
-Headline 三题在 `compare_tasks`：`p1-rail-desk` `p1-stock-push` `p1-beat-window`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
+Headline 三题在 `compare_tasks`：`p1-night-stall` `p1-vault-crawl` `p1-chart-rush`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是本仓合同（任务 instruction / geometry / playplan / checkpoint 原文）。缺字段停工。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps），抽帧后按量表打 M/D/V/A。缺 intro/loop/fail/clear 任一场景则 M、D 封顶 0.5。
 
 ## 读者与隔离
 
 - 实现方看不到 `1game-engine` 源码；只使用公开 npm train **`1.21.0`**。
 - Builder 的 Cursor **只打开** `work/<runId>/game`，不要把本 `eval/` 仓加进同一 workspace。
-- Judge 是本仓另一个 Node 进程，用绝对路径读 checkpoint。
-- 不要把 playplan / checkpoint 复制进 `game/`。
+- Judge 是本仓另一个 Node 进程。
+- 不要把 rubric / 官方 traces 复制进 Builder 工作区当答案；oracle 仅验收流水线。
 - 禁止 `1game-skill activate --global` 与 `npx skills add`。
 
 Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要对外声称已密封。
@@ -33,10 +33,10 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 游戏入口 | `src/game.tsx` |
 | 场景 | 恰好 1 个 `<scene>`，1280×720 |
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
-| Judge（正确性） | 只 `1gameplay frame query --select store:state`；不读图；不用 Chromium |
-| Capture（观感） | `1gameplay frame screenshot` 仅 `role=capture`；**视窗锁死 1280×720**（`--width 1280 --height 720`）。Capture **不是** Judge。 |
-| Looks（V/A） | 独立 looks-job：读 1280×720 静帧 + 该帧 dump。**跑分必须用真实 looks subagent**（写 `looks-verdict.json` 或 `EVAL_LOOKS_CMD` / `setLooksInvoker`）。内置 looks-job worker 只在 `EVAL_LOOKS_ALLOW_WORKER=1` 时调试，且 `looks_source=worker`，**不得当 headline**。无外部评委 → `SUBAGENT_UNAVAILABLE`，不可比。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。 |
-| Replay | `child_process.execFile`；整条赛道禁用 `--until` |
+| Judge（正确性） | Headline：提交 traces 重放抽帧 + 隐藏量表。P0 夹具仍只 `1gameplay frame query --select store:state`。不用 Chromium |
+| Capture（观感） | 重放抽帧 1280×720 PNG。Capture **不是** 单独的机械金标。 |
+| Looks（M/D/V/A） | 独立 looks-job：读抽帧 + 隐藏量表。**跑分必须用真实 looks subagent**。worker / heuristic 不得当 headline。 |
+| Replay | Headline 30fps submitted traces，sample 2fps，单条最长 20s。`child_process.execFile`；禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
 
@@ -93,11 +93,11 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)（无 D 的题把 10 分并进其余维）。\(G=0\) 则该题 0，仍占 1/3。\(M\) 是正例与负例 checkpoint 切片 0/1 的未量化均值（再对半平均）。\(D = 0.5 D_{mech} + 0.5 D_{looks}\)：\(D_{mech}\) 来自命名正例切片，\(D_{looks}\) 来自 looks D1。V/A 来自 **同一真实 looks subagent** 打冻结静帧（不是内置 worker）。场景、点击、视窗都是 **1280×720**。两边都 `G=1` 时必须同时有 1280×720 静帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占 1/3。\(G\) 定义为能启动且至少有一条合法 submitted trace。M/D/V/A 全部来自隐藏量表、由 **同一真实 looks subagent** 根据 30fps 重放抽帧打分（不是 dump 切片，不是内置 worker）。缺 intro/loop/fail/clear 则 M、D 封顶 0.5。场景与视窗都是 **1280×720**。两边都 `G=1` 时必须同时有抽帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 
-Headline 三题：`p1-rail-desk`（规则/状态）`p1-stock-push`（空间）`p1-beat-window`（街机节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
+Headline 三题：`p1-night-stall`（经营规则）`p1-vault-crawl`（格子空间）`p1-chart-rush`（谱面节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
 
 ## 本仓不包含
 

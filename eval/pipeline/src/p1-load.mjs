@@ -1,11 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { EVAL_DIR, taskDir } from './paths.mjs';
+import { taskDir } from './paths.mjs';
 import { P1_TASKS } from './product-100.mjs';
 import { loadYaml, loadJson } from './load.mjs';
 import { EvalError } from './util.mjs';
-import { auditClosedPlayplan } from './p1-closed.mjs';
-import { loadSchemaFile } from './p1-schema.mjs';
 
 export { P1_TASKS };
 
@@ -14,36 +12,32 @@ const ENGINE_WORDS = ['ColorRect', 'Autoload', 'bindStore', 'CharacterBody2D', '
 export function loadP1Task(taskId) {
   const dir = taskDir(taskId);
   const task = loadYaml(path.join(dir, 'task.yaml'));
-  const geometry = loadYaml(path.join(dir, 'geometry.yaml'));
-  const playplan = loadJson(path.join(dir, 'playplan.json'));
-  const playplanNeg = loadJson(path.join(dir, 'playplan.neg.json'));
-  const checkpoint = loadJson(path.join(dir, 'checkpoint.json'));
   const instruction = fs.readFileSync(path.join(dir, 'instruction.md'), 'utf8');
-  const { schema, sha } = loadSchemaFile(path.join(dir, 'dump.schema.json'));
+  const rubric = loadJson(path.join(dir, 'judge', 'rubric.json'));
   if (task.id !== taskId || task.tier !== 'P1') throw new EvalError('EVAL_INTERNAL', `P1 task meta ${taskId}`);
-  if (task.judge !== 'schema_strict' || task.rng !== 'forbidden' || task.physics !== 'forbidden') {
+  if (task.judge !== 'rubric_replay' || task.rng !== 'forbidden' || task.physics !== 'forbidden') {
     throw new EvalError('EVAL_INTERNAL', `P1 flags ${taskId}`);
   }
   if (task.scene?.count !== 1 || task.scene?.width !== 1280 || task.scene?.height !== 720) {
     throw new EvalError('EVAL_INTERNAL', `P1 scene must be 1×1280×720`);
   }
-  if (checkpoint.compare?.mode !== 'schema_strict' || checkpoint.compare?.extras !== 'fail') {
-    throw new EvalError('EVAL_INTERNAL', 'P1 checkpoint must be schema_strict extras=fail');
+  if (task.traces !== 'submitted' || task.replay_fps !== 30) {
+    throw new EvalError('EVAL_INTERNAL', `P1 traces must be submitted at 30fps`);
   }
-  if (checkpoint.select !== 'dump') throw new EvalError('EVAL_INTERNAL', 'P1 checkpoint select dump');
+  if (fs.existsSync(path.join(dir, 'dump.schema.json'))) {
+    throw new EvalError('EVAL_INTERNAL', `${taskId} must not use dump.schema.json as judge`);
+  }
+  if (fs.existsSync(path.join(dir, 'playplan.json'))) {
+    throw new EvalError('EVAL_INTERNAL', `${taskId} must not ship official playplan`);
+  }
   for (const w of ENGINE_WORDS) {
     if (instruction.includes(w)) throw new EvalError('EVAL_INTERNAL', `engine word ${w} in ${taskId} instruction`);
   }
-  for (const plan of [playplan, playplanNeg]) {
-    const a = auditClosedPlayplan(plan, geometry);
-    if (!a.ok) throw new EvalError('EVAL_INTERNAL', `${taskId} playplan: ${a.issues.join('; ')}`);
+  if (rubric.score_formula !== 'G * (40*M + 10*D + 20*V + 30*A)') {
+    throw new EvalError('EVAL_INTERNAL', `${taskId} rubric formula`);
   }
-  for (const plan of [playplan, playplanNeg]) {
-    for (const step of plan.steps) {
-      if (step.checkpoint && !checkpoint.slices[step.checkpoint]) {
-        throw new EvalError('EVAL_INTERNAL', `${taskId} missing slice ${step.checkpoint}`);
-      }
-    }
+  if (!Array.isArray(rubric.requirements) || rubric.requirements.length < 8 || rubric.requirements.length > 24) {
+    throw new EvalError('EVAL_INTERNAL', `${taskId} rubric size`);
   }
-  return { task, geometry, playplan, playplanNeg, checkpoint, instruction, schema, sha };
+  return { task, instruction, rubric, geometry: { regions: {}, labels: {} } };
 }

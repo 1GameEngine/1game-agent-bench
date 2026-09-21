@@ -1,0 +1,61 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "fail",
+  "duration_frames": 90,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 0,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 1,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 3,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 4,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 6,
+      "type": "keydown",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 7,
+      "type": "keyup",
+      "code": "ArrowRight"
+    },
+    {
+      "frame": 9,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 10,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 70,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 71,
+      "type": "keyup",
+      "code": "Space"
+    }
+  ]
+}

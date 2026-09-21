@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.trace/1",
+  "title": "Submitted play trace (30fps)",
+  "type": "object",
+  "required": ["schema", "scenario", "duration_frames", "viewport", "events"],
+  "properties": {
+    "schema": { "const": "eval.trace/1" },
+    "scenario": { "type": "string" },
+    "duration_frames": { "type": "integer", "minimum": 1 },
+    "viewport": {
+      "type": "object",
+      "required": ["w", "h"],
+      "properties": {
+        "w": { "const": 1280 },
+        "h": { "const": 720 }
+      }
+    },
+    "events": { "type": "array" }
+  }
+}
