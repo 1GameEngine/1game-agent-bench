@@ -82,7 +82,8 @@ pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # 3 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
 pnpm run run-product-100 -- --run-id <id> --mech   # 机械 + 静帧 + 写出 looks-job（不打 V/A）
 # 真实 looks subagent 写入各 jobDir/looks-verdict.json 后：
-pnpm run run-product-100 -- --run-id <id> --looks  # 读裁决 → PRODUCT_100.json（胜负）
+pnpm run run-product-100 -- --run-id <id> --looks  # 读裁决 → PRODUCT_100.json（胜负）+ report/index.html
+node src/cli.mjs emit-scoreboard --run-id <id>     # 只用已有 JSON 重出分数页（模板固定，加题加引擎只扩数据）
 # 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
 node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
@@ -96,7 +97,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 
-Headline 三题：`p1-signal-desk`（规则/状态）`p1-grid-scout`（空间）`p1-ready-run`（街机节奏）。P0 四题只作过程夹具。
+Headline 三题：`p1-signal-desk`（规则/状态）`p1-grid-scout`（空间）`p1-ready-run`（街机节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
 
 ## 本仓不包含
 

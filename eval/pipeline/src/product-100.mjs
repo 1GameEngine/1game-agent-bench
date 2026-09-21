@@ -186,6 +186,7 @@ export function scoreAttempt({
   looks_status,
   looks_source,
   stills,
+  looks_items,
 }) {
   const pos = mean(sliceScores?.length ? sliceScores : [0]);
   const neg = negSliceScores?.length ? mean(negSliceScores) : pos;
@@ -217,5 +218,6 @@ export function scoreAttempt({
       scale: s.scale,
     }));
   }
+  if (looks_items && typeof looks_items === 'object') row.looks_items = looks_items;
   return row;
 }

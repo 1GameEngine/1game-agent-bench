@@ -16,6 +16,7 @@ import { DEPTH_TASKS, P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
+import { writeScoreboard } from './scoreboard.mjs';
 
 function mergePlanResults(pos, neg) {
   if (pos.g0_ok !== 1) return pos;
@@ -243,6 +244,7 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
     stills: mech.stills,
+    looks_items: vis.items,
   });
 }
 
@@ -331,7 +333,7 @@ async function pairAndRows(taskId, og, gd) {
   };
 }
 
-function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts }) {
+function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs }) {
   const report = buildProduct100({ runId: suiteRunId, rows });
   assertNoForbiddenScoreKeys(report);
   const dir = path.join(WORK_DIR, suiteRunId);
@@ -342,7 +344,8 @@ function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts }) {
   writeReport(path.join(dir, 'P0_report.json'), p0);
   const cmp = buildCompareScalar({ runId: suiteRunId, attempts: p1attempts });
   writeReport(path.join(dir, 'COMPARE_SCALAR.json'), cmp);
-  return { report, out, p0, compare: cmp };
+  const html = writeScoreboard({ dir, report, rows, packs });
+  return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
 }
 
 export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}) {
@@ -363,6 +366,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
       rows,
       p0taskRows: saved.p0taskRows ?? [],
       p1attempts: saved.p1attempts ?? [],
+      packs: saved.tasks ?? [],
     });
   }
 
@@ -417,5 +421,5 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
     return { mechPath, looksJobs, out: mechPath };
   }
 
-  return writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts });
+  return writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs });
 }

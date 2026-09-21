@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>product_100 · 引擎对照</title>
+<style>
+  :root {
+    --bg:#0e1116; --card:#171b22; --line:#2a3140; --text:#e8edf5; --muted:#8b95a8;
+    --diff:#ffb020;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-padding-top: 64px; }
+  body {
+    margin:0; color:var(--text);
+    font: 15px/1.5 ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+  }
+  a { color: #8eb8ff; text-decoration:none; }
+  header {
+    position:sticky; top:0; z-index:3;
+    background:rgba(14,17,22,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:12px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  }
+  header strong { font-size:15px; }
+  .shell {
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+    max-width: 1360px;
+    margin: 0 auto;
+  }
+  main { min-width:0; grid-column: 1; grid-row: 1; padding:24px 24px 80px 20px; }
+  .rail {
+    grid-column: 2;
+    grid-row: 1;
+    width: 280px;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow: auto;
+    padding: 20px 16px 32px 8px;
+    border: 0;
+  }
+  .rail h4 {
+    margin: 0 0 12px;
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .toc, .toc .games { list-style: none; margin: 0; padding: 0; }
+  .toc .games { padding: 2px 0 0 14px; }
+  .toc a {
+    display: block;
+    color: inherit;
+    padding: 7px 0 8px;
+    border: 0;
+    background: none;
+  }
+  .toc a:hover .title { color: #fff; }
+  .toc .title {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .toc a.active .title { font-weight: 650; color: #fff; }
+  .toc .summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    margin-top: 3px;
+    font-size: 12px;
+    color: #6f7888;
+    font-weight: 400;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .toc .summary b { font-weight: 600; color: inherit; }
+  .toc a.active .summary { color: var(--muted); }
+  .toc a.active .summary .lead { color: #c5cddb; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px 22px 20px;
+  }
+  .game { margin-top: 20px; scroll-margin-top: 72px; }
+  #overview { scroll-margin-top: 72px; }
+  .card > h2 { font-size: 22px; margin: 0; }
+  .blurb { color: var(--muted); margin: 4px 0 0; }
+  .meta { color: var(--muted); font-size: 13px; margin: 8px 0 16px; }
+  header .meta { margin: 0; }
+  h3 {
+    font-size: 13px; color: var(--muted); font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px;
+  }
+  .scores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 16px;
+  }
+  .chip {
+    min-width: 112px;
+    flex: 1 1 120px;
+    background: #12161d;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .chip.win { border-color: color-mix(in srgb, var(--eng, #3dd68c) 70%, #000); }
+  .chip .k { font-size: 11px; letter-spacing: .04em; color: var(--muted); }
+  .chip .n {
+    font-size: 28px; font-weight: 700; line-height: 1.15;
+    margin-top: 2px; color: var(--eng, var(--text));
+    font-variant-numeric: tabular-nums;
+  }
+  .chip .t { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .lead { margin: 0 0 16px; color: var(--text); }
+  .two {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+  td.lab, td:first-child { white-space: normal; }
+  th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  td.diff { color: var(--diff); }
+  .why { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .legend { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .shot { margin: 14px 0 8px; }
+  .shot:last-child { margin-bottom: 0; }
+  .shot-h { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
+    gap: 10px;
+  }
+  figure { margin: 0; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  figure img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; background: #0f1224; }
+  figcaption { padding: 8px 10px; font-size: 11px; color: #c5cddb; line-height: 1.4; }
+  .eng { font-weight: 600; }
+  @media (max-width: 980px) {
+    .shell { grid-template-columns: 1fr; }
+    main, .rail { grid-column: auto; grid-row: auto; width: auto; }
+    .rail {
+      position: sticky; top: 48px; height: auto; order: -1;
+      border: 0; border-bottom: 1px solid var(--line);
+      padding: 8px 16px 10px;
+      background: rgba(12,15,20,.96);
+    }
+    .rail h4 { display: none; }
+    .toc .games { padding-left: 0; display: contents; }
+    .shots { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <strong>product_100</strong>
+  <span class="meta" id="hdr-meta"></span>
+</header>
+<div class="shell">
+  <aside class="rail" aria-label="目录">
+    <h4>目录</h4>
+    <ul class="toc" id="toc"></ul>
+  </aside>
+  <main id="main"></main>
+</div>
+<script>
+const REPORT = __VIEW_JSON__;
+</script>
+<script>
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+function engineById(id) { return REPORT.engines.find((e) => e.id === id); }
+function disagree(values) {
+  const nums = REPORT.engines.map((e) => values[e.id]).filter((v) => v !== '—' && v != null);
+  return new Set(nums.map(String)).size > 1;
+}
+function scoreBits(scores) {
+  return REPORT.engines.map((e) => {
+    const nums = REPORT.engines.map((x) => scores[x.id]).filter((v) => typeof v === 'number');
+    const lead = typeof scores[e.id] === 'number' && nums.length && scores[e.id] === Math.max(...nums);
+    return `<span class="${lead ? 'lead' : ''}">${esc(e.label)} <b>${esc(scores[e.id])}</b></span>`;
+  }).join('');
+}
+function thEngines() {
+  return REPORT.engines.map((e) => `<th class="num">${esc(e.label)}</th>`).join('');
+}
+function tdValues(values) {
+  const d = disagree(values) ? ' diff' : '';
+  return REPORT.engines.map((e) => {
+    const v = values[e.id];
+    return `<td class="num${d}">${v == null ? '—' : esc(v)}</td>`;
+  }).join('');
+}
+function metricTable(rows) {
+  return `<table><thead><tr><th></th>${thEngines()}</tr></thead><tbody>${
+    rows.map((r) => `<tr><td>${esc(r.label)}</td>${tdValues(r.values)}</tr>`).join('')
+  }</tbody></table>`;
+}
+function renderToc() {
+  const suiteScores = Object.fromEntries(REPORT.engines.map((e) => [e.id, e.product_100]));
+  const games = REPORT.games.map((g) => `
+    <li>
+      <a href="#${esc(g.id)}" data-id="${esc(g.id)}">
+        <span class="title">${esc(g.title)}</span>
+        <span class="summary">${scoreBits(g.scores)}</span>
+      </a>
+    </li>`).join('');
+  document.getElementById('toc').innerHTML = `
+    <li>
+      <a href="#overview" data-id="overview">
+        <span class="title">套件总览</span>
+        <span class="summary">${scoreBits(suiteScores)}</span>
+      </a>
+      <ul class="games">${games}</ul>
+    </li>`;
+}
+function renderMain() {
+  document.getElementById('hdr-meta').textContent = REPORT.headerMeta || '';
+  const chips = REPORT.engines.map((e) => `
+    <div class="chip${(REPORT.winnerIds || []).includes(e.id) ? ' win' : ''}" style="--eng:${e.color}">
+      <div class="k">${esc(e.label)}${(REPORT.winnerIds || []).includes(e.id) ? ' · 最高' : ''}</div>
+      <div class="n">${esc(e.product_100)}</div>
+      <div class="t">${REPORT.games.length} 题平均</div>
+    </div>`).join('');
+  const rows = REPORT.games.map((g) => `
+    <tr>
+      <td><a href="#${esc(g.id)}">${esc(g.title)}</a></td>
+      ${tdValues(g.scores)}
+    </tr>`).join('');
+  const games = REPORT.games.map((g) => {
+    const n = Math.max(REPORT.engines.length, ...g.stills.map((s) => s.shots.length), 1);
+    const stills = g.stills.map((s) => `
+      <div class="shot">
+        <div class="shot-h">${esc(s.label)}</div>
+        <div class="shots" style="--n:${n}">
+          ${s.shots.map((sh) => {
+            const eng = engineById(sh.engine);
+            return `<figure>
+              <img src="${esc(sh.src)}" alt="${esc(eng?.label || sh.engine)} ${esc(s.label)}">
+              <figcaption><span class="eng" style="color:${eng?.color || '#ccc'}">${esc(eng?.label || sh.engine)}</span> · ${esc(sh.caption)}</figcaption>
+            </figure>`;
+          }).join('')}
+        </div>
+      </div>`).join('');
+    return `
+      <section class="card game" id="${esc(g.id)}">
+        <h2>${esc(g.title)}</h2>
+        <p class="blurb">${esc(g.blurb)}</p>
+        <div class="scores">${REPORT.engines.map((e) => `
+          <div class="chip" style="--eng:${e.color}">
+            <div class="k">${esc(e.label)}</div>
+            <div class="n">${esc(g.scores[e.id] ?? '—')}</div>
+          </div>`).join('')}
+        </div>
+        ${g.note ? `<p class="lead">${esc(g.note)}</p>` : ''}
+        <div class="two">
+          <div>
+            <h3>百分制</h3>
+            ${metricTable(g.metrics)}
+          </div>
+          <div>
+            <h3>Looks 分项</h3>
+            ${metricTable(g.looks)}
+            ${g.looksNote ? `<p class="why">${esc(g.looksNote)}</p>` : ''}
+          </div>
+        </div>
+        <h3>静帧对照</h3>
+        ${stills || '<p class="why">无静帧。</p>'}
+      </section>`;
+  }).join('');
+  document.getElementById('main').innerHTML = `
+    <section class="card" id="overview">
+      <h2>套件总览</h2>
+      <p class="meta">${esc(REPORT.meta)}</p>
+      <div class="scores">${chips}</div>
+      <h3>各题分数</h3>
+      <table>
+        <thead><tr><th>游戏</th>${thEngines()}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="legend">${esc(REPORT.formula)}</p>
+    </section>
+    ${games}`;
+}
+renderToc();
+renderMain();
+const links = [...document.querySelectorAll('.toc a')];
+const items = links.map((a) => {
+  const el = document.getElementById(a.dataset.id);
+  if (!el) return null;
+  const heading = el.querySelector('h2') || el;
+  return { a, el, heading };
+}).filter(Boolean);
+function pageY(node) {
+  return node.getBoundingClientRect().top + window.scrollY;
+}
+function setActive() {
+  const header = document.querySelector('header');
+  const headerH = header ? header.offsetHeight : 56;
+  const line = window.scrollY + Math.max(headerH + 16, window.innerHeight * 0.32);
+  let current = items[0];
+  for (const item of items) {
+    if (pageY(item.heading) <= line) current = item;
+  }
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8) {
+    current = items[items.length - 1];
+  }
+  items.forEach((item) => item.a.classList.toggle('active', item === current));
+}
+setActive();
+window.addEventListener('scroll', setActive, { passive: true });
+window.addEventListener('resize', setActive);
+window.addEventListener('hashchange', () => requestAnimationFrame(setActive));
+window.addEventListener('load', setActive);
+links.forEach((a) => a.addEventListener('click', (e) => {
+  const el = document.getElementById(a.dataset.id);
+  if (!el) return;
+  e.preventDefault();
+  history.replaceState(null, '', `#${a.dataset.id}`);
+  el.scrollIntoView({ block: 'start', behavior: 'instant' });
+  setActive();
+}));
+</script>
+</body>
+</html>
