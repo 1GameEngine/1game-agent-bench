@@ -685,7 +685,7 @@ func _refresh() -> void:
 	_hud.text = "phase=%s remainMs=%s clockMs=%s hits=%s misses=%s score=%s" % [phase, remainMs, clockMs, hits, misses, score]
 	var open := _beat(clockMs)
 	for i in 3:
-		var on := (open == i) or resolved[i]
+		var on: bool = (open == i) or bool(resolved[i])
 		if i == 2:
 			_notes[i].color = Color("fbbf24") if on else Color("334155")
 		else:
@@ -880,12 +880,13 @@ def main():
             ],
             "neg_steps": [
                 {"id": "cp0", "checkpoint": "init"},
+                {"id": "dead", "click": "dead"},
                 {"id": "kl", "keydown": "ArrowLeft"},
                 {"id": "ul", "keyup": "ArrowLeft"},
                 {"id": "kd", "keydown": "ArrowDown"},
                 {"id": "ud", "keyup": "ArrowDown"},
-                {"id": "ku", "keydown": "ArrowUp"},
-                {"id": "uu", "keyup": "ArrowUp"},
+                {"id": "kl2", "keydown": "ArrowLeft"},
+                {"id": "ul2", "keyup": "ArrowLeft"},
                 {"id": "cp1", "checkpoint": "neg_final"},
             ],
             "checks": {

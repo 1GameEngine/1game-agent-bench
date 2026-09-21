@@ -8,6 +8,10 @@
       "checkpoint": "init"
     },
     {
+      "id": "dead",
+      "click": "dead"
+    },
+    {
       "id": "kl",
       "keydown": "ArrowLeft"
     },
@@ -24,12 +28,12 @@
       "keyup": "ArrowDown"
     },
     {
-      "id": "ku",
-      "keydown": "ArrowUp"
+      "id": "kl2",
+      "keydown": "ArrowLeft"
     },
     {
-      "id": "uu",
-      "keyup": "ArrowUp"
+      "id": "ul2",
+      "keyup": "ArrowLeft"
     },
     {
       "id": "cp1",
