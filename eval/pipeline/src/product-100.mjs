@@ -90,6 +90,17 @@ export function dimensionTally(og, gd) {
   return { onegame, godot, lead };
 }
 
+export function visibilityLead(og, gd) {
+  for (const k of ['V', 'A']) {
+    const a = og?.[k];
+    const b = gd?.[k];
+    if (typeof a !== 'number' || typeof b !== 'number') continue;
+    if (b > a) return 'godot';
+    if (a > b) return 'onegame';
+  }
+  return 'tie';
+}
+
 export function buildProduct100({ runId, rows }) {
   const byEngine = { onegame: [], godot: [] };
   for (const taskId of SUITE_TASKS) {
@@ -136,13 +147,16 @@ export function buildProduct100({ runId, rows }) {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
     const n = SUITE_TASKS.length;
     if (winner_engine === 'tie') {
-      const dims = dimensionTally(byEngine.onegame[0], byEngine.godot[0]);
-      if (dims.godot > dims.onegame) {
-        winner_engine = 'godot';
-        winner_sentence = `套件总分相同（1Game = ${og}，Godot = ${gd}）。${dims.lead.join('，')}，不并列。`;
-      } else if (dims.onegame > dims.godot) {
-        winner_engine = 'onegame';
-        winner_sentence = `套件总分相同（1Game = ${og}，Godot = ${gd}）。${dims.lead.join('，')}，不并列。`;
+      const ogRow = byEngine.onegame[0];
+      const gdRow = byEngine.godot[0];
+      const dims = dimensionTally(ogRow, gdRow);
+      let dimWinner = 'tie';
+      if (dims.godot > dims.onegame) dimWinner = 'godot';
+      else if (dims.onegame > dims.godot) dimWinner = 'onegame';
+      else dimWinner = visibilityLead(ogRow, gdRow);
+      if (dimWinner === 'godot' || dimWinner === 'onegame') {
+        winner_engine = dimWinner;
+        winner_sentence = `套件总分相同（1Game = ${og}，Godot = ${gd}）。${dims.lead.join('，') || '观感维更高'}，不并列。`;
       } else {
         winner_sentence = `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`;
       }
