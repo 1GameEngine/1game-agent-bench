@@ -15,6 +15,10 @@
 - 上方向键：若 coins≥1 且尚未升级，花 1 枚硬币升级，制作时间减半。
 - 15000 毫秒打烊：served≥3 通关（画面 Night clear），否则失败（Closed early）。超时未出餐同样失败。
 
+## 素材
+
+工作区有只读 Kenney CC0 图库 `asset-library/`。本题食物图已复制到工程 `assets/bun.png`、`assets/noodle.png`、`assets/tea.png`（来自 `pixel-platformer-food-expansion`）。档位上要画出对应食物，文案仍是 Bun / Noodle / Tea。
+
 ## 验收会看的玩法
 
 开局静止、正常出餐循环、失败（错餐或超时）、打烊通关。

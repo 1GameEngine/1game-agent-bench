@@ -9,6 +9,11 @@ var cursor: int = 0
 
 const LANES := ["ArrowLeft", "ArrowDown", "ArrowUp", "ArrowRight"]
 const WINDOW := 132
+var arrows: Array = []
+
+func _ready() -> void:
+	for n in ["arrow-left", "arrow-down", "arrow-up", "arrow-right"]:
+		arrows.append(load("res://assets/%s.png" % n))
 
 func _notes() -> Array:
 	var out: Array = []
@@ -90,7 +95,9 @@ func _draw() -> void:
 	var labels := ["Left", "Down", "Up", "Right"]
 	for i in 4:
 		draw_rect(Rect2(80 + i * 300, 560, 240, 120), Color("312e81"))
-		draw_string(ThemeDB.fallback_font, Vector2(80 + i * 300, 624), labels[i], HORIZONTAL_ALIGNMENT_CENTER, 240, 28, Color("c4b5fd"))
+		if i < arrows.size() and arrows[i] != null:
+			draw_texture_rect(arrows[i], Rect2(80 + i * 300 + 70, 568, 100, 64), false)
+		draw_string(ThemeDB.fallback_font, Vector2(80 + i * 300, 640), labels[i], HORIZONTAL_ALIGNMENT_CENTER, 240, 28, Color("c4b5fd"))
 	if phase == "playing":
 		var notes := _notes()
 		var cols := [Color("fb7185"), Color("38bdf8"), Color("a3e635"), Color("fbbf24")]
@@ -99,7 +106,11 @@ func _draw() -> void:
 			var y := 520.0 - maxf(0.0, float(int(n["t"]) - clockMs) * 0.12)
 			if y < 140:
 				continue
-			draw_rect(Rect2(80 + int(n["lane"]) * 300 + 40, y, 160, 36), cols[int(n["lane"])])
+			var lane := int(n["lane"])
+			if lane < arrows.size() and arrows[lane] != null:
+				draw_texture_rect(arrows[lane], Rect2(80 + lane * 300 + 70, y, 100, 64), false)
+			else:
+				draw_rect(Rect2(80 + lane * 300 + 40, y, 160, 36), cols[lane])
 	if phase == "ready":
 		draw_rect(Rect2(440, 200, 400, 120), Color("5b21b6"))
 		draw_string(ThemeDB.fallback_font, Vector2(440, 272), "Start", HORIZONTAL_ALIGNMENT_CENTER, 400, 48, Color("f5f3ff"))

@@ -24,6 +24,10 @@
 - 守卫在第 4 行（下标 3）的 x=1,2,3,2 循环，约每 792ms 前进一步。碰到守卫或警报格失败，画面 Caught。
 - 拿着钥匙走到出口通关，画面 Vault open。
 
+## 素材
+
+工作区有只读 Kenney CC0 图库 `asset-library/`。本题图在工程 `assets/`：`wall.png`、`floor.png`、`door.png`、`door-open.png`、`chest.png`、`key.png`、`player.png`、`guard.png`（来自 `roguelike-caves-dungeons` 与 `roguelike-characters`）。墙、地、门、箱子、钥匙、玩家、守卫用这些图，不要只用色块。
+
 ## 验收会看的玩法
 
 开局站在出生点、取钥匙的循环、踩警报失败、取钥匙后走到出口通关。

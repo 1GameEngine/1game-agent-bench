@@ -1,4 +1,13 @@
-import { createSignal } from 'solid-js';
+declare module '*.png' {
+  const src: string;
+  export default src;
+}
+
+import { createSignal, For } from 'solid-js';
+import arrowLeftPng from '../assets/arrow-left.png';
+import arrowDownPng from '../assets/arrow-down.png';
+import arrowUpPng from '../assets/arrow-up.png';
+import arrowRightPng from '../assets/arrow-right.png';
 import {
   createGameStore,
   renderGame,
@@ -20,6 +29,7 @@ type GameState = {
 };
 
 const LANES = ['ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'];
+const ARROWS = [arrowLeftPng, arrowDownPng, arrowUpPng, arrowRightPng];
 const NOTES = Array.from({ length: 16 }, (_, i) => ({ lane: i % 4, t: 400 * (i + 1) }));
 const WINDOW = 132;
 
@@ -75,23 +85,6 @@ function App() {
     });
   });
 
-  const upcoming = NOTES.map((n, i) => {
-    if (store.phase !== 'playing' || i < store.cursor) return null;
-    const y = 520 - Math.max(0, (n.t - store.clockMs) * 0.12);
-    if (y < 140) return null;
-    return (
-      <node
-        key={`n${i}`}
-        x={80 + n.lane * 300 + 40}
-        y={y}
-        width={160}
-        height={36}
-        shape="roundedRect(12 12 12 12)"
-        backgroundColor={['#fb7185', '#38bdf8', '#a3e635', '#fbbf24'][n.lane]}
-      />
-    );
-  });
-
   return (
     <scene
       name="main"
@@ -132,9 +125,36 @@ function App() {
         <node key={name} x={80 + i * 300} y={560} width={240} height={120} shape="roundedRect(16 16 16 16)" backgroundColor="#312e81" />
       ))}
       {LANES.map((name, i) => (
-        <text key={`${name}l`} x={80 + i * 300} y={592} width={240} height={56} text={name.replace('Arrow', '')} textAlign="center" textSize={28} textColor="#c4b5fd" />
+        <image
+          key={`${name}i`}
+          x={80 + i * 300 + 70}
+          y={568}
+          width={100}
+          height={64}
+          source={ARROWS[i]}
+          imageFit="contain"
+        />
       ))}
-      {upcoming}
+      {LANES.map((name, i) => (
+        <text key={`${name}l`} x={80 + i * 300} y={632} width={240} height={40} text={name.replace('Arrow', '')} textAlign="center" textSize={24} textColor="#c4b5fd" />
+      ))}
+      <For each={NOTES}>
+        {(n, i) => {
+          if (store.phase !== 'playing' || i() < store.cursor) return null;
+          const y = 520 - Math.max(0, (n.t - store.clockMs) * 0.12);
+          if (y < 80 || y > 640) return null;
+          return (
+            <image
+              x={80 + n.lane * 300 + 70}
+              y={y}
+              width={100}
+              height={64}
+              source={ARROWS[n.lane]}
+              imageFit="contain"
+            />
+          );
+        }}
+      </For>
       {store.phase === 'ready' ? <Btn /> : null}
       {store.phase === 'fail' ? (
         <text x={40} y={160} width={1200} height={64} text="Chart miss" textAlign="center" textSize={44} textColor="#fecaca" />

@@ -17,6 +17,25 @@ const H := 6
 const CELL := 80
 const OX := 320
 const OY := 120
+var wall_tex: Texture2D
+var floor_tex: Texture2D
+var door_tex: Texture2D
+var door_open_tex: Texture2D
+var chest_tex: Texture2D
+var key_tex: Texture2D
+var player_tex: Texture2D
+var guard_tex: Texture2D
+
+func _ready() -> void:
+	wall_tex = load("res://assets/wall.png")
+	floor_tex = load("res://assets/floor.png")
+	door_tex = load("res://assets/door.png")
+	door_open_tex = load("res://assets/door-open.png")
+	chest_tex = load("res://assets/chest.png")
+	key_tex = load("res://assets/key.png")
+	player_tex = load("res://assets/player.png")
+	guard_tex = load("res://assets/guard.png")
+
 const MAP := [
 	"########",
 	"#P..K..#",
@@ -119,9 +138,21 @@ func _draw() -> void:
 			elif t == "K":
 				c = Color("334155") if hasKey else Color("ca8a04")
 			draw_rect(Rect2(OX + x * CELL, OY + y * CELL, CELL - 4, CELL - 4), c)
-	draw_rect(Rect2(OX + bx * CELL + 12, OY + by * CELL + 12, 52, 52), Color("a16207"))
-	draw_rect(Rect2(OX + ex * CELL + 18, OY + ey * CELL + 18, 40, 40), Color("ef4444"))
-	draw_rect(Rect2(OX + px * CELL + 18, OY + py * CELL + 18, 40, 40), Color("38bdf8"))
+			var ground: Texture2D = wall_tex if t == "#" else floor_tex
+			if ground:
+				draw_texture_rect(ground, Rect2(OX + x * CELL, OY + y * CELL, CELL - 4, CELL - 4), false)
+			if t == "D":
+				var door: Texture2D = door_open_tex if doorOpen else door_tex
+				if door:
+					draw_texture_rect(door, Rect2(OX + x * CELL, OY + y * CELL, CELL - 4, CELL - 4), false)
+			if t == "K" and not hasKey and key_tex:
+				draw_texture_rect(key_tex, Rect2(OX + x * CELL + 12, OY + y * CELL + 12, 52, 52), false)
+	if chest_tex:
+		draw_texture_rect(chest_tex, Rect2(OX + bx * CELL + 8, OY + by * CELL + 8, 60, 60), false)
+	if guard_tex:
+		draw_texture_rect(guard_tex, Rect2(OX + ex * CELL + 8, OY + ey * CELL + 8, 60, 60), false)
+	if player_tex:
+		draw_texture_rect(player_tex, Rect2(OX + px * CELL + 8, OY + py * CELL + 8, 60, 60), false)
 	if phase == "fail":
 		draw_string(ThemeDB.fallback_font, Vector2(40, 680), "Caught", HORIZONTAL_ALIGNMENT_CENTER, 1200, 40, Color("fecaca"))
 	if phase == "clear":

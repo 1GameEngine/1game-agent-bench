@@ -73,7 +73,7 @@
       "applies": ["intro", "loop"],
       "need": "any",
       "weight": 1,
-      "description": "棋盘约在画面中部，格子可数。"
+      "description": "棋盘约在画面中部，墙和地是地牢图，格子可数。"
     },
     {
       "id": "V2",
@@ -97,7 +97,7 @@
       "applies": ["loop", "clear"],
       "need": "any",
       "weight": 1,
-      "description": "玩家、守卫、箱子不是三个无法分辨的色块克隆。"
+      "description": "玩家、守卫、箱子用不同的精灵，不是三个无法分辨的色块。"
     }
   ]
 }

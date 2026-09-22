@@ -1,4 +1,12 @@
+declare module '*.png' {
+  const src: string;
+  export default src;
+}
+
 import { createSignal } from 'solid-js';
+import bunPng from '../assets/bun.png';
+import noodlePng from '../assets/noodle.png';
+import teaPng from '../assets/tea.png';
 import {
   createGameStore,
   renderGame,
@@ -147,11 +155,14 @@ function App() {
         textSize={22}
       />
       <node x={80} y={160} width={280} height={220} shape="roundedRect(24 24 24 24)" backgroundColor={store.station === 0 ? '#fb7185' : '#4c0519'} />
-      <text x={80} y={230} width={280} height={80} text="Bun" textAlign="center" textSize={40} textColor="#fff1f2" />
+      <image x={140} y={180} width={160} height={140} source={bunPng} imageFit="contain" />
+      <text x={80} y={300} width={280} height={60} text="Bun" textAlign="center" textSize={32} textColor="#fff1f2" />
       <node x={500} y={160} width={280} height={220} shape="roundedRect(24 24 24 24)" backgroundColor={store.station === 1 ? '#fbbf24' : '#4c0519'} />
-      <text x={500} y={230} width={280} height={80} text="Noodle" textAlign="center" textSize={40} textColor="#fff7ed" />
+      <image x={560} y={180} width={160} height={140} source={noodlePng} imageFit="contain" />
+      <text x={500} y={300} width={280} height={60} text="Noodle" textAlign="center" textSize={32} textColor="#fff7ed" />
       <node x={920} y={160} width={280} height={220} shape="roundedRect(24 24 24 24)" backgroundColor={store.station === 2 ? '#38bdf8' : '#4c0519'} />
-      <text x={920} y={230} width={280} height={80} text="Tea" textAlign="center" textSize={40} textColor="#e0f2fe" />
+      <image x={980} y={180} width={160} height={140} source={teaPng} imageFit="contain" />
+      <text x={920} y={300} width={280} height={60} text="Tea" textAlign="center" textSize={32} textColor="#e0f2fe" />
       <node x={80} y={420} width={360} height={120} shape="roundedRect(20 20 20 20)" backgroundColor={store.waiting >= 0 ? '#e11d48' : '#3f3f46'} />
       <text x={80} y={450} width={360} height={64} text={store.waiting >= 0 ? `Guest ${want}` : 'Queue empty'} textAlign="center" textSize={32} textColor="#fff" />
       <node x={480} y={420} width={280} height={120} shape="roundedRect(20 20 20 20)" backgroundColor={store.upgrade ? '#a3e635' : '#44403c'} />

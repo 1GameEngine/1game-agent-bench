@@ -14,6 +14,10 @@
 - 判定窗 ±132 毫秒。命中 hits+1 并消费该音符；错过窗或打错轨 misses+1。
 - misses≥6 失败，画面 Chart miss。16 个音符结束后 hits≥12 通关，画面 Chart clear。
 
+## 素材
+
+工作区有只读 Kenney CC0 图库 `asset-library/`。本题方向键图在工程 `assets/arrow-left.png`、`arrow-down.png`、`arrow-up.png`、`arrow-right.png`（来自 `input-prompts-pixel`）。四条轨道和落下的音符用对应方向的键帽图。
+
 ## 验收会看的玩法
 
 未开始的标题、打中前几个音的循环、空放漏击失败、打完通关。

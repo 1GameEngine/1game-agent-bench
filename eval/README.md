@@ -76,6 +76,7 @@ npm train `1.21.0` 在缺少 `options.bindStore` 时 **create 直接失败**。�
 
 ```bash
 pnpm install
+node scripts/fetch-kenney.mjs   # Kenney CC0 图库到 eval/assets/library（或 $EVAL_ASSET_LIBRARY）
 pnpm test                 # 合同/审计/Judge 子集/报表禁令
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例

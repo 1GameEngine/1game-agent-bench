@@ -73,7 +73,7 @@
       "applies": ["intro", "loop"],
       "need": "any",
       "weight": 1,
-      "description": "三档位、队列、Start 或 Upgrade 在画面上找得到且文案正确。"
+      "description": "三档位上能看到食物图，Bun / Noodle / Tea 文案仍在，队列和 Start 或 Upgrade 找得到。"
     },
     {
       "id": "V2",
@@ -97,7 +97,7 @@
       "applies": ["loop", "clear"],
       "need": "any",
       "weight": 1,
-      "description": "档位或食物有形状/配色差异，不只一行数字。"
+      "description": "三个档位贴的是不同食物图，不只是纯色块或一行数字。"
     }
   ]
 }

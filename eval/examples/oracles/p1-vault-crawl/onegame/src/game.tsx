@@ -1,3 +1,16 @@
+declare module '*.png' {
+  const src: string;
+  export default src;
+}
+
+import floorPng from '../assets/floor.png';
+import wallPng from '../assets/wall.png';
+import doorPng from '../assets/door.png';
+import doorOpenPng from '../assets/door-open.png';
+import keyPng from '../assets/key.png';
+import chestPng from '../assets/chest.png';
+import guardPng from '../assets/guard.png';
+import playerPng from '../assets/player.png';
 import {
   createGameStore,
   renderGame,
@@ -86,16 +99,6 @@ function tryMove(d: GameState, dx: number, dy: number) {
   if (d.px === d.ex && d.py === d.ey) d.phase = 'fail';
 }
 
-function cellColor(x: number, y: number) {
-  const t = tile(x, y);
-  if (t === '#') return '#1e293b';
-  if (t === 'A') return '#7f1d1d';
-  if (t === 'G') return '#166534';
-  if (t === 'D') return store.doorOpen ? '#854d0e' : '#44403c';
-  if (t === 'K') return store.hasKey ? '#334155' : '#ca8a04';
-  return '#0f172a';
-}
-
 function App() {
   useFrame((frame) => {
     const dt = frame.deltaSeconds;
@@ -116,17 +119,44 @@ function App() {
   const cells = [];
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
+      const t = tile(x, y);
       cells.push(
-        <node
+        <image
           key={`c${x}-${y}`}
           x={OX + x * CELL}
           y={OY + y * CELL}
           width={CELL - 4}
           height={CELL - 4}
-          shape="roundedRect(8 8 8 8)"
-          backgroundColor={cellColor(x, y)}
+          source={t === '#' ? wallPng : floorPng}
+          imageFit="cover"
         />,
       );
+      if (t === 'D') {
+        cells.push(
+          <image
+            key={`d${x}-${y}`}
+            x={OX + x * CELL}
+            y={OY + y * CELL}
+            width={CELL - 4}
+            height={CELL - 4}
+            source={store.doorOpen ? doorOpenPng : doorPng}
+            imageFit="contain"
+          />,
+        );
+      }
+      if (t === 'K' && !store.hasKey) {
+        cells.push(
+          <image
+            key={`k${x}-${y}`}
+            x={OX + x * CELL + 12}
+            y={OY + y * CELL + 12}
+            width={52}
+            height={52}
+            source={keyPng}
+            imageFit="contain"
+          />,
+        );
+      }
     }
   }
 
@@ -157,9 +187,9 @@ function App() {
         textSize={22}
       />
       {cells}
-      <node x={OX + store.bx * CELL + 12} y={OY + store.by * CELL + 12} width={52} height={52} shape="roundedRect(8 8 8 8)" backgroundColor="#a16207" />
-      <node x={OX + store.ex * CELL + 18} y={OY + store.ey * CELL + 18} width={40} height={40} shape="roundedRect(20 20 20 20)" backgroundColor="#ef4444" />
-      <node x={OX + store.px * CELL + 18} y={OY + store.py * CELL + 18} width={40} height={40} shape="roundedRect(20 20 20 20)" backgroundColor="#38bdf8" />
+      <image x={OX + store.bx * CELL + 8} y={OY + store.by * CELL + 8} width={60} height={60} source={chestPng} imageFit="contain" />
+      <image x={OX + store.ex * CELL + 8} y={OY + store.ey * CELL + 8} width={60} height={60} source={guardPng} imageFit="contain" />
+      <image x={OX + store.px * CELL + 8} y={OY + store.py * CELL + 8} width={60} height={60} source={playerPng} imageFit="contain" />
       {store.phase === 'fail' ? (
         <text x={40} y={640} width={1200} height={56} text="Caught" textAlign="center" textSize={40} textColor="#fecaca" />
       ) : null}

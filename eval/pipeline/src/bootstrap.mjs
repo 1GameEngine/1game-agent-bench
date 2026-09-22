@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { PIN, REQUIRED_ONEGAME, gameDir as gameDirFor, oracleGame, oracleTraces } from './paths.mjs';
 import { EvalError } from './util.mjs';
+import { mountAssetLibrary } from './assets.mjs';
 import { execFileOk, whichPnpm } from './exec.mjs';
 
 function nodeMajor() {
@@ -121,6 +122,7 @@ export function bootstrap({ taskId, runId, instruction, oracle = false, replaceE
   pinGate(cwd);
 
   fs.writeFileSync(path.join(cwd, 'instruction.md'), instruction);
+  mountAssetLibrary(cwd, taskId);
   if (oracle) {
     const src = oracleGame(taskId);
     fs.copyFileSync(src, path.join(cwd, 'src', 'game.tsx'));

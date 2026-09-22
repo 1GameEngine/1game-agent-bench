@@ -18,6 +18,11 @@ const COOK := [330, 660, 330]
 const PATIENCE := 2700
 const CLOSE_AT := 15000
 const NAMES := ["Bun", "Noodle", "Tea"]
+var food: Array = []
+
+func _ready() -> void:
+	for n in ["bun", "noodle", "tea"]:
+		food.append(load("res://assets/%s.png" % n))
 
 func _cook_ms(st: int) -> int:
 	var raw: int = COOK[st]
@@ -100,7 +105,9 @@ func _draw() -> void:
 	for i in 3:
 		var c: Color = cols[i] if station == i else Color("4c0519")
 		draw_rect(Rect2(80 + i * 420, 160, 280, 220), c)
-		draw_string(ThemeDB.fallback_font, Vector2(80 + i * 420, 280), str(NAMES[i]), HORIZONTAL_ALIGNMENT_CENTER, 280, 40, Color("fff1f2"))
+		if i < food.size() and food[i] != null:
+			draw_texture_rect(food[i], Rect2(80 + i * 420 + 60, 175, 160, 140), false)
+		draw_string(ThemeDB.fallback_font, Vector2(80 + i * 420, 330), str(NAMES[i]), HORIZONTAL_ALIGNMENT_CENTER, 280, 36, Color("fff1f2"))
 	draw_rect(Rect2(80, 420, 360, 120), Color("e11d48") if waiting >= 0 else Color("3f3f46"))
 	draw_string(ThemeDB.fallback_font, Vector2(80, 490), "Guest %s" % want if waiting >= 0 else "Queue empty", HORIZONTAL_ALIGNMENT_CENTER, 360, 32, Color.WHITE)
 	draw_rect(Rect2(480, 420, 280, 120), Color("a3e635") if upgrade == 1 else Color("44403c"))

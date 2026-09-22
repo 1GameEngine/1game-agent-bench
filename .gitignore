@@ -8,3 +8,4 @@ eval/pipeline/.test-work/
 *.1gamerecord.swp
 eval/tools/godot/*.x86_64
 eval/tools/godot/*.zip
+eval/assets/library/

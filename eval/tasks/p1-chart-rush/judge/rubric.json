@@ -73,7 +73,7 @@
       "applies": ["intro", "loop"],
       "need": "any",
       "weight": 1,
-      "description": "四轨在画面下方排开，Start 在未开始时可见。"
+      "description": "四轨在画面下方排开，轨道上能看到方向键图，Start 在未开始时可见。"
     },
     {
       "id": "V2",
@@ -97,7 +97,7 @@
       "applies": ["loop", "clear"],
       "need": "any",
       "weight": 1,
-      "description": "音符有下落或接近判定线的图形，不只数字加一。"
+      "description": "落下的音符是方向键图，靠近判定区，不只是色条或数字加一。"
     }
   ]
 }

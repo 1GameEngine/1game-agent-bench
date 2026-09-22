@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { EVAL_DIR, PIPELINE_DIR, WORK_DIR } from './paths.mjs';
 import { execFileOk } from './exec.mjs';
+import { mountAssetLibrary } from './assets.mjs';
 import { gameplayKeys, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { finalizeStill } from './capture.mjs';
 import { FRAME_MS, parseStillId } from './p1-trace.mjs';
@@ -73,6 +74,7 @@ export function stageGodotProject({ taskId, runId, srcDir }) {
       return { dest, tamper: true, leak: leakScan(dest) };
     }
   }
+  mountAssetLibrary(dest, taskId);
   const patched = patchAutoload(path.join(dest, 'project.godot'), 'eval_injected/EvalProbe.gd', 'eval_injected/EvalRunner.gd');
   if (!patched.tamper) patchWindowLock(path.join(dest, 'project.godot'));
   return { dest, tamper: patched.tamper, leak: leakScan(dest), officialProbe };
@@ -80,7 +82,7 @@ export function stageGodotProject({ taskId, runId, srcDir }) {
 
 function walkGd(root, acc = [], prefix = '') {
   for (const ent of fs.readdirSync(root, { withFileTypes: true })) {
-    if (ent.name === '.godot') continue;
+    if (ent.name === '.godot' || ent.name === 'asset-library' || ent.isSymbolicLink()) continue;
     const rel = prefix ? `${prefix}/${ent.name}` : ent.name;
     if (ent.isDirectory()) walkGd(path.join(root, ent.name), acc, rel);
     else acc.push(rel);
@@ -92,6 +94,7 @@ function leakScan(dest) {
   const hits = [];
   for (const rel of walkGd(dest)) {
     if (rel.startsWith('eval_injected/')) continue;
+    if (/\.(png|jpg|jpeg|webp|wav|ogg|import)$/i.test(rel)) continue;
     const txt = fs.readFileSync(path.join(dest, rel), 'utf8');
     if (/playplan|checkpoint\.json/.test(txt)) hits.push(rel);
   }
