@@ -10,7 +10,7 @@ Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`�
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**。每次 `run-product-100` / `run-p1-compare` 在 `work/` 里重新写出提交物再重放。评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
 
 ## 读者与隔离
 

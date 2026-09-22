@@ -21,6 +21,7 @@ import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTr
 import { scoreProbe, visualRubric } from './probe.mjs';
 import { looksJudgeConfigured } from './looks-judge.mjs';
 import { requirementsForScenario } from './rubric.mjs';
+import { freshSubmissionDir } from './materialize-submission.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -159,7 +160,7 @@ export async function mechP1Godot(taskId, runId) {
   const staged = stageGodotProject({
     taskId,
     runId: `${runId}-gd`,
-    srcDir: oracleGodot(taskId),
+    srcDir: freshSubmissionDir(taskId, 'godot', `${runId}-gd`),
   });
   if (staged.tamper) {
     return {

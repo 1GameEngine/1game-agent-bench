@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { WORK_DIR, oracleGodot } from './paths.mjs';
+import { WORK_DIR } from './paths.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { P1_TASKS, loadP1Task } from './p1-load.mjs';
 import { runOnegameTraces } from './p1-onegame.mjs';
@@ -8,6 +8,7 @@ import { stageGodotProject, runGodotJob, makeTraceJob, judgeTraceEvents } from '
 import { buildCompareScalar } from './p1-report.mjs';
 import { writeReport } from './report.mjs';
 import { readTraces } from './p1-trace.mjs';
+import { freshSubmissionDir } from './materialize-submission.mjs';
 
 export function runP1OnegameTask(taskId, runId) {
   const bundle = loadP1Task(taskId);
@@ -26,7 +27,7 @@ export function runP1GodotTask(taskId, runId) {
   const staged = stageGodotProject({
     taskId,
     runId: `${runId}-gd`,
-    srcDir: oracleGodot(taskId),
+    srcDir: freshSubmissionDir(taskId, 'godot', `${runId}-gd`),
   });
   if (staged.tamper) return { id: taskId, engine: 'godot', primary: 'INJECT_TAMPER', g0_ok: 0, notes: ['EvalProbe tamper'] };
   if (staged.leak.length) return { id: taskId, engine: 'godot', primary: 'HARNESS_LEAK', g0_ok: 0, notes: staged.leak };
