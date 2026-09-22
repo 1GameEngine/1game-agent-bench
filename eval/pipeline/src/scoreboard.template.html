@@ -136,14 +136,35 @@
   td.diff { color: var(--diff); }
   .why { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
   .legend { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
-  .shot { margin: 14px 0 8px; }
-  .shot:last-child { margin-bottom: 0; }
+  .shot { margin: 0; }
   .shot-h { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
   .shots {
     display: grid;
     grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr));
     gap: 10px;
   }
+  .still-pager { margin-top: 8px; }
+  .still-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin: 0 0 12px;
+  }
+  .still-bar button, .still-tabs button {
+    appearance: none; cursor: pointer;
+    background: #12161d; color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; font: inherit; font-size: 13px;
+  }
+  .still-bar button:hover, .still-tabs button:hover { border-color: #4a5568; }
+  .still-bar button:focus-visible, .still-tabs button:focus-visible {
+    outline: 2px solid #8eb8ff; outline-offset: 2px;
+  }
+  .still-pos { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+  .still-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  .still-tabs button.is-on {
+    border-color: #8eb8ff; color: #fff; background: #1a2433;
+  }
+  .still-stage .shot { display: none; }
+  .still-stage .shot.is-on { display: block; }
   figure { margin: 0; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
   figure img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; background: #0f1224; }
   figcaption { padding: 8px 10px; font-size: 11px; color: #c5cddb; line-height: 1.4; }
@@ -244,8 +265,8 @@ function renderMain() {
     </tr>`).join('');
   const games = REPORT.games.map((g) => {
     const n = Math.max(REPORT.engines.length, ...g.stills.map((s) => s.shots.length), 1);
-    const stills = g.stills.map((s) => `
-      <div class="shot">
+    const stills = g.stills.map((s, i) => `
+      <div class="shot${i === 0 ? ' is-on' : ''}" data-i="${i}" data-label="${esc(s.label)}">
         <div class="shot-h">${esc(s.label)}</div>
         <div class="shots" style="--n:${n}">
           ${s.shots.map((sh) => {
@@ -257,6 +278,20 @@ function renderMain() {
           }).join('')}
         </div>
       </div>`).join('');
+    const tabKeys = [...new Set(g.stills.map((s) => String(s.label).split('_')[0]))];
+    const tabs = tabKeys.map((k, i) => `<button type="button" data-tab="${esc(k)}" class="${i === 0 ? 'is-on' : ''}">${esc(k)}</button>`).join('');
+    const pager = g.stills.length
+      ? `<div class="still-pager" tabindex="0" aria-label="静帧切换">
+          <div class="still-tabs">${tabs}</div>
+          <div class="still-bar">
+            <button type="button" data-dir="-1">上一张</button>
+            <span class="still-pos">1 / ${g.stills.length}</span>
+            <button type="button" data-dir="1">下一张</button>
+            <span class="why" style="margin:0">点击图或左右键切换，不铺开。</span>
+          </div>
+          <div class="still-stage">${stills}</div>
+        </div>`
+      : '<p class="why">无静帧。</p>';
     return `
       <section class="card game" id="${esc(g.id)}">
         <h2>${esc(g.title)}</h2>
@@ -280,7 +315,7 @@ function renderMain() {
           </div>
         </div>
         <h3>静帧对照</h3>
-        ${stills || '<p class="why">无静帧。</p>'}
+        ${pager}
       </section>`;
   }).join('');
   document.getElementById('main').innerHTML = `
@@ -314,6 +349,40 @@ function renderMain() {
 }
 renderToc();
 renderMain();
+function bindStillPagers() {
+  for (const pager of document.querySelectorAll('.still-pager')) {
+    const shots = [...pager.querySelectorAll('.still-stage .shot')];
+    if (!shots.length) continue;
+    const pos = pager.querySelector('.still-pos');
+    const tabs = [...pager.querySelectorAll('.still-tabs button')];
+    let i = 0;
+    const show = (next) => {
+      i = (next + shots.length) % shots.length;
+      shots.forEach((el, j) => el.classList.toggle('is-on', j === i));
+      if (pos) pos.textContent = `${i + 1} / ${shots.length}`;
+      const tab = String(shots[i].dataset.label || '').split('_')[0];
+      tabs.forEach((b) => b.classList.toggle('is-on', b.dataset.tab === tab));
+    };
+    pager.querySelectorAll('[data-dir]').forEach((b) => {
+      b.addEventListener('click', () => show(i + Number(b.dataset.dir)));
+    });
+    tabs.forEach((b) => {
+      b.addEventListener('click', () => {
+        const idx = shots.findIndex((el) => String(el.dataset.label || '').startsWith(b.dataset.tab));
+        if (idx >= 0) show(idx);
+      });
+    });
+    pager.querySelector('.still-stage')?.addEventListener('click', (e) => {
+      if (e.target.closest('figure')) show(i + 1);
+    });
+    pager.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); show(i + 1); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); show(i - 1); }
+    });
+    show(0);
+  }
+}
+bindStillPagers();
 const links = [...document.querySelectorAll('.toc a')];
 const items = links.map((a) => {
   const el = document.getElementById(a.dataset.id);

@@ -34,6 +34,19 @@ test('P1 compare_tasks are 3 headline games with hidden rubric and traces', () =
   }
 });
 
+test('chart rush looks isolate falling notes from receptor caps', () => {
+  const b = loadP1Task('p1-chart-rush');
+  const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
+  assert.deepEqual(byId.V1.applies, ['intro']);
+  assert.deepEqual(byId.V2.applies, ['loop']);
+  assert.equal(byId.V2.need, 'all');
+  assert.deepEqual(byId.A2.applies, ['loop']);
+  assert.equal(byId.A2.need, 'all');
+  assert.match(byId.V2.description, /下落/);
+  assert.match(byId.A2.description, /底栏/);
+  assert.match(b.instruction, /只有底栏没有下落物/);
+});
+
 test('P1 builder prompts share body bytes', () => {
   const og = fs.readFileSync(new URL('../../builder.prompt.p1.onegame.md', import.meta.url), 'utf8');
   const gd = fs.readFileSync(new URL('../../builder.prompt.p1.godot.md', import.meta.url), 'utf8');

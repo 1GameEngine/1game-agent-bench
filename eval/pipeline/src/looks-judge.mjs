@@ -209,7 +209,11 @@ export async function judgeLooksJob(job, stills) {
       ? aggregateRubric(parsed.scores, job.rubric)
       : aggregateLooks(parsed.scores, { hasDepth });
     if (job.verdictPath) {
-      fs.writeFileSync(job.verdictPath, `${JSON.stringify({ scores: parsed.scores }, null, 2)}\n`);
+      const persist =
+        evidenceScores && typeof evidenceScores === 'object' && !Array.isArray(evidenceScores)
+          ? evidenceScores
+          : parsed.scores;
+      fs.writeFileSync(job.verdictPath, `${JSON.stringify({ scores: persist }, null, 2)}\n`);
     }
     return { ...agg, looks_status: 'OK', source: 'subagent' };
   } catch (err) {

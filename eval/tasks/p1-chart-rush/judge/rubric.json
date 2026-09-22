@@ -70,18 +70,18 @@
     {
       "id": "V1",
       "dim": "V",
-      "applies": ["intro", "loop"],
-      "need": "any",
+      "applies": ["intro"],
+      "need": "all",
       "weight": 1,
-      "description": "四轨在画面下方排开，轨道上能看到方向键图，Start 在未开始时可见。"
+      "description": "未开始：四轨在画面下方排开，Start 找得到，受体上是方向键图。只看到底栏不能给 loop 加分。"
     },
     {
       "id": "V2",
       "dim": "V",
-      "applies": ["loop", "fail", "clear"],
-      "need": "any",
+      "applies": ["loop"],
+      "need": "all",
       "weight": 1,
-      "description": "不读调试字段也能看出是否在打谱、是否已经失败或通关。"
+      "description": "打谱中：轨道中段（标题和判定区之间）能看见正在下落的音符。空场、只有底栏受体、或音符钉死在判定条上且看不出在落，记 0。终局条幅不算本条。"
     },
     {
       "id": "A1",
@@ -89,15 +89,15 @@
       "applies": ["intro", "loop", "fail", "clear"],
       "need": "any",
       "weight": 1,
-      "description": "夜店或谱面风格统一。"
+      "description": "夜店或谱面风格统一。失败能读到 Chart miss，通关能读到 Chart clear，不靠 phase= 调试字。"
     },
     {
       "id": "A2",
       "dim": "A",
-      "applies": ["loop", "clear"],
-      "need": "any",
+      "applies": ["loop"],
+      "need": "all",
       "weight": 1,
-      "description": "落下的音符是方向键图，靠近判定区，不只是色条或数字加一。"
+      "description": "下落物是四张不同方向键图，出现在判定区上方的轨道里。底栏四颗键帽不算落下的音符。"
     }
   ]
 }

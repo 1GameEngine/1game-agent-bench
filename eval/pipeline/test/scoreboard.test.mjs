@@ -95,6 +95,9 @@ test('scoreboard view: one card per game, labeled engine summaries, extra engine
   assert.ok(!html.includes('__VIEW_JSON__'));
   assert.match(html, /"id":"unity"/);
   assert.match(html, /p1-extra-game/);
+  assert.match(html, /still-pager/);
+  assert.match(html, /上一张/);
+  assert.match(html, /data-dir/);
 });
 
 test('writeScoreboard emits index.html with N game cards from template', () => {

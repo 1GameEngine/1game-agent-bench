@@ -256,6 +256,20 @@ test('rubric verdict without still evidence is not a score', async () => {
     assert.equal(ok.V, 1);
     assert.equal(ok.A, 0);
     assert.equal(cited.looks_status, 'EVIDENCE_INCOMPLETE');
+    const jobDir = fs.mkdtempSync(path.join(os.tmpdir(), 'looks-persist-'));
+    const persisted = await scoreVisuals({
+      stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
+      geometry: { regions: {} },
+      instruction: 'stall',
+      taskId: 'p1-night-stall',
+      rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
+      scenario: 'loop',
+      jobDir,
+    });
+    assert.equal(persisted.looks_status, 'OK');
+    const saved = JSON.parse(fs.readFileSync(path.join(jobDir, 'looks-verdict.json'), 'utf8'));
+    assert.deepEqual(saved.scores.V1.evidence, ['loop_f0']);
+    assert.equal(saved.scores.V1.score, 1);
     fs.unlinkSync(tmp);
   } finally {
     if (prev === undefined) delete process.env.EVAL_LOOKS_BACKEND;

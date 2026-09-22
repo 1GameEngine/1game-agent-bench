@@ -19,8 +19,8 @@ export const ENGINE_DISPLAY = {
 export const ENGINE_PALETTE = ['#6ea8ff', '#3dd68c', '#ffb020', '#e879f9', '#67e8f9', '#fb7185'];
 
 export const LOOKS_ZH = {
-  V1: 'V1 控件位置/文案',
-  V2: 'V2 状态条能看清',
+  V1: 'V1 开局能认',
+  V2: 'V2 局内过程能看懂',
   V3: 'V3 图对得上 dump',
   V4: 'V4 必要 UI 没被挡住',
   A1: 'A1 风格统一',
