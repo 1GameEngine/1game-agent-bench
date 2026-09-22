@@ -137,13 +137,14 @@ export async function main(argv = process.argv.slice(2)) {
       if (phase !== 'looks' && process.env.EVAL_LOOKS_ALLOW_WORKER !== '1') {
         process.env.EVAL_LOOKS_REQUIRE_EXTERNAL = process.env.EVAL_LOOKS_REQUIRE_EXTERNAL || '1';
       }
-      const { report, out, mechPath, looksJobs, htmlPath } = await runProduct100(runId, { phase });
-      if (phase === 'mech') {
-        process.stdout.write(`${JSON.stringify({ phase: 'mech', mechPath, looks_jobs: looksJobs?.length ?? 0 }, null, 2)}\n`);
+      const { report, out, mechPath, looksJobs, htmlPath, looks_pending } = await runProduct100(runId, { phase });
+      if (phase === 'mech' || looks_pending) {
+        process.stdout.write(`${JSON.stringify({ phase: looks_pending ? 'pending' : 'mech', looks_phase: report?.looks_phase ?? null, mechPath, looks_jobs: looksJobs?.length ?? 0, product_100: report?.product_100 ?? null, winner_sentence: report?.winner_sentence ?? null }, null, 2)}\n`);
         process.stderr.write(`wrote ${mechPath}\n`);
+        if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
         return;
       }
-      process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, winner_sentence: report.winner_sentence }, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, looks_phase: report.looks_phase, winner_sentence: report.winner_sentence }, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
       process.exitCode = 0;

@@ -13,7 +13,7 @@ import {
   stripInstruction,
 } from '../src/looks-rubric.mjs';
 import { encodePngRgba } from '../src/png-nn.mjs';
-import { buildLooksJob, looksBackend, scoreVisuals, setLooksInvoker } from '../src/looks-judge.mjs';
+import { buildLooksJob, looksBackend, looksJudgeConfigured, scoreVisuals, setLooksInvoker } from '../src/looks-judge.mjs';
 
 test('parseLooksVerdict extracts JSON and quantizes 0/0.5/1', () => {
   const text = 'ok\n{"scores":{"V1":0.9,"V2":0.4,"V3":0.1,"V4":1,"A1":0.5,"A2":2,"A3":0,"A4":0.2,"D1":0.8}}\n';
@@ -73,6 +73,7 @@ test('looks job prompt is per-scenario play tags, not engine APIs', () => {
 
 test('NODE_TEST_CONTEXT backend is heuristic', () => {
   assert.equal(looksBackend(), 'heuristic');
+  assert.equal(looksJudgeConfigured(), false);
 });
 
 test('EVAL_LOOKS_BACKEND=subagent with no invoker is SUBAGENT_UNAVAILABLE', async () => {
@@ -210,4 +211,55 @@ test('paired looks zeros both when one side has no stills', async () => {
   assert.equal(vis.gd.V, 0);
   assert.equal(vis.og.looks_status, 'INCOMPARABLE_VISUAL');
   fs.unlinkSync(png);
+});
+
+test('rubric verdict without still evidence is not a score', async () => {
+  const prev = process.env.EVAL_LOOKS_BACKEND;
+  process.env.EVAL_LOOKS_BACKEND = 'subagent';
+  setLooksInvoker(async () => ({ scores: { V1: 1, A1: 1 } }));
+  try {
+    const tmp = path.join(os.tmpdir(), `looks-bare-${process.pid}.png`);
+    fs.writeFileSync(tmp, Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082', 'hex'));
+    const vis = await scoreVisuals({
+      stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
+      geometry: { regions: {} },
+      instruction: 'stall',
+      taskId: 'p1-night-stall',
+      rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
+      scenario: 'loop',
+    });
+    assert.equal(vis.looks_status, 'EVIDENCE_INCOMPLETE');
+    assert.equal(vis.V, null);
+    const cited = await scoreVisuals({
+      stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
+      geometry: { regions: {} },
+      instruction: 'stall',
+      taskId: 'p1-night-stall',
+      rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
+      scenario: 'loop',
+    });
+    setLooksInvoker(async () => ({
+      scores: {
+        V1: { score: 1, evidence: ['loop_f0'] },
+        A1: { score: 0, evidence: ['loop_f0'] },
+      },
+    }));
+    const ok = await scoreVisuals({
+      stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
+      geometry: { regions: {} },
+      instruction: 'stall',
+      taskId: 'p1-night-stall',
+      rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
+      scenario: 'loop',
+    });
+    assert.equal(ok.looks_status, 'OK');
+    assert.equal(ok.V, 1);
+    assert.equal(ok.A, 0);
+    assert.equal(cited.looks_status, 'EVIDENCE_INCOMPLETE');
+    fs.unlinkSync(tmp);
+  } finally {
+    if (prev === undefined) delete process.env.EVAL_LOOKS_BACKEND;
+    else process.env.EVAL_LOOKS_BACKEND = prev;
+    setLooksInvoker(null);
+  }
 });

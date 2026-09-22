@@ -19,6 +19,7 @@ import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
 import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTraces } from './p1-trace.mjs';
 import { scoreProbe, visualRubric } from './probe.mjs';
+import { looksJudgeConfigured } from './looks-judge.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
@@ -332,6 +333,29 @@ function serializeMech(mech) {
   };
 }
 
+function pendingVis() {
+  return {
+    V: null,
+    A: null,
+    M: null,
+    D: null,
+    looks_status: 'PENDING',
+    looks_source: 'none',
+    items: {},
+  };
+}
+
+function pendingRows(packs) {
+  const rows = [];
+  for (const pack of packs) {
+    const og = { ...pack.og, bundle: pack.bundle };
+    const gd = { ...pack.gd, bundle: pack.bundle };
+    rows.push(rowFromMech(pack.id, 'onegame', og, pendingVis()));
+    rows.push(rowFromMech(pack.id, 'godot', gd, pendingVis()));
+  }
+  return rows;
+}
+
 async function pairAndRows(taskId, og, gd) {
   const vis = await scorePairedLooks({
     taskId,
@@ -392,13 +416,14 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
   const p1attempts = [];
   const packs = [];
   const looksJobs = [];
+  const judgeNow = phase === 'all' && looksJudgeConfigured();
 
   for (const taskId of P0_TASKS) {
     process.stderr.write(`product P0 pair ${taskId}\n`);
     const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
     const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
     looksJobs.push(...prepareLooksJobs(taskId, og, gd));
-    if (phase !== 'mech') {
+    if (judgeNow) {
       const paired = await pairAndRows(taskId, og, gd);
       rows.push(paired.ogRow, paired.gdRow);
     }
@@ -421,7 +446,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
     const og = await mechP1Onegame(taskId, `${suiteRunId}-${taskId}`);
     const gd = await mechP1Godot(taskId, `${suiteRunId}-${taskId}`);
     looksJobs.push(...prepareLooksJobs(taskId, og, gd));
-    if (phase !== 'mech') {
+    if (judgeNow) {
       const paired = await pairAndRows(taskId, og, gd);
       rows.push(paired.ogRow, paired.gdRow);
     }
@@ -443,9 +468,15 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
   fs.writeFileSync(mechPath, `${JSON.stringify({ suiteRunId, tasks: packs, p0taskRows, p1attempts }, null, 2)}\n`);
   fs.writeFileSync(path.join(dir, 'LOOKS_JOBS.json'), `${JSON.stringify({ jobs: looksJobs }, null, 2)}\n`);
 
-  if (phase === 'mech') {
-    process.stderr.write(`wrote ${looksJobs.length} looks jobs; fill looks-verdict.json then --looks\n`);
-    return { mechPath, looksJobs, out: mechPath };
+  if (!judgeNow) {
+    process.stderr.write(`wrote ${looksJobs.length} looks jobs; 观感未评。填 looks-verdict.json 后 --looks\n`);
+    const reported = writeSuiteReports(suiteRunId, {
+      rows: pendingRows(packs),
+      p0taskRows,
+      p1attempts,
+      packs,
+    });
+    return { ...reported, mechPath, looksJobs, looks_pending: true };
   }
 
   return writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs });

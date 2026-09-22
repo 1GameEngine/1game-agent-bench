@@ -80,9 +80,10 @@ pnpm test                 # 合同/审计/Judge 子集/报表禁令
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # 3 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
-pnpm run run-product-100 -- --run-id <id> --mech   # 机械 + 静帧 + 写出 looks-job（不打 V/A）
-# 真实 looks subagent 写入各 jobDir/looks-verdict.json 后：
-pnpm run run-product-100 -- --run-id <id> --looks  # 读裁决 → PRODUCT_100.json（胜负）+ report/index.html
+pnpm run run-product-100 -- --run-id <id>          # 无评委时停在机械分 + looks-job，百分制为空，页眉「观感未评」
+pnpm run run-product-100 -- --run-id <id> --mech   # 同上，只强调机械阶段
+# 同一 looks subagent 写入各 jobDir/looks-verdict.json 后：
+pnpm run run-product-100 -- --run-id <id> --looks  # 读裁决 → 有 V/A 才写 product_100 胜负 + report/index.html
 node src/cli.mjs emit-scoreboard --run-id <id>     # 只用已有 JSON 重出分数页（模板固定，加题加引擎只扩数据）
 # 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json

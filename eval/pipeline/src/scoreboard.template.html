@@ -235,7 +235,7 @@ function renderMain() {
     <div class="chip${(REPORT.winnerIds || []).includes(e.id) ? ' win' : ''}" style="--eng:${e.color}">
       <div class="k">${esc(e.label)}${(REPORT.winnerIds || []).includes(e.id) ? ' · 最高' : ''}</div>
       <div class="n">${e.product_100 == null ? '—' : esc(e.product_100)}</div>
-      <div class="t">${REPORT.games.length} 题平均</div>
+      <div class="t">${e.product_100 == null ? '百分制未出' : REPORT.games.length + ' 题平均'}</div>
     </div>`).join('');
   const rows = REPORT.games.map((g) => `
     <tr>
@@ -294,6 +294,21 @@ function renderMain() {
         <tbody>${rows}</tbody>
       </table>
       <p class="legend">${esc(REPORT.formula)}</p>
+      <h3>机械 G / M / D</h3>
+      <p class="why">这一列来自重放探针，不叫 product_100，也不决定谁赢。</p>
+      <table>
+        <thead><tr><th>游戏</th>${thEngines()}</tr></thead>
+        <tbody>${REPORT.games.map((g) => {
+          const pick = (key) => g.metrics.find((m) => m.key === key);
+          return `<tr><td>${esc(g.title)}</td>${REPORT.engines.map((e) => {
+            const g1 = pick('G')?.values?.[e.id];
+            const m = pick('M')?.values?.[e.id];
+            const d = pick('D')?.values?.[e.id];
+            const miss = g.missing && g.missing[e.id] && g.missing[e.id].length ? ' 缺 ' + g.missing[e.id].join(',') : '';
+            return `<td class="num">G ${esc(g1)} · M ${esc(m)} · D ${esc(d)}${esc(miss)}</td>`;
+          }).join('')}</tr>`;
+        }).join('')}</tbody>
+      </table>
     </section>
     ${games}`;
 }

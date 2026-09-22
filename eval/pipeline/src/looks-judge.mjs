@@ -8,6 +8,7 @@ import {
   promptHasBannedWords,
   stripInstruction,
   normalizeLooksScores,
+  looksEvidenceComplete,
 } from './looks-rubric.mjs';
 import { heuristicDepth, heuristicFrame, round01, average01 } from './looks.mjs';
 import { scoreLooksWorker } from './looks-worker.mjs';
@@ -24,6 +25,13 @@ export function looksBackend() {
   if (process.env.EVAL_LOOKS_BACKEND) return process.env.EVAL_LOOKS_BACKEND;
   if (process.env.NODE_TEST_CONTEXT) return 'heuristic';
   return 'subagent';
+}
+
+export function looksJudgeConfigured() {
+  if (registeredInvoker) return true;
+  if (process.env.EVAL_LOOKS_CMD) return true;
+  if (process.env.EVAL_LOOKS_ALLOW_WORKER === '1') return true;
+  return false;
 }
 
 export function buildLooksJob({
@@ -175,10 +183,28 @@ export async function judgeLooksJob(job, stills) {
       };
     }
     const stillIds = new Set((job.stills ?? []).map((s) => s.id).filter(Boolean));
+    const rawScores =
+      typeof text === 'object'
+        ? text.scores && typeof text.scores === 'object' && !Array.isArray(text.scores)
+          ? text.scores
+          : text
+        : null;
     const parsed =
       typeof text === 'object'
-        ? { scores: normalizeLooksScores(text.scores ?? text, job.rubric, stillIds) }
+        ? { scores: normalizeLooksScores(rawScores, job.rubric, stillIds) }
         : parseLooksVerdict(text, job.rubric, stillIds);
+    const evidenceScores =
+      rawScores ??
+      (parsed.raw?.scores && typeof parsed.raw.scores === 'object' ? parsed.raw.scores : parsed.raw);
+    if (!looksEvidenceComplete(evidenceScores, job.rubric, stillIds)) {
+      return {
+        V: null,
+        A: null,
+        items: parsed.scores,
+        looks_status: 'EVIDENCE_INCOMPLETE',
+        source: 'subagent',
+      };
+    }
     const agg = job.rubric?.requirements?.length
       ? aggregateRubric(parsed.scores, job.rubric)
       : aggregateLooks(parsed.scores, { hasDepth });

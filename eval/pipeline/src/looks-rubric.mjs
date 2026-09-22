@@ -128,6 +128,20 @@ export function normalizeLooksScores(scores, rubric, stillIds) {
   return out;
 }
 
+export function looksEvidenceComplete(scores, rubric, stillIds) {
+  if (!rubric?.requirements?.length) return true;
+  if (!stillIds || stillIds.size === 0) return false;
+  for (const req of rubric.requirements) {
+    const raw = scores?.[req.id];
+    const evidence =
+      raw && typeof raw === 'object' && !Array.isArray(raw) && Array.isArray(raw.evidence)
+        ? raw.evidence.map(String)
+        : [];
+    if (!evidence.some((id) => stillIds.has(id))) return false;
+  }
+  return true;
+}
+
 export function aggregateLooks(itemScores, { hasDepth = false } = {}) {
   const vIds = LOOKS_ITEMS.filter((i) => i.dim === 'V').map((i) => i.id);
   const aIds = LOOKS_ITEMS.filter((i) => i.dim === 'A').map((i) => i.id);

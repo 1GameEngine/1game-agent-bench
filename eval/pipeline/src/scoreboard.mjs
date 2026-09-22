@@ -214,7 +214,7 @@ export function buildScoreboardView({ report, rows, packs }) {
         const v = row[m.key];
         return v == null ? '—' : v;
       });
-      return { label: m.label, values };
+      return { key: m.key, label: m.label, values };
     });
     const looksKeys = [];
     for (const e of engines) {
@@ -265,6 +265,7 @@ export function buildScoreboardView({ report, rows, packs }) {
       title: copy.title,
       blurb: copy.blurb,
       scores,
+      missing: Object.fromEntries(engines.map((e) => [e.id, byEngine[e.id].missing_scenarios ?? []])),
       note: gameNote(engines, scores),
       metrics,
       looks,
@@ -274,12 +275,24 @@ export function buildScoreboardView({ report, rows, packs }) {
   });
 
   const runId = String(report?.report_id ?? '').replace(/^P100_/, '') || 'run';
+  const looksPhase = report?.looks_phase ?? (comparable ? 'scored' : 'blocked');
+  const headerMeta =
+    looksPhase === 'scored'
+      ? '可比 · 真实 looks'
+      : looksPhase === 'pending'
+        ? '观感未评'
+        : looksPhase === 'unpaired'
+          ? '观感不成对'
+          : looksPhase === 'evidence'
+            ? '证据不全'
+            : '不可比';
   return {
     schema: 'eval.scoreboard/1',
     runId,
     comparable,
-    headerMeta: comparable ? '可比 · 真实 looks' : '不可比',
-    meta: `跑次 ${runId} · ${comparable ? '可比' : '不可比'} · looks ${report?.still?.looks ?? 'n/a'}。橙色数字表示引擎之间不一致。`,
+    looksPhase,
+    headerMeta,
+    meta: `跑次 ${runId} · ${headerMeta}。百分制只在 looks subagent 成对后出现。橙色数字表示引擎之间不一致。`,
     formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。M/D 来自重放探针。V/A 仅 looks subagent 逐条计分；否则 S 不出分。`,
     engines,
     winnerIds: winnerIds.length === engines.length ? [] : winnerIds,

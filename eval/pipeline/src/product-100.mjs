@@ -69,6 +69,7 @@ export function buildProduct100({ runId, rows }) {
     };
   }
   const { comparable, reasons } = suiteComparableFromRows(rows);
+  const looks_phase = classifyLooksPhase(comparable, reasons);
   const fmt = (x) => (typeof x === 'number' ? x.toFixed(1) : '未出分');
   const og = fmt(engines.onegame.product_100);
   const gd = fmt(engines.godot.product_100);
@@ -80,7 +81,15 @@ export function buildProduct100({ runId, rows }) {
       .slice(0, 3)
       .map((r) => `${r.id}:${r.reason}`)
       .join('；');
-    winner_sentence = `产物分不可比（静帧或 looks Judge 未成对）。1Game = ${og}，Godot = ${gd}（含观感的百分制不得宣布胜者）。${sample}`;
+    const head =
+      looks_phase === 'pending'
+        ? '观感未评，百分制不可比。机械 G/M/D 已出，胜负要等同一 looks subagent 写完 looks-verdict.json。'
+        : looks_phase === 'unpaired'
+          ? '观感不成对，百分制不可比。静帧或 looks job 两边不一致，不得宣布胜者。'
+          : looks_phase === 'evidence'
+            ? '观感证据不全，百分制不可比。裁决没有对上本 job 的静帧 id，不得宣布胜者。'
+            : '产物分不可比（静帧或 looks Judge 未成对）。';
+    winner_sentence = `${head}1Game = ${og}，Godot = ${gd}。${sample}`;
   } else {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
     winner_sentence =
@@ -95,6 +104,7 @@ export function buildProduct100({ runId, rows }) {
     headline_track: 'product_100',
     winner: comparable,
     comparable,
+    looks_phase,
     incomparable_reasons: comparable ? [] : reasons,
     looks_included: true,
     still: {
@@ -125,6 +135,15 @@ export function buildProduct100({ runId, rows }) {
       p0_report: 'P0_report.json',
     },
   };
+}
+
+export function classifyLooksPhase(comparable, reasons) {
+  if (comparable) return 'scored';
+  const texts = (reasons ?? []).map((r) => String(r.reason ?? ''));
+  if (texts.length && texts.every((t) => /PENDING|SUBAGENT_UNAVAILABLE/.test(t))) return 'pending';
+  if (texts.length && texts.every((t) => /EVIDENCE_INCOMPLETE/.test(t))) return 'evidence';
+  if (texts.some((t) => t.includes('INCOMPARABLE'))) return 'unpaired';
+  return 'blocked';
 }
 
 function suiteComparableFromRows(rows) {

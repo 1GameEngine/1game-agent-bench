@@ -58,6 +58,32 @@ test('buildProduct100 6 rows and winner sentence', () => {
   assert.equal(report.still.traces, 'submitted');
 });
 
+test('pending looks withholds S and says 观感未评', () => {
+  const rows = SUITE_TASKS.flatMap((id) => [
+    scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, D: 1, V: null, A: null, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'PENDING', looks_source: 'none' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, M: 0.5, D: 0.5, V: null, A: null, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'PENDING', looks_source: 'none' }),
+  ]);
+  const report = buildProduct100({ runId: 'pending', rows });
+  assert.equal(report.looks_phase, 'pending');
+  assert.equal(report.product_100.onegame, null);
+  assert.equal(report.product_100.godot, null);
+  assert.equal(report.comparable, false);
+  assert.match(report.winner_sentence, /观感未评/);
+  assert.equal(report.tasks[0].M, 1);
+  assert.equal(report.tasks.find((r) => r.engine === 'godot').D, 0.5);
+});
+
+test('incomplete looks evidence withholds S', () => {
+  const rows = SUITE_TASKS.flatMap((id) => [
+    scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, D: 1, V: null, A: null, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'EVIDENCE_INCOMPLETE', looks_source: 'subagent' }),
+    scoreAttempt({ id, engine: 'godot', G: 1, M: 1, D: 1, V: null, A: null, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'EVIDENCE_INCOMPLETE', looks_source: 'subagent' }),
+  ]);
+  const report = buildProduct100({ runId: 'evidence', rows });
+  assert.equal(report.looks_phase, 'evidence');
+  assert.equal(report.product_100.onegame, null);
+  assert.match(report.winner_sentence, /观感证据不全/);
+});
+
 test('buildProduct100 withholds winner when looks unpaired', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
     scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, V: 1, A: 1, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
