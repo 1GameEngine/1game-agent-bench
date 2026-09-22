@@ -12,6 +12,7 @@ import { runP1Compare } from './p1-run.mjs';
 import { runProduct100 } from './product-run.mjs';
 import { writeScoreboardFromRun } from './scoreboard.mjs';
 import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
+import { installLooksVerdicts } from './looks-install.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -165,6 +166,19 @@ export async function main(argv = process.argv.slice(2)) {
       process.stdout.write(`${buildLooksUserPrompt(job)}\n`);
       return;
     }
+    if (cmd === 'install-looks') {
+      const runId = argValue(argv, '--run-id');
+      const verdictsPath = argValue(argv, '--verdicts');
+      if (!runId || !verdictsPath) throw new EvalError('EVAL_INTERNAL', '--run-id and --verdicts required');
+      const jobsPath = path.join(WORK_DIR, runId, 'LOOKS_JOBS.json');
+      const jobs = JSON.parse(fs.readFileSync(jobsPath, 'utf8')).jobs ?? [];
+      const payload = JSON.parse(fs.readFileSync(verdictsPath, 'utf8'));
+      const verdicts = Array.isArray(payload) ? payload : payload.jobs;
+      const result = installLooksVerdicts({ jobs, verdicts });
+      process.stdout.write(`${JSON.stringify({ ok: result.ok, written: result.written.length, issues: result.issues }, null, 2)}\n`);
+      process.exitCode = result.ok ? 0 : 1;
+      return;
+    }
     if (cmd === 'apply-looks') {
       const verdictPath = argValue(argv, '--verdict');
       if (!verdictPath) throw new EvalError('EVAL_INTERNAL', '--verdict required');
@@ -187,7 +201,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | emit-scoreboard --run-id <id> | looks-prompt --job <json> | install-looks --run-id <id> --verdicts <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {
