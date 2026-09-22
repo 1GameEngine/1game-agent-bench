@@ -18,6 +18,8 @@ import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
 import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTraces } from './p1-trace.mjs';
+import { scoreProbe, visualRubric } from './probe.mjs';
+import { requirementsForScenario } from './rubric.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -131,6 +133,7 @@ export async function mechP1Onegame(taskId, runId) {
   const replay = runOnegameTraces({
     gameDir: boot.gameDir,
     stillsDir,
+    probeKeys: bundle.probe?.keys,
   });
   const valid = (replay.traces ?? []).filter((t) => t.audit.ok);
   const G = replay.g0_ok === 1 && hyg.ok && valid.length > 0 && replay.primary === 'TRACE_OK';
@@ -138,6 +141,7 @@ export async function mechP1Onegame(taskId, runId) {
     bundle,
     G,
     stills: replay.stills,
+    samples: replay.samples ?? [],
     traces: replay.traces,
     scenarios: replay.scenarios,
     replayed_scenarios: replay.replayed_scenarios,
@@ -185,7 +189,7 @@ export async function mechP1Godot(taskId, runId) {
   const traces = readTraces(path.join(staged.dest, 'demo_outputs'));
   const jobRun = runGodotJob({
     projectDir: staged.dest,
-    job: makeTraceJob({ traces, stillsDir }),
+    job: makeTraceJob({ traces, stillsDir, probeKeys: bundle.probe?.keys }),
     outPath: path.join(outDir, 'traces.jsonl'),
     timeoutMs: 300_000,
   });
@@ -201,6 +205,7 @@ export async function mechP1Godot(taskId, runId) {
     bundle,
     G,
     stills: judged.stills,
+    samples: judged.samples ?? [],
     traces,
     scenarios: judged.scenarios,
     replayed_scenarios: judged.replayed_scenarios,
@@ -216,12 +221,24 @@ function rowFromMech(taskId, engine, mech, vis) {
   if (mech.rowReady && !mech.G) {
     return { ...mech.rowReady, looks_status: vis.looks_status, looks_source: vis.looks_source };
   }
+  const probeScore = mech.bundle?.probe
+    ? scoreProbe({
+        probe: mech.bundle.probe,
+        rubric: mech.bundle.rubric,
+        samples: mech.samples ?? [],
+        traces: mech.traces,
+        replayedScenarios: mech.replayed_scenarios,
+      })
+    : null;
+  const missing = [
+    ...new Set([...(probeScore?.missing_scenarios ?? []), ...(vis.missing_scenarios ?? mech.missing_scenarios ?? [])]),
+  ];
   return scoreAttempt({
     id: taskId,
     engine,
     G: mech.G,
-    M: vis.M,
-    D: vis.D,
+    M: probeScore ? probeScore.M : vis.M,
+    D: probeScore ? probeScore.D : vis.D,
     V: vis.V,
     A: vis.A,
     primary: mech.primary,
@@ -229,9 +246,9 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
     stills: mech.stills,
-    looks_items: vis.items,
+    looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
     scenarios: vis.observed_scenarios ?? mech.scenarios,
-    missing_scenarios: vis.missing_scenarios ?? mech.missing_scenarios,
+    missing_scenarios: missing,
   });
 }
 
@@ -251,7 +268,7 @@ function stillsForJob(stills) {
 function prepareLooksJobs(taskId, og, gd) {
   const instruction = og.bundle?.instruction ?? gd.bundle?.instruction;
   const geometry = og.bundle?.geometry ?? gd.bundle?.geometry;
-  const rubric = og.bundle?.rubric ?? gd.bundle?.rubric;
+  const rubric = visualRubric(og.bundle?.rubric ?? gd.bundle?.rubric);
   const jobs = [];
   for (const side of [
     { engine: 'onegame', mech: og },
@@ -261,6 +278,7 @@ function prepareLooksJobs(taskId, og, gd) {
     const by = groupStillsByScenario(stillsForJob(side.mech.stills));
     for (const [scenario, list] of by) {
       if (!list.length) continue;
+      if (!requirementsForScenario(rubric, scenario).length) continue;
       const capped = capLooksStills(list);
       const jobDir = path.join(side.mech.jobDir, scenario);
       const job = buildLooksJob({
@@ -310,6 +328,7 @@ function serializeMech(mech) {
     scenarios: mech.scenarios,
     replayed_scenarios: mech.replayed_scenarios,
     missing_scenarios: mech.missing_scenarios,
+    samples: mech.samples ?? [],
   };
 }
 
@@ -390,6 +409,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
         instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
         geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
         rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
+        probe: og.bundle?.probe ?? gd.bundle?.probe,
       },
       og: serializeMech(og),
       gd: serializeMech(gd),
@@ -412,6 +432,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
         instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
         geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
         rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
+        probe: og.bundle?.probe ?? gd.bundle?.probe,
       },
       og: serializeMech(og),
       gd: serializeMech(gd),

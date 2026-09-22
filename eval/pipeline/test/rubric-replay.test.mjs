@@ -8,6 +8,8 @@ import {
   validateRubric,
 } from '../src/rubric.mjs';
 import { loadP1Task, P1_TASKS } from '../src/p1-load.mjs';
+import { assertionScore, scoreProbe, validateProbe } from '../src/probe.mjs';
+import { normalizeLooksScores } from '../src/looks-rubric.mjs';
 
 const mini = {
   score_formula: 'G * (40*M + 10*D + 20*V + 30*A)',
@@ -94,4 +96,57 @@ test('failed fail-anchor drops scenario and caps M/D', () => {
   assert.ok(fin.missing_scenarios.includes('fail'));
   assert.equal(fin.M, 0.5);
   assert.equal(fin.D, 0.5);
+});
+
+test('headline probes match rubric M/D and do not broadcast one mark', () => {
+  for (const id of P1_TASKS) {
+    const b = loadP1Task(id);
+    assert.equal(validateProbe(b.probe, b.rubric).ok, true, id);
+  }
+  const night = loadP1Task('p1-night-stall');
+  const failOnly = scoreProbe({
+    probe: night.probe,
+    rubric: night.rubric,
+    samples: [
+      { scenario: 'intro', frame: 0, state: { phase: 'title', waiting: -1, station: 0, spawned: 0, served: 0, cooked: -1, upgrade: 0 } },
+      { scenario: 'loop', frame: 0, state: { phase: 'open', waiting: -1, station: 0, spawned: 1, served: 0, cooked: 0, upgrade: 0 } },
+      { scenario: 'loop', frame: 30, state: { phase: 'open', waiting: 0, station: 1, spawned: 1, served: 1, cooked: -1, upgrade: 0 } },
+      { scenario: 'fail', frame: 0, state: { phase: 'open', served: 0 } },
+      { scenario: 'fail', frame: 40, state: { phase: 'clear', served: 1 } },
+      { scenario: 'clear', frame: 0, state: { phase: 'open', station: 0, spawned: 1, served: 0, cooked: 0, upgrade: 0 } },
+      { scenario: 'clear', frame: 40, state: { phase: 'clear', station: 1, spawned: 2, served: 3, cooked: -1, upgrade: 1 } },
+    ],
+    traces: REQUIRED_SCENARIOS.map((scenario) => ({
+      audit: { ok: true },
+      trace: { scenario, events: [{ frame: 0, type: 'keydown', code: 'Enter' }] },
+    })),
+    replayedScenarios: REQUIRED_SCENARIOS,
+  });
+  assert.ok(failOnly.missing_scenarios.includes('fail'));
+  assert.ok(failOnly.M <= 0.5);
+  assert.equal(
+    assertionScore(night.probe.assertions.find((a) => a.id === 'M6'), [
+      { state: { phase: 'clear', served: 3 } },
+    ]),
+    1,
+  );
+});
+
+test('rubric looks items without evidence score 0', () => {
+  const rubric = {
+    requirements: [
+      { id: 'V1', description: 'see' },
+      { id: 'A1', description: 'art' },
+    ],
+  };
+  const ids = new Set(['loop_f0']);
+  const bare = normalizeLooksScores({ V1: 1, A1: 1 }, rubric, ids);
+  assert.equal(bare.V1, 0);
+  const cited = normalizeLooksScores(
+    { V1: { score: 1, evidence: ['loop_f0'] }, A1: { score: 1, evidence: ['other'] } },
+    rubric,
+    ids,
+  );
+  assert.equal(cited.V1, 1);
+  assert.equal(cited.A1, 0);
 });

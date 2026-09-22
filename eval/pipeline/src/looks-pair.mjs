@@ -3,6 +3,8 @@ import path from 'node:path';
 import { scoreVisuals } from './looks-judge.mjs';
 import { finalizeObservedScores } from './rubric.mjs';
 import { capLooksStills, groupStillsByScenario } from './p1-trace.mjs';
+import { requirementsForScenario } from './rubric.mjs';
+import { visualRubric } from './probe.mjs';
 
 export function stillsComplete(stills) {
   const list = stills ?? [];
@@ -41,6 +43,7 @@ async function scoreVisualsSide({
   traces,
   replayed_scenarios,
 }) {
+  const visRubric = visualRubric(rubric);
   const by = scenarioStillsMap(stills);
   const scenarios = Object.keys(by).filter((sc) => by[sc].length);
   if (!scenarios.length) {
@@ -51,6 +54,7 @@ async function scoreVisualsSide({
   let looks_source;
   const policies = [];
   for (const sc of scenarios) {
+    if (!requirementsForScenario(visRubric, sc).length) continue;
     const capped = capLooksStills(by[sc]);
     policies.push(capped.sample_policy);
     const vis = await scoreVisuals({
@@ -60,7 +64,7 @@ async function scoreVisualsSide({
       taskId,
       engine,
       jobDir: jobDir ? path.join(jobDir, sc) : undefined,
-      rubric,
+      rubric: visRubric,
       scenario: sc,
       sample_policy: capped.sample_policy,
     });
@@ -79,7 +83,7 @@ async function scoreVisualsSide({
   const sample_policy = uniqPolicy.length === 1 ? uniqPolicy[0] : uniqPolicy.join(',');
   const agg = finalizeObservedScores({
     byScenario,
-    rubric,
+    rubric: visRubric,
     traces,
     replayedScenarios: replayed_scenarios,
   });

@@ -7,31 +7,31 @@
       "applies": ["intro"],
       "need": "all",
       "weight": 1,
-      "description": "标题阶段可见 Night Stall 与 Start；队列区没有客人入座。"
+      "description": "未开档：phase 保持 title，队列没有客人。"
     },
     {
       "id": "M2",
       "dim": "M",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "三档商品 Bun / Noodle / Tea 同时在画面上可辨，不是单一柜台。"
+      "description": "开档后当前档位会切换，不是锁死在一档。"
     },
     {
       "id": "M3",
       "dim": "M",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "开档后队列区出现客人；连续帧里客人从无到有或点单变化可见。"
+      "description": "开档后有客人入队（spawned 增加）。"
     },
     {
       "id": "M4",
       "dim": "M",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "匹配出餐时队列推进或已出餐数量增加，须在连续抽帧里看见，而不是只看见按钮被点。"
+      "description": "匹配出餐使 served 增加。"
     },
     {
       "id": "M5",
@@ -40,7 +40,7 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "失败画面出现 Closed early；本条若看不到失败态必须打 0。"
+      "description": "失败轨迹结束在 fail，且全程没有进入 clear。"
     },
     {
       "id": "M6",
@@ -49,23 +49,23 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "通关画面出现 Night clear；本条若看不到通关态必须打 0。"
+      "description": "通关轨迹结束在 clear，served 至少 3，且全程没有进入 fail。"
     },
     {
       "id": "D1",
       "dim": "D",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "备餐与出餐是两段：先见制作中，再见成品离开柜台或交给客人。"
+      "description": "先做出成品（cooked），之后 served 才增加。"
     },
     {
       "id": "D2",
       "dim": "D",
-      "applies": ["loop", "clear"],
-      "need": "any",
+      "applies": ["clear"],
+      "need": "all",
       "weight": 1,
-      "description": "Upgrade 区与三种商品档位职责不同，升级后节奏或档位外观有变化。"
+      "description": "通关轨迹里 upgrade 从 0 变为 1。"
     },
     {
       "id": "V1",

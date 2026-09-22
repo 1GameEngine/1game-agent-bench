@@ -10,7 +10,7 @@ Headline 三题在 `compare_tasks`：`p1-night-stall` `p1-vault-crawl` `p1-chart
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps），按 scenario 抽帧后打 M/D/V/A。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。评测重放 **提交的 traces**（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
 
 ## 读者与隔离
 
@@ -93,7 +93,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占 1/3。\(G\) 定义为能启动且至少有一条合法 submitted trace。M/D/V/A 全部来自隐藏量表、由 **同一真实 looks subagent** 根据 30fps 重放抽帧打分（不是 dump 切片，不是内置 worker）。缺 intro/loop/fail/clear 则 M、D 封顶 0.5。场景与视窗都是 **1280×720**。两边都 `G=1` 时必须同时有抽帧且 `looks_status=OK`、`looks_source=subagent`；否则观感成对作废，`comparable=false`，**不宣布胜者**。worker / heuristic 不得当 headline。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占 1/3。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

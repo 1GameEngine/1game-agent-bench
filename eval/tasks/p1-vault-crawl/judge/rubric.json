@@ -7,31 +7,31 @@
       "applies": ["intro"],
       "need": "all",
       "weight": 1,
-      "description": "开局玩家在钥匙左侧出生格，墙与出口可辨。"
+      "description": "开局 phase=play，玩家在 (1,1)。"
     },
     {
       "id": "M2",
       "dim": "M",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "连续抽帧里玩家格子位置改变，且没有穿墙。"
+      "description": "玩家横向格子坐标发生变化。"
     },
     {
       "id": "M3",
       "dim": "M",
-      "applies": ["loop", "clear"],
-      "need": "any",
+      "applies": ["clear"],
+      "need": "all",
       "weight": 1,
-      "description": "拿到钥匙后门的外观或可通过性改变。"
+      "description": "先拿到钥匙，之后门打开。"
     },
     {
       "id": "M4",
       "dim": "M",
-      "applies": ["loop"],
+      "applies": ["loop", "clear"],
       "need": "any",
       "weight": 1,
-      "description": "箱子相对周围格子可移动或占据独立格，没有推进墙里。"
+      "description": "箱子横向格子坐标相对开局发生变化。"
     },
     {
       "id": "M5",
@@ -40,7 +40,7 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "失败画面出现 Caught；本条若看不到失败态必须打 0。"
+      "description": "失败轨迹结束在 fail，且全程没有进入 clear。"
     },
     {
       "id": "M6",
@@ -49,23 +49,23 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "通关画面出现 Vault open；本条若看不到通关态必须打 0。"
+      "description": "通关轨迹结束在 clear，且全程没有进入 fail。"
     },
     {
       "id": "D1",
       "dim": "D",
-      "applies": ["loop", "intro"],
-      "need": "any",
+      "applies": ["clear"],
+      "need": "all",
       "weight": 1,
-      "description": "钥匙、箱子、守卫、警报、出口在画面上职责不同。"
+      "description": "通关前已经拿到钥匙，结束时门是开的。"
     },
     {
       "id": "D2",
       "dim": "D",
-      "applies": ["fail", "clear"],
-      "need": "any",
+      "applies": ["loop", "clear"],
+      "need": "all",
       "weight": 1,
-      "description": "失败与通关是不同结局画面，不是同一句状态字。"
+      "description": "移动会推进内部 tick。"
     },
     {
       "id": "V1",

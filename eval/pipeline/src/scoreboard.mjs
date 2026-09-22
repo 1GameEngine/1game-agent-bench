@@ -212,7 +212,7 @@ export function buildScoreboardView({ report, rows, packs }) {
         const row = byEngine[id];
         if (m.key === 'D' && row.D == null && !hasDepth(taskId)) return '—';
         const v = row[m.key];
-        return v == null ? (m.optional ? '—' : 0) : v;
+        return v == null ? '—' : v;
       });
       return { label: m.label, values };
     });
@@ -280,7 +280,7 @@ export function buildScoreboardView({ report, rows, packs }) {
     comparable,
     headerMeta: comparable ? '可比 · 真实 looks' : '不可比',
     meta: `跑次 ${runId} · ${comparable ? '可比' : '不可比'} · looks ${report?.still?.looks ?? 'n/a'}。橙色数字表示引擎之间不一致。`,
-    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。无 D 的题按 90 分母重标到百分制。`,
+    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。M/D 来自重放探针。V/A 仅 looks subagent 逐条计分；否则 S 不出分。`,
     engines,
     winnerIds: winnerIds.length === engines.length ? [] : winnerIds,
     games,

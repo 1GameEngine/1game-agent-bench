@@ -90,6 +90,23 @@ test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   assert.equal(row.V, 1);
   assert.equal(row.A, 0.5);
   assert.equal(row.product_100, 70);
+  const withheld = scoreAttempt({
+    id: 'p1-night-stall',
+    engine: 'onegame',
+    G: 1,
+    M: 1,
+    D: 1,
+    V: 1,
+    A: 1,
+    primary: 'TRACE_OK',
+    g0_ok: 1,
+    looks_status: 'OK',
+    looks_source: 'heuristic',
+  });
+  assert.equal(withheld.product_100, null);
+  assert.equal(withheld.V, null);
+  assert.equal(withheld.A, null);
+  assert.equal(withheld.M, 1);
   assert.deepEqual(row.scenarios, ['intro', 'loop', 'fail', 'clear']);
   assert.equal(row.M_pos, undefined);
   assert.equal(row.D_mech, undefined);

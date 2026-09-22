@@ -12,6 +12,8 @@
     "regions": { "type": "object" },
     "variant_regions": { "type": "array", "items": { "type": "string" } },
     "rubric": { "type": "object" },
+    "scenario": { "type": "string" },
+    "sample_policy": { "type": "string" },
     "stills": {
       "type": "array",
       "items": {

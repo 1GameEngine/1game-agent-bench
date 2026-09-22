@@ -174,10 +174,11 @@ export async function judgeLooksJob(job, stills) {
         source: 'subagent',
       };
     }
+    const stillIds = new Set((job.stills ?? []).map((s) => s.id).filter(Boolean));
     const parsed =
       typeof text === 'object'
-        ? { scores: normalizeLooksScores(text.scores ?? text, job.rubric) }
-        : parseLooksVerdict(text, job.rubric);
+        ? { scores: normalizeLooksScores(text.scores ?? text, job.rubric, stillIds) }
+        : parseLooksVerdict(text, job.rubric, stillIds);
     const agg = job.rubric?.requirements?.length
       ? aggregateRubric(parsed.scores, job.rubric)
       : aggregateLooks(parsed.scores, { hasDepth });

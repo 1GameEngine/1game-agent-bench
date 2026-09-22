@@ -247,8 +247,21 @@ func _map_key(code: String) -> Key:
 			return KEY_NONE
 
 func _snapshot(id: String) -> void:
+	_emit_probe(id)
 	if _stills_dir == "":
 		return
+
+func _emit_probe(id: String) -> void:
+	var keys: Array = _job.get("probe_keys", [])
+	if keys.is_empty():
+		return
+	var root := get_tree().current_scene
+	if root == null:
+		return
+	var state := {}
+	for k in keys:
+		state[String(k)] = root.get(String(k))
+	_emit({"event": "probe", "id": id, "state": state})
 	_lock_window()
 	_ensure_cap()
 	var img: Image = await _grab_still()

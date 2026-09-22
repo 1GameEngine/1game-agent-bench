@@ -39,7 +39,7 @@ test('aggregateLooks averages V/A; D1 only when hasDepth', () => {
     D1: 1,
   };
   const withD = aggregateLooks(scores, { hasDepth: true });
-  assert.equal(withD.V, 1);
+  assert.equal(withD.V, 0.75);
   assert.equal(withD.A, 0.5);
   assert.equal(withD.D_visual, 1);
   const noD = aggregateLooks(scores, { hasDepth: false });

@@ -7,31 +7,31 @@
       "applies": ["intro"],
       "need": "all",
       "weight": 1,
-      "description": "未开始时有 Chart Rush 与 Start；谱面尚未进入游玩判定。"
+      "description": "未开始时 phase=ready，cursor 保持 0。"
     },
     {
       "id": "M2",
       "dim": "M",
-      "applies": ["intro", "loop"],
-      "need": "any",
+      "applies": ["loop"],
+      "need": "all",
       "weight": 1,
-      "description": "四轨从左到右排开，键位顺序与轨道一致。"
+      "description": "开局后进入 playing。"
     },
     {
       "id": "M3",
       "dim": "M",
       "applies": ["loop", "clear"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "音符按固定谱面接近判定线，连续帧位置在变，不是随机乱跳。"
+      "description": "谱面 cursor 向前推进。"
     },
     {
       "id": "M4",
       "dim": "M",
       "applies": ["loop"],
-      "need": "any",
+      "need": "all",
       "weight": 1,
-      "description": "窗内打中或错过能从音符消失、轨道反馈或计数变化看出来。"
+      "description": "循环轨迹里 hits 增加。"
     },
     {
       "id": "M5",
@@ -40,7 +40,7 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "失败画面出现 Chart miss；本条若看不到失败态必须打 0。"
+      "description": "失败轨迹结束在 fail，且全程没有进入 clear。"
     },
     {
       "id": "M6",
@@ -49,23 +49,23 @@
       "need": "all",
       "weight": 1,
       "anchor": true,
-      "description": "通关画面出现 Chart clear；本条若看不到通关态必须打 0。"
+      "description": "通关轨迹结束在 clear，hits 至少 12，且全程没有进入 fail。"
     },
     {
       "id": "D1",
       "dim": "D",
-      "applies": ["intro", "loop", "fail", "clear"],
-      "need": "any",
+      "applies": ["loop", "clear"],
+      "need": "all",
       "weight": 1,
-      "description": "倒计时、游玩、失败、通关至少两种阶段外观可分。"
+      "description": "同一条轨迹里先出现 countdown，再进入 playing。"
     },
     {
       "id": "D2",
       "dim": "D",
-      "applies": ["loop", "clear"],
-      "need": "any",
+      "applies": ["clear"],
+      "need": "all",
       "weight": 1,
-      "description": "四轨与多音符同时存在，不是单键单音玩具。"
+      "description": "通关轨迹里 hits 与 cursor 都在增加。"
     },
     {
       "id": "V1",

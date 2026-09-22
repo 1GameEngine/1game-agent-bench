@@ -93,21 +93,37 @@ export function quantizeLooks(x) {
   return 0;
 }
 
-export function parseLooksVerdict(text, rubric) {
+function roundDim(x) {
+  return Math.round(x * 1000) / 1000;
+}
+
+function readLooksItem(raw, stillIds) {
+  if (stillIds) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return 0;
+    const evidence = Array.isArray(raw.evidence) ? raw.evidence.map(String) : [];
+    if (!evidence.some((id) => stillIds.has(id))) return 0;
+    return quantizeLooks(raw.score);
+  }
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return quantizeLooks(raw.score);
+  return quantizeLooks(raw);
+}
+
+export function parseLooksVerdict(text, rubric, stillIds) {
   const raw = String(text ?? '');
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('no JSON object in looks verdict');
   const data = JSON.parse(raw.slice(start, end + 1));
   const scores = data.scores && typeof data.scores === 'object' ? data.scores : data;
-  return { scores: normalizeLooksScores(scores, rubric), raw: data };
+  return { scores: normalizeLooksScores(scores, rubric, stillIds), raw: data };
 }
 
-export function normalizeLooksScores(scores, rubric) {
+export function normalizeLooksScores(scores, rubric, stillIds) {
   const ids = rubric?.requirements?.length ? rubric.requirements.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
+  const evidenceIds = stillIds && rubric?.requirements?.length ? stillIds : null;
   const out = {};
   for (const id of ids) {
-    out[id] = quantizeLooks(scores?.[id]);
+    out[id] = readLooksItem(scores?.[id], evidenceIds);
   }
   return out;
 }
@@ -117,8 +133,8 @@ export function aggregateLooks(itemScores, { hasDepth = false } = {}) {
   const aIds = LOOKS_ITEMS.filter((i) => i.dim === 'A').map((i) => i.id);
   const V = avg(vIds.map((id) => itemScores[id] ?? 0));
   const A = avg(aIds.map((id) => itemScores[id] ?? 0));
-  const result = { V: quantizeLooks(V), A: quantizeLooks(A), items: itemScores };
-  if (hasDepth) result.D_visual = quantizeLooks(itemScores.D1 ?? 0);
+  const result = { V: roundDim(V), A: roundDim(A), items: itemScores };
+  if (hasDepth) result.D_visual = roundDim(itemScores.D1 ?? 0);
   return result;
 }
 
@@ -150,13 +166,17 @@ export function buildLooksUserPrompt(job) {
       : LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`)
   ).join('\n');
   const ids = rubricReqs.length ? rubricReqs.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
-  const shape = `{${ids.map((id) => `"${id}":0`).join(',')}}`;
+  const exampleId = job.stills?.[0]?.id || 'frame_id';
+  const shape = rubricReqs.length
+    ? `{${ids.map((id) => `"${id}":{"score":0,"evidence":["${exampleId}"]}`).join(',')}}`
+    : `{${ids.map((id) => `"${id}":0`).join(',')}}`;
   const scenario = job.scenario || 'play';
   return [
     'You are a strict but fair evaluator of observed play. Score only what is visible in the attached 1280x720 replay stills.',
     'The window and gameplay are 1280x720. Score only those pixels.',
     'Do not name engines or widget APIs. Do not compare two engines. Score this submission alone.',
     'Use only 0, 0.5, or 1 per item. Score only this one submitted scenario. Do not assume other demos exist.',
+    'Each rubric item needs evidence: freeze_id values from this job. An item with no evidence, or evidence that is not one of these stills, is 0. Do not copy one impression onto every item.',
     `This job is scenario="${scenario}". If this scenario is fail and no failure state is visible, fail-related items must be 0. If this scenario is clear and no clear state is visible, clear-related items must be 0.`,
     'Mechanical items must be evidenced by these stills, not by guessing hidden state or HUD field names.',
     '',

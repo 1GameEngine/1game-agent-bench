@@ -61,15 +61,17 @@ export function buildProduct100({ runId, rows }) {
   const engines = {};
   for (const engine of ['onegame', 'godot']) {
     const list = byEngine[engine];
-    const product_100 = roundScore(mean(list.map((r) => r.product_100)), 1);
+    const nums = list.map((r) => r.product_100).filter((v) => typeof v === 'number');
+    const product_100 = nums.length === list.length ? roundScore(mean(nums), 1) : null;
     engines[engine] = {
       product_100,
       task_count: list.length,
     };
   }
   const { comparable, reasons } = suiteComparableFromRows(rows);
-  const og = engines.onegame.product_100.toFixed(1);
-  const gd = engines.godot.product_100.toFixed(1);
+  const fmt = (x) => (typeof x === 'number' ? x.toFixed(1) : '未出分');
+  const og = fmt(engines.onegame.product_100);
+  const gd = fmt(engines.godot.product_100);
   let winner_engine;
   let winner_sentence;
   if (!comparable) {
@@ -146,6 +148,10 @@ function suiteComparableFromRows(rows) {
     }
     if (og.looks_source !== 'subagent' || gd.looks_source !== 'subagent') {
       reasons.push({ id, reason: `looks_source=${og.looks_source}/${gd.looks_source}` });
+      continue;
+    }
+    if (typeof og.product_100 !== 'number' || typeof gd.product_100 !== 'number') {
+      reasons.push({ id, reason: 'product_100_withheld' });
     }
   }
   return { comparable: reasons.length === 0, reasons };
@@ -186,21 +192,28 @@ export function scoreAttempt({
   missing_scenarios,
 }) {
   const hasD = true;
-  const m = clamp01(M ?? 0);
-  const d = clamp01(D ?? 0);
-  const v = clamp01(V ?? 0);
-  const a = clamp01(A ?? 0);
-  const product_100 = roundScore(taskScore100({ G: G ? 1 : 0, M: m, D: d, V: v, A: a, hasD }), 1);
+  const g = G ? 1 : 0;
+  const visualsReady = looks_source === 'subagent' && looks_status === 'OK' && V != null && A != null;
+  const m = M == null ? null : roundScore(clamp01(M), 3);
+  const d = D == null ? null : roundScore(clamp01(D), 3);
+  const v = visualsReady ? roundScore(clamp01(V), 3) : null;
+  const a = visualsReady ? roundScore(clamp01(A), 3) : null;
+  const product_100 =
+    g === 0
+      ? 0
+      : visualsReady
+        ? roundScore(taskScore100({ G: g, M: m ?? 0, D: d ?? 0, V: v, A: a, hasD }), 1)
+        : null;
   const row = {
     id,
     engine,
     primary,
-    G: G ? 1 : 0,
-    g0_ok: g0_ok ?? (G ? 1 : 0),
-    M: roundScore(m, 3),
-    D: roundScore(d, 3),
-    V: roundScore(v, 3),
-    A: roundScore(a, 3),
+    G: g,
+    g0_ok: g0_ok ?? g,
+    M: m,
+    D: d,
+    V: v,
+    A: a,
     product_100,
     looks_status: looks_status ?? 'SKIP',
     looks_source: looks_source ?? 'none',

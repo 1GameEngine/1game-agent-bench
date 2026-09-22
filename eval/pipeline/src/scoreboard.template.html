@@ -234,7 +234,7 @@ function renderMain() {
   const chips = REPORT.engines.map((e) => `
     <div class="chip${(REPORT.winnerIds || []).includes(e.id) ? ' win' : ''}" style="--eng:${e.color}">
       <div class="k">${esc(e.label)}${(REPORT.winnerIds || []).includes(e.id) ? ' · 最高' : ''}</div>
-      <div class="n">${esc(e.product_100)}</div>
+      <div class="n">${e.product_100 == null ? '—' : esc(e.product_100)}</div>
       <div class="t">${REPORT.games.length} 题平均</div>
     </div>`).join('');
   const rows = REPORT.games.map((g) => `
