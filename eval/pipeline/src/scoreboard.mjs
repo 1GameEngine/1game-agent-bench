@@ -153,15 +153,22 @@ function disagree(engines, values) {
   return new Set(nums.map(String)).size > 1;
 }
 
-function gameNote(engines, scores) {
+function gameNote(engines, scores, metrics) {
   const nums = engines.map((e) => ({ e, v: scores[e.id] })).filter((x) => typeof x.v === 'number');
   if (!nums.length) return '';
   const uniq = new Set(nums.map((x) => x.v));
-  if (uniq.size === 1) return `${nums.length} 个引擎都是 ${nums[0].v} 分。`;
+  const dimDiff = (metrics ?? []).filter((r) => ['M', 'D', 'V', 'A'].includes(r.key) && disagree(engines, r.values));
+  if (uniq.size === 1) {
+    if (dimDiff.length) {
+      return `${nums.length} 个引擎总分都是 ${nums[0].v}，但 ${dimDiff.map((r) => r.label).join('、')} 不一致，不并列。`;
+    }
+    return `${nums.length} 个引擎都是 ${nums[0].v} 分。`;
+  }
   const max = Math.max(...nums.map((x) => x.v));
   const top = nums.filter((x) => x.v === max).map((x) => x.e.label);
   const rest = nums.filter((x) => x.v !== max).map((x) => `${x.e.label} ${x.v}`);
-  return `${top.join('、')} ${max}；其余 ${rest.join('，')}。`;
+  const dims = dimDiff.length ? ` ${dimDiff.map((r) => r.label).join('、')} 也不一样。` : '';
+  return `${top.join('、')} ${max}；其余 ${rest.join('，')}。${dims}`;
 }
 
 function looksNote(engines, looks) {
@@ -183,12 +190,12 @@ export function buildScoreboardView({ report, rows, packs }) {
   const nums = engines.map((e) => e.product_100).filter((v) => typeof v === 'number');
   const max = nums.length ? Math.max(...nums) : null;
   const comparable = report?.comparable !== false;
-  const winnerIds =
+  let winnerIds =
     comparable && max != null ? engines.filter((e) => e.product_100 === max).map((e) => e.id) : [];
-  if (winnerIds.length > 1 && nums.some((v) => v !== max)) {
-    /* keep all tied leaders */
+  if (report?.winner_engine === 'onegame' || report?.winner_engine === 'godot') {
+    winnerIds = [report.winner_engine];
   } else if (winnerIds.length > 1 && new Set(nums).size === 1) {
-    winnerIds.length = 0;
+    winnerIds = [];
   }
 
   const taskIds = report?.task_ids?.length
@@ -266,7 +273,7 @@ export function buildScoreboardView({ report, rows, packs }) {
       blurb: copy.blurb,
       scores,
       missing: Object.fromEntries(engines.map((e) => [e.id, byEngine[e.id].missing_scenarios ?? []])),
-      note: gameNote(engines, scores),
+      note: gameNote(engines, scores, metrics),
       metrics,
       looks,
       looksNote: looksNote(engines, looks),
@@ -293,7 +300,7 @@ export function buildScoreboardView({ report, rows, packs }) {
     looksPhase,
     headerMeta,
     meta: `跑次 ${runId} · ${headerMeta}。百分制只在 looks subagent 成对后出现。橙色数字表示引擎之间不一致。`,
-    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。M/D 来自重放探针。V/A 仅 looks subagent 逐条计分；否则 S 不出分。`,
+    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。V2=0 时 M/D 封顶 0.5，V 取 V1/V2 低值，A2=0 时 A 封顶 0.5。M/D 探针不能单独把循环空场打满分。`,
     engines,
     winnerIds: winnerIds.length === engines.length ? [] : winnerIds,
     games,

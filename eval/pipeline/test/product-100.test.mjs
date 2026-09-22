@@ -39,6 +39,85 @@ test('low M caps A contribution', () => {
   assert.ok(uncapped <= 100);
 });
 
+test('empty chart loop caps M/D and V, S is 40 not 75', () => {
+  const empty = scoreAttempt({
+    id: 'p1-chart-rush',
+    engine: 'onegame',
+    G: 1,
+    M: 1,
+    D: 1,
+    V: 0.5,
+    A: 0.5,
+    primary: 'TRACE_OK',
+    g0_ok: 1,
+    looks_status: 'OK',
+    looks_source: 'subagent',
+    looks_items: { V1: 1, V2: 0, A1: 1, A2: 0, M1: 1, M4: 1, M6: 1, D1: 1 },
+  });
+  assert.equal(empty.M, 0.5);
+  assert.equal(empty.D, 0.5);
+  assert.equal(empty.V, 0);
+  assert.equal(empty.A, 0.5);
+  assert.equal(empty.product_100, 40);
+  const notes = scoreAttempt({
+    id: 'p1-chart-rush',
+    engine: 'godot',
+    G: 1,
+    M: 0.5,
+    D: 0.5,
+    V: 1,
+    A: 1,
+    primary: 'TRACE_OK',
+    g0_ok: 1,
+    looks_status: 'OK',
+    looks_source: 'subagent',
+    looks_items: { V1: 1, V2: 1, A1: 1, A2: 1, M5: 1, M6: 0 },
+  });
+  assert.equal(notes.M, 0.5);
+  assert.equal(notes.V, 1);
+  assert.equal(notes.A, 1);
+  assert.equal(notes.product_100, 75);
+  const report = buildProduct100({ runId: 'gates', rows: [empty, notes] });
+  assert.equal(report.winner_engine, 'godot');
+  assert.equal(report.product_100.onegame, 40);
+  assert.equal(report.product_100.godot, 75);
+  assert.ok(!report.winner_sentence.includes('并列'));
+});
+
+test('equal S with opposite dims is not a suite tie', () => {
+  const og = scoreAttempt({
+    id: 'p1-chart-rush',
+    engine: 'onegame',
+    G: 1,
+    M: 1,
+    D: 1,
+    V: 0.5,
+    A: 0.5,
+    primary: 'TRACE_OK',
+    g0_ok: 1,
+    looks_status: 'OK',
+    looks_source: 'subagent',
+  });
+  const gd = scoreAttempt({
+    id: 'p1-chart-rush',
+    engine: 'godot',
+    G: 1,
+    M: 0.5,
+    D: 0.5,
+    V: 1,
+    A: 1,
+    primary: 'TRACE_OK',
+    g0_ok: 1,
+    looks_status: 'OK',
+    looks_source: 'subagent',
+  });
+  assert.equal(og.product_100, 75);
+  assert.equal(gd.product_100, 75);
+  const report = buildProduct100({ runId: 'dims', rows: [og, gd] });
+  assert.equal(report.winner_engine, 'godot');
+  assert.match(report.winner_sentence, /不并列/);
+});
+
 test('buildProduct100 rows and winner sentence', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
     scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, V: 1, A: 0.5, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),

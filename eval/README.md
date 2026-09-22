@@ -96,7 +96,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。总分相同但四维不一致时不宣布并列。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 headline `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

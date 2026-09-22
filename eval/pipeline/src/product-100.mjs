@@ -27,13 +27,36 @@ export function mean(vals) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-export function taskScore100({ G, M, D, V, A, hasD }) {
+export function applyPlayableGates({ M, D, V, A, looks_items }) {
+  const items = looks_items && typeof looks_items === 'object' ? looks_items : {};
+  let m = M;
+  let d = D;
+  let v = V;
+  let a = A;
+  const v1 = items.V1;
+  const v2 = items.V2;
+  const a2 = items.A2;
+  if (v1 != null && v2 != null && v != null) {
+    v = Math.min(clamp01(v1), clamp01(v2));
+  }
+  if (v2 != null && clamp01(v2) <= 0) {
+    if (m != null) m = Math.min(clamp01(m), 0.5);
+    if (d != null) d = Math.min(clamp01(d), 0.5);
+  }
+  if (a2 != null && clamp01(a2) <= 0 && a != null) {
+    a = Math.min(clamp01(a), 0.5);
+  }
+  return { M: m, D: d, V: v, A: a };
+}
+
+export function taskScore100({ G, M, D, V, A, hasD, looks_items }) {
   if (!G) return 0;
-  const m = clamp01(M);
-  let a = clamp01(A);
+  const gated = applyPlayableGates({ M, D, V, A, looks_items });
+  const m = clamp01(gated.M);
+  let a = clamp01(gated.A);
   if (m < 0.5) a = Math.min(a, 0.5);
-  const v = clamp01(V);
-  const d = clamp01(D ?? 0);
+  const v = clamp01(gated.V);
+  const d = clamp01(gated.D ?? 0);
   if (hasD) return 40 * m + 10 * d + 20 * v + 30 * a;
   return ((40 * m + 20 * v + 30 * a) / 90) * 100;
 }
@@ -46,6 +69,25 @@ function clamp01(x) {
 export function winnerOf(og, gd, eps = 0.1) {
   if (Math.abs(og - gd) < eps) return 'tie';
   return og > gd ? 'onegame' : 'godot';
+}
+
+export function dimensionTally(og, gd) {
+  let onegame = 0;
+  let godot = 0;
+  const lead = [];
+  for (const k of ['M', 'D', 'V', 'A']) {
+    const a = og?.[k];
+    const b = gd?.[k];
+    if (typeof a !== 'number' || typeof b !== 'number') continue;
+    if (a > b) {
+      onegame += 1;
+      lead.push(`${k} 1Game`);
+    } else if (b > a) {
+      godot += 1;
+      lead.push(`${k} Godot`);
+    }
+  }
+  return { onegame, godot, lead };
 }
 
 export function buildProduct100({ runId, rows }) {
@@ -93,10 +135,20 @@ export function buildProduct100({ runId, rows }) {
   } else {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
     const n = SUITE_TASKS.length;
-    winner_sentence =
-      winner_engine === 'tie'
-        ? `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
-        : `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+    if (winner_engine === 'tie') {
+      const dims = dimensionTally(byEngine.onegame[0], byEngine.godot[0]);
+      if (dims.godot > dims.onegame) {
+        winner_engine = 'godot';
+        winner_sentence = `套件总分相同（1Game = ${og}，Godot = ${gd}）。${dims.lead.join('，')}，不并列。`;
+      } else if (dims.onegame > dims.godot) {
+        winner_engine = 'onegame';
+        winner_sentence = `套件总分相同（1Game = ${og}，Godot = ${gd}）。${dims.lead.join('，')}，不并列。`;
+      } else {
+        winner_sentence = `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`;
+      }
+    } else {
+      winner_sentence = `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+    }
   }
   return {
     schema: 'eval.product-100/1',
@@ -127,7 +179,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
+      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。循环核心看不见（V2=0）时 M/D 封顶 0.5，V 取 V1/V2 低值，A2=0 时 A 封顶 0.5。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {
@@ -214,15 +266,22 @@ export function scoreAttempt({
   const hasD = true;
   const g = G ? 1 : 0;
   const visualsReady = looks_source === 'subagent' && looks_status === 'OK' && V != null && A != null;
-  const m = M == null ? null : roundScore(clamp01(M), 3);
-  const d = D == null ? null : roundScore(clamp01(D), 3);
-  const v = visualsReady ? roundScore(clamp01(V), 3) : null;
-  const a = visualsReady ? roundScore(clamp01(A), 3) : null;
+  let m = M == null ? null : roundScore(clamp01(M), 3);
+  let d = D == null ? null : roundScore(clamp01(D), 3);
+  let v = visualsReady ? roundScore(clamp01(V), 3) : null;
+  let a = visualsReady ? roundScore(clamp01(A), 3) : null;
+  if (visualsReady) {
+    const gated = applyPlayableGates({ M: m, D: d, V: v, A: a, looks_items });
+    m = gated.M == null ? m : roundScore(clamp01(gated.M), 3);
+    d = gated.D == null ? d : roundScore(clamp01(gated.D), 3);
+    v = gated.V == null ? v : roundScore(clamp01(gated.V), 3);
+    a = gated.A == null ? a : roundScore(clamp01(gated.A), 3);
+  }
   const product_100 =
     g === 0
       ? 0
       : visualsReady
-        ? roundScore(taskScore100({ G: g, M: m ?? 0, D: d ?? 0, V: v, A: a, hasD }), 1)
+        ? roundScore(taskScore100({ G: g, M: m ?? 0, D: d ?? 0, V: v, A: a, hasD, looks_items }), 1)
         : null;
   const row = {
     id,
