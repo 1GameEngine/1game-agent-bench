@@ -22,7 +22,7 @@ test('installLooksVerdicts writes only complete still evidence', () => {
   );
   const jobs = [
     {
-      taskId: 'p1-night-stall',
+      taskId: 'p1-chart-rush',
       engine: 'onegame',
       scenario: 'intro',
       jobDir,
@@ -33,7 +33,7 @@ test('installLooksVerdicts writes only complete still evidence', () => {
     jobs,
     verdicts: [
       {
-        taskId: 'p1-night-stall',
+        taskId: 'p1-chart-rush',
         engine: 'onegame',
         scenario: 'intro',
         scores: { V1: { score: 1, evidence: ['other'] }, A1: { score: 1, evidence: ['intro_f0'] } },
@@ -47,7 +47,7 @@ test('installLooksVerdicts writes only complete still evidence', () => {
     jobs,
     verdicts: [
       {
-        taskId: 'p1-night-stall',
+        taskId: 'p1-chart-rush',
         engine: 'onegame',
         scenario: 'intro',
         scores: {

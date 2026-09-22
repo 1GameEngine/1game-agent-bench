@@ -2,11 +2,11 @@
 
 私有评测产品。不要发到 npm，不要做成 `1game-*` skill。
 
-**当前里程碑：product_100。** 跨引擎谁赢只看 **3 题等权平均的百分制** `product_100`（夜市摊 / 金库爬行 / 谱面冲刺）。结论句只引用两个套件分。
+**当前里程碑：product_100。** 跨引擎谁赢只看 **headline 题等权平均的百分制** `product_100`（目前仅谱面冲刺）。结论句只引用两个套件分。
 
 过程指标仍产出、不决定胜负：P0 四题五维表（夹具，不进 headline）、`COMPARE_SCALAR = TRACE_OK / ATTEMPTS`。禁止 `overall` / `total_score` / `vlm_*`。
 
-Headline 三题在 `compare_tasks`：`p1-night-stall` `p1-vault-crawl` `p1-chart-rush`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
+Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`，只作过程/负例夹具。
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
@@ -80,7 +80,7 @@ pnpm test                 # 合同/审计/Judge 子集/报表禁令
 # Kenney CC0 四包已在 eval/assets/library。要重拉：node scripts/fetch-kenney.mjs
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
-pnpm run run-p1-compare   # 3 题 × 两引擎 oracle → COMPARE_SCALAR.json（过程）
+pnpm run run-p1-compare   # headline × 两引擎 oracle → COMPARE_SCALAR.json（过程）
 pnpm run run-product-100 -- --run-id <id>          # 无评委时停在机械分 + looks-job，百分制为空，页眉「观感未评」
 pnpm run run-product-100 -- --run-id <id> --mech   # 同上，只强调机械阶段
 # 同一 looks subagent 按 LOOKS_JOBS 逐条写带静帧 id 的裁决后：
@@ -96,11 +96,11 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占 1/3。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
 
-过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与三题 `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
+过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 headline `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 
-Headline 三题：`p1-night-stall`（经营规则）`p1-vault-crawl`（格子空间）`p1-chart-rush`（谱面节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
+Headline：`p1-chart-rush`（谱面节奏）。P0 四题只作过程夹具。分数页模板在 `eval/pipeline/src/scoreboard.template.html`：目录是「引擎名 + 分数」，正文一题一张大卡片；`engines[]` / `task_ids[]` 变长时版式不变。
 
 ## 本仓不包含
 

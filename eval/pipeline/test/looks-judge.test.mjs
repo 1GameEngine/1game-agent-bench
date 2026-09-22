@@ -54,7 +54,7 @@ test('stripInstruction drops 实现约束; gameplayView drops eval.*', () => {
 
 test('looks job prompt is per-scenario play tags, not engine APIs', () => {
   const job = buildLooksJob({
-    taskId: 'p1-night-stall',
+    taskId: 'p1-chart-rush',
     engine: 'godot',
     scenario: 'intro',
     instruction: 'Toggle the lamp. ## 实现约束\nUse Sprite2D',
@@ -224,7 +224,7 @@ test('rubric verdict without still evidence is not a score', async () => {
       stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
       geometry: { regions: {} },
       instruction: 'stall',
-      taskId: 'p1-night-stall',
+      taskId: 'p1-chart-rush',
       rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
       scenario: 'loop',
     });
@@ -234,7 +234,7 @@ test('rubric verdict without still evidence is not a score', async () => {
       stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
       geometry: { regions: {} },
       instruction: 'stall',
-      taskId: 'p1-night-stall',
+      taskId: 'p1-chart-rush',
       rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
       scenario: 'loop',
     });
@@ -248,7 +248,7 @@ test('rubric verdict without still evidence is not a score', async () => {
       stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
       geometry: { regions: {} },
       instruction: 'stall',
-      taskId: 'p1-night-stall',
+      taskId: 'p1-chart-rush',
       rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
       scenario: 'loop',
     });
@@ -261,7 +261,7 @@ test('rubric verdict without still evidence is not a score', async () => {
       stills: [{ id: 'loop_f0', ok: true, path: tmp, dump: { scenario: 'loop' } }],
       geometry: { regions: {} },
       instruction: 'stall',
-      taskId: 'p1-night-stall',
+      taskId: 'p1-chart-rush',
       rubric: { requirements: [{ id: 'V1', dim: 'V', description: 'see' }, { id: 'A1', dim: 'A', description: 'art' }] },
       scenario: 'loop',
       jobDir,

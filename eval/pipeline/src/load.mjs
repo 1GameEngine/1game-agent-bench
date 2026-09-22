@@ -52,7 +52,7 @@ export function loadSuite() {
   }
   const compare = suite.compare_tasks ?? [];
   if (JSON.stringify(compare) !== JSON.stringify(P1_TASKS)) {
-    throw new EvalError('EVAL_INTERNAL', 'compare_tasks must be the 3 headline games');
+    throw new EvalError('EVAL_INTERNAL', 'compare_tasks must match P1_TASKS');
   }
   if (suite.replay?.fps !== 30 || suite.replay?.traces !== 'submitted') {
     throw new EvalError('SPEC_VIOLATION', 'headline replay must be submitted traces at 30fps');

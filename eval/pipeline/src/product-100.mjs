@@ -1,7 +1,7 @@
 export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
 export const P0_TASKS = [];
 
-export const P1_TASKS = ['p1-night-stall', 'p1-vault-crawl', 'p1-chart-rush'];
+export const P1_TASKS = ['p1-chart-rush'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 
@@ -92,10 +92,11 @@ export function buildProduct100({ runId, rows }) {
     winner_sentence = `${head}1Game = ${og}，Godot = ${gd}。${sample}`;
   } else {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
+    const n = SUITE_TASKS.length;
     winner_sentence =
       winner_engine === 'tie'
-        ? `套件总分（3题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
-        : `套件总分（3题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
+        ? `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。并列。`
+        : `套件总分（${n}题算术平均，百分制）：1Game = ${og}，Godot = ${gd}。胜者是分数更高的引擎。`;
   }
   return {
     schema: 'eval.product-100/1',
@@ -117,7 +118,7 @@ export function buildProduct100({ runId, rows }) {
       traces: 'submitted',
     },
     weights: { ...WEIGHTS },
-    task_count: 3,
+    task_count: SUITE_TASKS.length,
     task_ids: [...SUITE_TASKS],
     product_100: {
       onegame: engines.onegame.product_100,
@@ -126,7 +127,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      '胜负只看可比的 product_100（3 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。',
+      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {

@@ -1,6 +1,6 @@
 # Godot 4.4.x（P0 dump 夹具 + P1 30fps traces 抽帧）
 
-P0 夹具机械正确性仍跑 **headless dump**。Headline 三题改为 **submitted traces 30fps 重放抽帧**（`frame_dt=0.033`），隐藏量表打 M/D/V/A。场景、点击、观感视窗都是 **1280×720**。EvalRunner 从专用 SubViewport 出 PNG。Xvfb 单帧（`--screen 1280x720`），不是录像。
+P0 夹具机械正确性仍跑 **headless dump**。Headline 改为 **submitted traces 30fps 重放抽帧**（`frame_dt=0.033`），隐藏量表打 M/D/V/A。场景、点击、观感视窗都是 **1280×720**。EvalRunner 从专用 SubViewport 出 PNG。Xvfb 单帧（`--screen 1280x720`），不是录像。
 
 两边都 `G=1` 的题若只有一侧有静帧，V/A 成对记 `INCOMPARABLE_VISUAL`（两边都 0），套件 `comparable=false`，不得宣布胜者。
 

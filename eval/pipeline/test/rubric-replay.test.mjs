@@ -103,18 +103,18 @@ test('headline probes match rubric M/D and do not broadcast one mark', () => {
     const b = loadP1Task(id);
     assert.equal(validateProbe(b.probe, b.rubric).ok, true, id);
   }
-  const night = loadP1Task('p1-night-stall');
+  const chart = loadP1Task('p1-chart-rush');
   const failOnly = scoreProbe({
-    probe: night.probe,
-    rubric: night.rubric,
+    probe: chart.probe,
+    rubric: chart.rubric,
     samples: [
-      { scenario: 'intro', frame: 0, state: { phase: 'title', waiting: -1, station: 0, spawned: 0, served: 0, cooked: -1, upgrade: 0 } },
-      { scenario: 'loop', frame: 0, state: { phase: 'open', waiting: -1, station: 0, spawned: 1, served: 0, cooked: 0, upgrade: 0 } },
-      { scenario: 'loop', frame: 30, state: { phase: 'open', waiting: 0, station: 1, spawned: 1, served: 1, cooked: -1, upgrade: 0 } },
-      { scenario: 'fail', frame: 0, state: { phase: 'open', served: 0 } },
-      { scenario: 'fail', frame: 40, state: { phase: 'clear', served: 1 } },
-      { scenario: 'clear', frame: 0, state: { phase: 'open', station: 0, spawned: 1, served: 0, cooked: 0, upgrade: 0 } },
-      { scenario: 'clear', frame: 40, state: { phase: 'clear', station: 1, spawned: 2, served: 3, cooked: -1, upgrade: 1 } },
+      { scenario: 'intro', frame: 0, state: { phase: 'ready', remainMs: 0, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
+      { scenario: 'loop', frame: 0, state: { phase: 'countdown', remainMs: 2000, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
+      { scenario: 'loop', frame: 30, state: { phase: 'playing', remainMs: 0, clockMs: 800, hits: 1, misses: 0, cursor: 1 } },
+      { scenario: 'fail', frame: 0, state: { phase: 'playing', hits: 0, misses: 0, cursor: 0 } },
+      { scenario: 'fail', frame: 40, state: { phase: 'clear', hits: 12, misses: 0, cursor: 16 } },
+      { scenario: 'clear', frame: 0, state: { phase: 'countdown', remainMs: 2000, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
+      { scenario: 'clear', frame: 40, state: { phase: 'clear', hits: 16, misses: 0, cursor: 16 } },
     ],
     traces: REQUIRED_SCENARIOS.map((scenario) => ({
       audit: { ok: true },
@@ -125,8 +125,8 @@ test('headline probes match rubric M/D and do not broadcast one mark', () => {
   assert.ok(failOnly.missing_scenarios.includes('fail'));
   assert.ok(failOnly.M <= 0.5);
   assert.equal(
-    assertionScore(night.probe.assertions.find((a) => a.id === 'M6'), [
-      { state: { phase: 'clear', served: 3 } },
+    assertionScore(chart.probe.assertions.find((a) => a.id === 'M6'), [
+      { state: { phase: 'clear', hits: 16, misses: 0, cursor: 16 } },
     ]),
     1,
   );

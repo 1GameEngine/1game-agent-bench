@@ -5,20 +5,16 @@
   "comparable": true,
   "winner": false,
   "notice": "过程指标：COMPARE_SCALAR = TRACE_OK / ATTEMPTS（分母含 G0 失败）。非胜负。胜负只看 product_100。禁止 overall / total_score。",
-  "checkpoints_ok": 6,
-  "attempts": 6,
-  "headline": "6/6",
-  "g0_ok": 6,
-  "g0_conditional": "6/6",
+  "checkpoints_ok": 2,
+  "attempts": 2,
+  "headline": "2/2",
+  "g0_ok": 2,
+  "g0_conditional": "2/2",
   "engines": {
-    "onegame": { "checkpoints_ok": 3, "attempts": 3, "g0_ok": 3 },
-    "godot": { "checkpoints_ok": 3, "attempts": 3, "g0_ok": 3 }
+    "onegame": { "checkpoints_ok": 1, "attempts": 1, "g0_ok": 1 },
+    "godot": { "checkpoints_ok": 1, "attempts": 1, "g0_ok": 1 }
   },
   "tasks": [
-    { "id": "p1-night-stall", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
-    { "id": "p1-night-stall", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 },
-    { "id": "p1-vault-crawl", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
-    { "id": "p1-vault-crawl", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 },
     { "id": "p1-chart-rush", "engine": "onegame", "primary": "TRACE_OK", "g0_ok": 1 },
     { "id": "p1-chart-rush", "engine": "godot", "primary": "TRACE_OK", "g0_ok": 1 }
   ]

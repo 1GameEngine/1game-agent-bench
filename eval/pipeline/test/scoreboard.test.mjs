@@ -36,8 +36,8 @@ test('parseTaskCopy reads 标题 and first body line', () => {
   const copy = parseTaskCopy('标题：信号台\n\n做一个控制室微游戏。\n\n玩家体验：\n- x', 'p1-x');
   assert.equal(copy.title, '信号台');
   assert.match(copy.blurb, /控制室/);
-  const md = parseTaskCopy('# 夜市摊\n\n做一个摊位游戏。', 'p1-night-stall');
-  assert.equal(md.title, '夜市摊');
+  const md = parseTaskCopy('# 谱面冲刺\n\n做一个节奏游戏。', 'p1-chart-rush');
+  assert.equal(md.title, '谱面冲刺');
 });
 
 test('packSides understands og/gd and extra engine keys', () => {
@@ -86,7 +86,7 @@ test('scoreboard view: one card per game, labeled engine summaries, extra engine
   assert.equal(view.engines.length, 3);
   assert.equal(view.engines[2].id, 'unity');
   assert.equal(view.engines[2].label, 'unity');
-  assert.equal(view.games.length, 4);
+  assert.equal(view.games.length, 2);
   assert.equal(view.games[0].id, P1_TASKS[0]);
   assert.ok(view.games.every((g) => Object.keys(g.scores).join(',') === 'onegame,godot,unity'));
   assert.equal(view.games[0].stills[0].shots.length, 3);
@@ -144,7 +144,7 @@ test('writeScoreboard emits index.html with N game cards from template', () => {
   }));
   const { htmlPath, view } = writeScoreboard({ dir, report, rows, packs });
   const html = fs.readFileSync(htmlPath, 'utf8');
-  assert.equal(view.games.length, 3);
+  assert.equal(view.games.length, SUITE_TASKS.length);
   assert.match(html, /套件总览/);
   assert.match(html, /1Game/);
   assert.match(html, /Godot/);

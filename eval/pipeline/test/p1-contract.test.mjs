@@ -9,12 +9,12 @@ import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
 import { oracleTraces } from '../src/paths.mjs';
 
-test('P1 compare_tasks are 3 headline games with hidden rubric and traces', () => {
+test('P1 compare_tasks are headline games with hidden rubric and traces', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
-  assert.equal(P1_TASKS.length, 3);
+  assert.deepEqual(P1_TASKS, ['p1-chart-rush']);
   assert.equal(suite.replay.fps, 30);
   assert.equal(suite.replay.traces, 'submitted');
   for (const id of P1_TASKS) {

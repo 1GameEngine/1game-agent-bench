@@ -15,21 +15,6 @@ const CELL = 16;
 const STEP = 17;
 
 export const TASK_SPRITES = {
-  'p1-night-stall': [
-    { src: '2D/pixel-platformer-food-expansion/Tiles/tile_0004.png', name: 'bun.png' },
-    { src: '2D/pixel-platformer-food-expansion/Tiles/tile_0020.png', name: 'noodle.png' },
-    { src: '2D/pixel-platformer-food-expansion/Tiles/tile_0030.png', name: 'tea.png' },
-  ],
-  'p1-vault-crawl': [
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'wall.png', cell: [0, 0] },
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'floor.png', cell: [1, 0] },
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'door.png', cell: [7, 0] },
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'door-open.png', cell: [8, 0] },
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'chest.png', cell: [13, 0] },
-    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'key.png', cell: [15, 0] },
-    { src: '2D/roguelike-characters/Spritesheet/roguelikeChar_transparent.png', name: 'player.png', cell: [0, 0] },
-    { src: '2D/roguelike-characters/Spritesheet/roguelikeChar_transparent.png', name: 'guard.png', cell: [7, 0] },
-  ],
   'p1-chart-rush': [
     // Spritesheet row 4, confirmed by glyph: 166 up, 167 right, 168 down, 169 left.
     { src: '2D/input-prompts-pixel/Tiles/tile_0169.png', name: 'arrow-left.png' },

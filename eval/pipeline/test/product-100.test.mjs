@@ -16,7 +16,8 @@ import { loadSuite } from '../src/load.mjs';
 test('suite winner is product_100', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
-  assert.equal(SUITE_TASKS.length, 3);
+  assert.equal(SUITE_TASKS.length, 1);
+  assert.deepEqual(SUITE_TASKS, ['p1-chart-rush']);
   assert.equal(P0_TASKS.length, 0);
 });
 
@@ -38,13 +39,13 @@ test('low M caps A contribution', () => {
   assert.ok(uncapped <= 100);
 });
 
-test('buildProduct100 6 rows and winner sentence', () => {
+test('buildProduct100 rows and winner sentence', () => {
   const rows = SUITE_TASKS.flatMap((id) => [
     scoreAttempt({ id, engine: 'onegame', G: 1, M: 1, V: 1, A: 0.5, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
     scoreAttempt({ id, engine: 'godot', G: 1, M: 1, V: 1, A: 1, D: 1, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'OK', looks_source: 'subagent' }),
   ]);
   const report = buildProduct100({ runId: 'unit', rows });
-  assert.equal(report.tasks.length, 6);
+  assert.equal(report.tasks.length, SUITE_TASKS.length * 2);
   assert.equal(report.winner_engine, 'godot');
   assert.equal(report.comparable, true);
   assert.equal(report.winner, true);
@@ -98,7 +99,7 @@ test('buildProduct100 withholds winner when looks unpaired', () => {
 
 test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   const row = scoreAttempt({
-    id: 'p1-night-stall',
+    id: 'p1-chart-rush',
     engine: 'onegame',
     G: 1,
     M: 0.75,
@@ -117,7 +118,7 @@ test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   assert.equal(row.A, 0.5);
   assert.equal(row.product_100, 70);
   const withheld = scoreAttempt({
-    id: 'p1-night-stall',
+    id: 'p1-chart-rush',
     engine: 'onegame',
     G: 1,
     M: 1,

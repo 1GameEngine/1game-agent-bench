@@ -22,8 +22,6 @@ engines:
     inject: EvalProbe
 tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
 compare_tasks:
-  - p1-night-stall
-  - p1-vault-crawl
   - p1-chart-rush
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
