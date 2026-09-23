@@ -10,7 +10,11 @@ Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`�
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 都会让模型按题面为 1Game 和 Godot **各重写一版**，并在同一次进程里重放、打观感。不把机械结果写进仓库，不支持 `--looks` 或 `--mech` 续评。模型入口是 `EVAL_BUILDER_CMD`（cwd 为该引擎提交目录，stdin 为 `{engine,instruction,prompt,dest}` 的 JSON；退出码 0 时可以自己写好文件，或把 `{"files":{...}}` 打到 stdout）或 `EVAL_BUILDER_API_KEY`（OpenAI 兼容 chat completions，可用 `EVAL_BUILDER_BASE_URL` / `EVAL_BUILDER_MODEL`）。未配置模型时机械阶段以 `BUILDER_REQUIRED` 停止，不会落盘上一轮源码。评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 都按引擎拆成三个 subagent，主进程只准备空工作区并在最后套公式。不支持 `--looks` 或 `--mech`，也不把机械结果存进仓库再续评。
+
+阶段入口是 `EVAL_SUBAGENT_CMD`（cwd 为该引擎工作区，stdin 为 `{role,engine,taskId,workspace,prompt,...}`）。`role` 依次是 `builder`、`replay`、`looks`，两边引擎互不可见。未设置时以 `SUBAGENT_REQUIRED` 停止，主进程不写 `game.tsx` / `game.gd`，不重放，不看图。Builder 把提交写进工作区。Replay 只能执行 `node src/cli.mjs stage-replay ...`，由该命令写出带 `via:"stage-replay"` 和本次令牌的 `REPLAY.json`；手改文件会被 `REPLAY_UNTRUSTED` 拒绝。Looks 只看这一边的静帧和观感条目，每条带静帧 id。主进程用隐藏探针算 M/D，用观感结论算 V/A，再套同一公式和 V2/A2 闸门。`EVAL_BUILDER_CMD` 只留给单独的模型写盘试验，headline 跑分不走它。
+
+评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
 
 ## 读者与隔离
 
@@ -35,8 +39,8 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | Headline：提交 traces 重放抽帧 + 隐藏量表。P0 夹具仍只 `1gameplay frame query --select store:state`。不用 Chromium |
 | Capture（观感） | 重放抽帧 1280×720 PNG。Capture **不是** 单独的机械金标。 |
-| Looks（M/D/V/A） | 独立 looks-job：读抽帧 + 隐藏量表。**跑分必须用真实 looks subagent**。worker / heuristic 不得当 headline。 |
-| Replay | Headline 30fps submitted traces，sample 2fps，单条最长 20s。`child_process.execFile`；禁用 `--until` |
+| Looks（V/A） | 每引擎一个 looks subagent，只看该边静帧。worker / heuristic 不得当 headline。 |
+| Replay | Replay subagent 只能跑 `stage-replay`。Headline 30fps submitted traces，sample 2fps，单条最长 20s。禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
 
@@ -80,8 +84,8 @@ pnpm test                 # 合同/审计/Judge 子集/报表禁令
 # Kenney CC0 四包已在 eval/assets/library。要重拉：node scripts/fetch-kenney.mjs
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
-pnpm run run-p1-compare   # headline × 两引擎：模型按题面重写后再重放 → COMPARE_SCALAR.json（过程）
-pnpm run run-product-100 -- --run-id <id>          # 一次跑完：出码、重放、观感。无评委时百分制为空，页眉「观感未评」
+pnpm run run-p1-compare   # headline × 两引擎：builder / replay / looks 三个 subagent，再写 COMPARE_SCALAR.json
+pnpm run run-product-100 -- --run-id <id>          # 同上三个 subagent。主进程套公式。未配置 EVAL_SUBAGENT_CMD 时 SUBAGENT_REQUIRED
 node src/cli.mjs emit-scoreboard --run-id <id>     # 只用 PRODUCT_100.json 重出分数页（模板固定，加题加引擎只扩数据）
 # 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json

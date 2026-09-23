@@ -5,20 +5,17 @@ import { bootstrap } from './bootstrap.mjs';
 import { loadTaskBundle } from './load.mjs';
 import { replayJudgeHygiene } from './replay.mjs';
 import { loadP0GodotTask } from './p0-godot.mjs';
-import { runOnegameTraces } from './p1-onegame.mjs';
-import { stageGodotProject, runGodotJob, makeJob, makeTraceJob, judgeGodotEvents, judgeTraceEvents } from './p1-godot.mjs';
-import { scanHygiene } from './hygiene.mjs';
+import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
 import { primaryOf } from './verdict.mjs';
-import { loadP1Task } from './p1-load.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { missingRequiredScenarios, readTraces } from './p1-trace.mjs';
-import { scoreProbe } from './probe.mjs';
-import { runModelBuilder } from './model-builder.mjs';
+import { scoreProbe, visualRubric } from './probe.mjs';
+import { finalizeObservedScores } from './rubric.mjs';
+import { orchestrateEngines } from './subagent-stage.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -119,113 +116,107 @@ export async function mechP0Godot(taskId, runId) {
   };
 }
 
-export async function mechP1Onegame(taskId, runId) {
-  const bundle = loadP1Task(taskId);
-  const boot = bootstrap({
-    taskId,
-    runId: `${runId}-og`,
-    instruction: bundle.instruction,
-    oracle: false,
-  });
-  await runModelBuilder({
-    taskId,
-    engine: 'onegame',
-    instruction: bundle.instruction,
-    dest: boot.gameDir,
-  });
-  const hyg = scanHygiene({ gameDir: boot.gameDir });
-  const stillsDir = path.join(WORK_DIR, `${runId}-og`, 'stills');
-  const replay = runOnegameTraces({
-    gameDir: boot.gameDir,
-    stillsDir,
-    probeKeys: bundle.probe?.keys,
-  });
-  const valid = (replay.traces ?? []).filter((t) => t.audit.ok);
-  const G = replay.g0_ok === 1 && hyg.ok && valid.length > 0 && replay.primary === 'TRACE_OK';
-  return {
-    bundle,
-    G,
-    stills: replay.stills,
-    samples: replay.samples ?? [],
+function emptyVis(looks_status, looks_source) {
+  return { V: 0, A: 0, looks_status, looks_source };
+}
+
+function visualsFromLooks(replay, looks, rubric) {
+  if (!looks) return emptyVis('SKIP', 'none');
+  if (looks.looks_status !== 'OK') {
+    return {
+      V: null,
+      A: null,
+      looks_status: looks.looks_status,
+      looks_source: looks.looks_source ?? 'subagent',
+      sample_policy: looks.sample_policy,
+      jobs: looks.jobs,
+    };
+  }
+  const fin = finalizeObservedScores({
+    byScenario: looks.byScenario,
+    rubric: visualRubric(rubric),
     traces: replay.traces,
-    scenarios: replay.scenarios,
-    replayed_scenarios: replay.replayed_scenarios,
-    missing_scenarios: replay.missing_scenarios,
-    primary: hyg.ok ? replay.primary : 'HYGIENE_FAIL',
-    g0_ok: replay.g0_ok,
-    attempt: { id: taskId, engine: 'onegame', primary: hyg.ok ? replay.primary : 'HYGIENE_FAIL', g0_ok: replay.g0_ok, notes: replay.notes },
-    jobDir: path.join(WORK_DIR, `${runId}-og`, 'looks'),
+    replayedScenarios: replay.replayed_scenarios,
+  });
+  return {
+    V: fin.V,
+    A: fin.A,
+    items: fin.items,
+    missing_scenarios: fin.missing_scenarios,
+    observed_scenarios: fin.observed_scenarios,
+    looks_status: 'OK',
+    looks_source: 'subagent',
+    sample_policy: looks.sample_policy,
+    jobs: looks.jobs,
   };
 }
 
-export async function mechP1Godot(taskId, runId) {
-  const bundle = loadP1Task(taskId);
-  const staged = stageGodotProject({
-    taskId,
-    runId: `${runId}-gd`,
-    srcDir: await runModelBuilder({
-      taskId,
-      engine: 'godot',
-      instruction: bundle.instruction,
-      dest: path.join(WORK_DIR, `${runId}-gd-generated`, 'godot'),
-      wipe: true,
-    }).then((built) => built.dest),
-  });
-  if (staged.tamper) {
-    return {
-      bundle,
-      G: 0,
-      stills: [],
-      primary: 'INJECT_TAMPER',
-      g0_ok: 0,
-      attempt: { id: taskId, engine: 'godot', primary: 'INJECT_TAMPER', g0_ok: 0, notes: ['EvalProbe tamper'] },
-      rowReady: zeroRow(taskId, 'godot', 'INJECT_TAMPER'),
-      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
-    };
+export function scoreStagedPair(taskId, staged) {
+  const bundle = staged.bundle;
+  let ogVis;
+  let gdVis;
+  if (staged.pair === 'BOTH_G0') {
+    ogVis = emptyVis('SKIP', 'none');
+    gdVis = emptyVis('SKIP', 'none');
+  } else if (staged.pair === 'INCOMPARABLE_VISUAL') {
+    ogVis = emptyVis('INCOMPARABLE_VISUAL', 'pair');
+    gdVis = emptyVis('INCOMPARABLE_VISUAL', 'pair');
+  } else {
+    ogVis = staged.onegame.replay.G
+      ? visualsFromLooks(staged.onegame.replay, staged.onegame.looks, bundle.rubric)
+      : emptyVis('SKIP', 'none');
+    gdVis = staged.godot.replay.G
+      ? visualsFromLooks(staged.godot.replay, staged.godot.looks, bundle.rubric)
+      : emptyVis('SKIP', 'none');
+    if (staged.onegame.replay.G && staged.godot.replay.G) {
+      if (
+        ogVis.looks_status !== gdVis.looks_status ||
+        ogVis.looks_source !== gdVis.looks_source ||
+        ogVis.sample_policy !== gdVis.sample_policy ||
+        ogVis.jobs !== gdVis.jobs
+      ) {
+        ogVis = emptyVis('INCOMPARABLE_LOOKS', 'pair');
+        gdVis = emptyVis('INCOMPARABLE_LOOKS', 'pair');
+      }
+    }
   }
-  if (staged.leak.length) {
-    return {
-      bundle,
-      G: 0,
-      stills: [],
-      primary: 'HARNESS_LEAK',
-      g0_ok: 0,
-      attempt: { id: taskId, engine: 'godot', primary: 'HARNESS_LEAK', g0_ok: 0, notes: staged.leak },
-      rowReady: zeroRow(taskId, 'godot', 'HARNESS_LEAK'),
-      jobDir: path.join(WORK_DIR, `${runId}-gd`, 'looks'),
-    };
-  }
-  const outDir = path.join(WORK_DIR, `${runId}-gd`);
-  const stillsDir = path.join(outDir, 'stills');
-  const traces = readTraces(path.join(staged.dest, 'demo_outputs'));
-  const jobRun = runGodotJob({
-    projectDir: staged.dest,
-    job: makeTraceJob({ traces, stillsDir, probeKeys: bundle.probe?.keys }),
-    outPath: path.join(outDir, 'traces.jsonl'),
-    timeoutMs: 300_000,
-  });
-  const judged = judgeTraceEvents(jobRun.events || [], stillsDir);
-  if (jobRun.ok === false) {
-    judged.primary = jobRun.code || judged.primary || 'BOOT_FAIL';
-    judged.notes = [...(judged.notes ?? []), ...(jobRun.notes ?? [])];
-  }
-  const valid = traces.filter((t) => t.audit.ok);
-  const G = judged.g0_ok === 1 && valid.length > 0 && judged.primary === 'TRACE_OK';
-  const missing = missingRequiredScenarios(valid, { replayedScenarios: judged.replayed_scenarios });
   return {
-    bundle,
-    G,
-    stills: judged.stills,
-    samples: judged.samples ?? [],
-    traces,
-    scenarios: judged.scenarios,
-    replayed_scenarios: judged.replayed_scenarios,
-    missing_scenarios: missing,
-    primary: judged.primary,
-    g0_ok: judged.g0_ok,
-    attempt: { id: taskId, engine: 'godot', primary: judged.primary, g0_ok: judged.g0_ok, notes: judged.notes },
-    jobDir: path.join(outDir, 'looks'),
+    ogRow: rowFromReplay(taskId, 'onegame', staged.onegame.replay, ogVis, bundle),
+    gdRow: rowFromReplay(taskId, 'godot', staged.godot.replay, gdVis, bundle),
+    pair: staged.pair,
   };
+}
+
+function rowFromReplay(taskId, engine, replay, vis, bundle) {
+  const probeScore = bundle?.probe
+    ? scoreProbe({
+        probe: bundle.probe,
+        rubric: bundle.rubric,
+        samples: replay.samples ?? [],
+        traces: replay.traces,
+        replayedScenarios: replay.replayed_scenarios,
+      })
+    : null;
+  const missing = [
+    ...new Set([...(probeScore?.missing_scenarios ?? []), ...(vis.missing_scenarios ?? replay.missing_scenarios ?? [])]),
+  ];
+  return scoreAttempt({
+    id: taskId,
+    engine,
+    G: replay.G,
+    M: probeScore ? probeScore.M : 0,
+    D: probeScore ? probeScore.D : 0,
+    V: vis.V,
+    A: vis.A,
+    primary: replay.primary,
+    g0_ok: replay.g0_ok,
+    looks_status: vis.looks_status,
+    looks_source: vis.looks_source,
+    stills: replay.stills,
+    looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
+    scenarios: vis.observed_scenarios ?? replay.scenarios,
+    missing_scenarios: missing,
+  });
 }
 
 function rowFromMech(taskId, engine, mech, vis) {
@@ -260,6 +251,22 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
     scenarios: vis.observed_scenarios ?? mech.scenarios,
     missing_scenarios: missing,
+  });
+}
+
+function serializeReplay(replay) {
+  return serializeMech({
+    G: replay.G,
+    stills: replay.stills,
+    primary: replay.primary,
+    g0_ok: replay.g0_ok,
+    attempt: replay.attempt,
+    traces: replay.traces,
+    scenarios: replay.scenarios,
+    replayed_scenarios: replay.replayed_scenarios,
+    missing_scenarios: replay.missing_scenarios,
+    samples: replay.samples,
+    jobDir: undefined,
   });
 }
 
@@ -348,21 +355,20 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
 
   for (const taskId of P1_TASKS) {
     process.stderr.write(`product P1 pair ${taskId}\n`);
-    const og = await mechP1Onegame(taskId, `${suiteRunId}-${taskId}`);
-    const gd = await mechP1Godot(taskId, `${suiteRunId}-${taskId}`);
-    const paired = await pairAndRows(taskId, og, gd);
+    const staged = await orchestrateEngines({ taskId, runId: `${suiteRunId}-${taskId}` });
+    const paired = scoreStagedPair(taskId, staged);
     rows.push(paired.ogRow, paired.gdRow);
-    p1attempts.push(og.attempt, gd.attempt);
+    p1attempts.push(staged.onegame.replay.attempt, staged.godot.replay.attempt);
     packs.push({
       id: taskId,
       bundle: {
-        instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
-        geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
-        rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
-        probe: og.bundle?.probe ?? gd.bundle?.probe,
+        instruction: staged.bundle.instruction,
+        geometry: staged.bundle.geometry,
+        rubric: staged.bundle.rubric,
+        probe: staged.bundle.probe,
       },
-      og: serializeMech(og),
-      gd: serializeMech(gd),
+      og: serializeReplay(staged.onegame.replay),
+      gd: serializeReplay(staged.godot.replay),
     });
   }
 

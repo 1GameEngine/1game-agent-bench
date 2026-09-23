@@ -56,7 +56,8 @@ ${instruction.trim()}
 你是这一次跑分的 Builder。只根据上面的题面和本引擎附录，从零写出一份新提交。
 不要读取 rubric、probe、oracle、评测仓，也不要照抄任何上一轮工程。
 
-把提交写进当前工作目录。也可以只在标准输出打印一个 JSON 对象：
+把提交写进当前工作目录。评测主进程不写游戏源码。
+也可以只在标准输出打印一个 JSON 对象（仅旧的模型命令会读取它）：
 {"files":{"相对路径":"文件全文"}}
 
 必须包含：
@@ -107,6 +108,10 @@ function writeFiles(dest, files) {
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, body);
   }
+}
+
+export function auditModelSubmission(dest, engine) {
+  assertSubmission(dest, engine);
 }
 
 function assertSubmission(dest, engine) {
