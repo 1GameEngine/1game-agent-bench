@@ -8,7 +8,6 @@ import { bootstrap } from './bootstrap.mjs';
 import { loadP1Task } from './p1-load.mjs';
 import { auditModelSubmission, buildBuilderPrompt } from './model-builder.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
-import { visualRubric } from './probe.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, stripInstruction } from './looks-rubric.mjs';
@@ -103,7 +102,7 @@ export function buildLooksStagePrompt({ instruction, frames, items }) {
   const lines = items
     .map((item) => `- ${item.id}（${item.dim}，场景 ${item.applies.join('/')}）：${item.description}`)
     .join('\n');
-  let text = `你只看这一边提交的静帧。不要看另一边，不要改计分公式，不要根据探针猜分。
+  let text = `你只看这一边提交的静帧。M、D、V、A 都按画面打，不要读内部状态字段，不要看另一边，不要改计分公式。
 每条分数必须引用该场景列表里的静帧 id。score 只能是 0、0.5 或 1。
 只输出一个 JSON 对象，形状：
 {"scenarios":{"intro":{"V1":{"score":0,"evidence":["某静帧id"]}}}}
@@ -123,13 +122,12 @@ ${lines}
 }
 
 export function looksFramePlan(stills, rubric) {
-  const vis = visualRubric(rubric);
   const by = scenarioStillsMap(stills);
   const frames = {};
   const policies = [];
   for (const sc of Object.keys(by).sort()) {
     if (!by[sc].length) continue;
-    if (!requirementsForScenario(vis, sc).length) continue;
+    if (!requirementsForScenario(rubric, sc).length) continue;
     const capped = capLooksStills(by[sc]);
     policies.push(capped.sample_policy);
     frames[sc] = capped.stills.map((s) => ({ id: s.id, path: s.path }));
@@ -173,10 +171,9 @@ export function acceptLooksText(text, { frames, rubric }) {
     return { looks_status: 'EVIDENCE_INCOMPLETE', looks_source: 'subagent', byScenario: {} };
   }
   const scenarios = data?.scenarios && typeof data.scenarios === 'object' ? data.scenarios : data;
-  const vis = visualRubric(rubric);
   const byScenario = {};
   for (const [sc, stills] of Object.entries(frames)) {
-    const reqs = requirementsForScenario(vis, sc);
+    const reqs = requirementsForScenario(rubric, sc);
     if (!reqs.length) continue;
     const ids = new Set(stills.map((s) => s.id));
     if (!looksEvidenceComplete(scenarios?.[sc], { requirements: reqs }, ids)) {
@@ -187,14 +184,13 @@ export function acceptLooksText(text, { frames, rubric }) {
   return { looks_status: 'OK', looks_source: 'subagent', byScenario };
 }
 
-function visualItems(rubric) {
-  return visualRubric(rubric).requirements.map((req) => ({
+function rubricItems(rubric) {
+  return (rubric?.requirements ?? []).map((req) => ({
     id: req.id,
     dim: req.dim,
     description: req.description,
     applies: req.applies,
-    need: req.need,
-    anchor: req.anchor === true,
+    scope: req.scope === 'persistent' ? 'persistent' : 'scenario',
   }));
 }
 
@@ -229,7 +225,7 @@ function replaySpec({ engine, taskId, prep, token }) {
 }
 
 function looksSpec({ engine, taskId, workspace, instruction, rubric, plan }) {
-  const items = visualItems(rubric);
+  const items = rubricItems(rubric);
   return {
     role: 'looks',
     engine,

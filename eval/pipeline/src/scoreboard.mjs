@@ -300,7 +300,7 @@ export function buildScoreboardView({ report, rows, packs }) {
     looksPhase,
     headerMeta,
     meta: `跑次 ${runId} · ${headerMeta}。百分制只在 looks subagent 成对后出现。橙色数字表示引擎之间不一致。`,
-    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。V2=0 时 M/D 封顶 0.5，V 取 V1/V2 低值，A2=0 时 A 封顶 0.5。M/D 探针不能单独把循环空场打满分。`,
+    formula: `S = G × (${w.M}M + ${w.D}D + ${w.V}V + ${w.A}A)。四类都看重放静帧。单场景条目取最高，贯穿条目取平均。`,
     engines,
     winnerIds: winnerIds.length === engines.length ? [] : winnerIds,
     games,

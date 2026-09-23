@@ -3,7 +3,7 @@
 Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 强制约定：
 
 1. Builder 工作区根 = `work/<runId>/game`，**不要**把 `eval/` add 进同一个 Cursor workspace。
-2. Judge 是评测仓里的 **另一个 Node 进程**。Headline 机械分来自 traces 重放抽帧 + 隐藏量表，不是 screenshot 当金标。
+2. Judge 是评测仓里的 **另一个 Node 进程**。Headline 的 M、D、V、A 都由 looks subagent 看重放静帧对照隐藏量表，不是 screenshot 当金标，也不读内部字段。
 3. 不要把 rubric / 官方 traces 当作 Builder 可见答案塞进 `game/`（oracle 验收除外）。
 4. 禁止 `1game-skill activate --global`。
 5. 下一题新 `runId`，禁止跨任务复用未校验 pin 的 `node_modules`。
@@ -19,6 +19,6 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
-M/D 走隐藏 `probe.json`：重放抽帧时读取 store / 场景字段，按断言打 0/1，维度是加权平均。V/A 走 **每个 scenario 一份 looks-job**，输入是该条 traces 的 2fps 抽帧（每条最多 40 张）。裁决必须逐条带静帧 id；没有证据的条目为 0。锚点项为 0 则该 scenario 视为缺失。**百分制只在真实 looks subagent 写完 `looks-verdict.json` 且 `looks_source=subagent` 时出现**。G 要求全部合法 traces 重放 `TRACE_OK`。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者，也不写出 `product_100`。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
+M、D、V、A 都由每个引擎的 looks subagent 看 2fps 抽帧（每条最多 40 张）打出。裁决必须逐条带静帧 id；没有证据的条目为 0。单场景条目取最高，贯穿条目取平均。**百分制只在真实 looks subagent 打完且 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。`probe.json` 不进入百分制。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者，也不写出 `product_100`。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
 
 两引擎都 `G=1` 时，抽帧必须成对且均为 **1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

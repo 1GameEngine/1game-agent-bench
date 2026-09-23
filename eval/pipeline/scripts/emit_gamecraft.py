@@ -42,7 +42,7 @@ TSCN = """[gd_scene load_steps=2 format=3 uid="uid://eval{short}"]
 script = ExtResource("1_game")
 """
 
-FORMULA = "G * (40*M + 10*D + 20*V + 30*A)"
+FORMULA = "G * (15*M + 35*D + 15*V + 35*A)"
 
 
 def tap(frame: int, code: str) -> list[dict]:
@@ -218,7 +218,7 @@ CHART = {
         req("D1", "倒计时、游玩、失败、通关四种阶段外观可分。"),
         req("D2", "16 音长度与四轨同时存在，不是单键单音玩具。"),
         req("V1", "四轨在画面下方排开，Start 在指定矩形。"),
-        req("V2", "HUD 能读 phase、remainMs 或 clockMs、hits、misses。"),
+        req("V2", "打谱中轨道中段能看见正在下落的音符。空场或音符钉死在判定条上记 0。"),
         req("A1", "夜店/谱面风格统一。"),
         req("A2", "音符有下落或接近判定线的图形，不只数字加一。"),
     ],

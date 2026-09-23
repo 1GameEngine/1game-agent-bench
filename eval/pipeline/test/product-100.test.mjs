@@ -21,26 +21,14 @@ test('suite winner is product_100', () => {
   assert.equal(P0_TASKS.length, 0);
 });
 
-test('G=0 zeros the task; missing D renormalizes', () => {
-  assert.equal(taskScore100({ G: 0, M: 1, D: 1, V: 1, A: 1, hasD: true }), 0);
-  const fullD = taskScore100({ G: 1, M: 1, D: 1, V: 1, A: 1, hasD: true });
-  assert.equal(fullD, 100);
-  const noD = taskScore100({ G: 1, M: 1, V: 1, A: 1, hasD: false });
-  assert.equal(noD, 100);
-  const place = taskScore100({ G: 1, M: 1, V: 1, A: 0.5, hasD: false });
-  assert.ok(place > 70 && place < 90);
+test('G=0 zeros the task; full marks are 100', () => {
+  assert.equal(taskScore100({ G: 0, M: 1, D: 1, V: 1, A: 1 }), 0);
+  assert.equal(taskScore100({ G: 1, M: 1, D: 1, V: 1, A: 1 }), 100);
+  assert.equal(taskScore100({ G: 1, M: 0, D: 1, V: 1, A: 1 }), 85);
 });
 
-test('low M caps A contribution', () => {
-  const uncapped = taskScore100({ G: 1, M: 0, V: 1, A: 1, hasD: false });
-  const capped = taskScore100({ G: 1, M: 0.4, V: 1, A: 1, hasD: false });
-  const halfA = taskScore100({ G: 1, M: 0.4, V: 1, A: 0.5, hasD: false });
-  assert.equal(capped, halfA);
-  assert.ok(uncapped <= 100);
-});
-
-test('empty chart loop caps M/D and V, S is 40 not 75', () => {
-  const empty = scoreAttempt({
+test('frame scores are not cross-capped', () => {
+  const row = scoreAttempt({
     id: 'p1-chart-rush',
     engine: 'onegame',
     G: 1,
@@ -52,36 +40,13 @@ test('empty chart loop caps M/D and V, S is 40 not 75', () => {
     g0_ok: 1,
     looks_status: 'OK',
     looks_source: 'subagent',
-    looks_items: { V1: 1, V2: 0, A1: 1, A2: 0, M1: 1, M4: 1, M6: 1, D1: 1 },
+    looks_items: { V2: 0, A2: 0, M1: 1 },
   });
-  assert.equal(empty.M, 0.5);
-  assert.equal(empty.D, 0.5);
-  assert.equal(empty.V, 0);
-  assert.equal(empty.A, 0.5);
-  assert.equal(empty.product_100, 40);
-  const notes = scoreAttempt({
-    id: 'p1-chart-rush',
-    engine: 'godot',
-    G: 1,
-    M: 0.5,
-    D: 0.5,
-    V: 1,
-    A: 1,
-    primary: 'TRACE_OK',
-    g0_ok: 1,
-    looks_status: 'OK',
-    looks_source: 'subagent',
-    looks_items: { V1: 1, V2: 1, A1: 1, A2: 1, M5: 1, M6: 0 },
-  });
-  assert.equal(notes.M, 0.5);
-  assert.equal(notes.V, 1);
-  assert.equal(notes.A, 1);
-  assert.equal(notes.product_100, 75);
-  const report = buildProduct100({ runId: 'gates', rows: [empty, notes] });
-  assert.equal(report.winner_engine, 'godot');
-  assert.equal(report.product_100.onegame, 40);
-  assert.equal(report.product_100.godot, 75);
-  assert.ok(!report.winner_sentence.includes('并列'));
+  assert.equal(row.M, 1);
+  assert.equal(row.D, 1);
+  assert.equal(row.V, 0.5);
+  assert.equal(row.A, 0.5);
+  assert.equal(row.product_100, 75);
 });
 
 test('equal S with opposite dims is not a suite tie', () => {
@@ -149,8 +114,8 @@ test('pending looks withholds S and says 观感未评', () => {
   assert.equal(report.product_100.godot, null);
   assert.equal(report.comparable, false);
   assert.match(report.winner_sentence, /观感未评/);
-  assert.equal(report.tasks[0].M, 1);
-  assert.equal(report.tasks.find((r) => r.engine === 'godot').D, 0.5);
+  assert.equal(report.tasks[0].M, null);
+  assert.equal(report.tasks.find((r) => r.engine === 'godot').D, null);
 });
 
 test('incomplete looks evidence withholds S', () => {
@@ -195,7 +160,7 @@ test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   assert.equal(row.D, 0.5);
   assert.equal(row.V, 1);
   assert.equal(row.A, 0.5);
-  assert.equal(row.product_100, 70);
+  assert.equal(row.product_100, 61.3);
   const withheld = scoreAttempt({
     id: 'p1-chart-rush',
     engine: 'onegame',
@@ -212,7 +177,8 @@ test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   assert.equal(withheld.product_100, null);
   assert.equal(withheld.V, null);
   assert.equal(withheld.A, null);
-  assert.equal(withheld.M, 1);
+  assert.equal(withheld.M, null);
+  assert.equal(withheld.D, null);
   assert.deepEqual(row.scenarios, ['intro', 'loop', 'fail', 'clear']);
   assert.equal(row.M_pos, undefined);
   assert.equal(row.D_mech, undefined);

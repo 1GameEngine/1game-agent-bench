@@ -5,7 +5,7 @@ export const P1_TASKS = ['p1-chart-rush'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 
-export const WEIGHTS = { M: 40, D: 10, V: 20, A: 30 };
+export const WEIGHTS = { M: 15, D: 35, V: 15, A: 35 };
 
 export function hasDepth(_taskId) {
   return true;
@@ -27,38 +27,9 @@ export function mean(vals) {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
-export function applyPlayableGates({ M, D, V, A, looks_items }) {
-  const items = looks_items && typeof looks_items === 'object' ? looks_items : {};
-  let m = M;
-  let d = D;
-  let v = V;
-  let a = A;
-  const v1 = items.V1;
-  const v2 = items.V2;
-  const a2 = items.A2;
-  if (v1 != null && v2 != null && v != null) {
-    v = Math.min(clamp01(v1), clamp01(v2));
-  }
-  if (v2 != null && clamp01(v2) <= 0) {
-    if (m != null) m = Math.min(clamp01(m), 0.5);
-    if (d != null) d = Math.min(clamp01(d), 0.5);
-  }
-  if (a2 != null && clamp01(a2) <= 0 && a != null) {
-    a = Math.min(clamp01(a), 0.5);
-  }
-  return { M: m, D: d, V: v, A: a };
-}
-
-export function taskScore100({ G, M, D, V, A, hasD, looks_items }) {
+export function taskScore100({ G, M, D, V, A }) {
   if (!G) return 0;
-  const gated = applyPlayableGates({ M, D, V, A, looks_items });
-  const m = clamp01(gated.M);
-  let a = clamp01(gated.A);
-  if (m < 0.5) a = Math.min(a, 0.5);
-  const v = clamp01(gated.V);
-  const d = clamp01(gated.D ?? 0);
-  if (hasD) return 40 * m + 10 * d + 20 * v + 30 * a;
-  return ((40 * m + 20 * v + 30 * a) / 90) * 100;
+  return 15 * clamp01(M) + 35 * clamp01(D) + 15 * clamp01(V) + 35 * clamp01(A);
 }
 
 function clamp01(x) {
@@ -193,7 +164,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题由提交 traces 重放抽帧 + 隐藏量表打 M/D/V/A。循环核心看不见（V2=0）时 M/D 封顶 0.5，V 取 V1/V2 低值，A2=0 时 A 封顶 0.5。两边都 G=1 时必须有抽帧且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
+      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题 S = G × (15M + 35D + 15V + 35A)。M/D/V/A 都由 looks subagent 看重放静帧打出，条目 0/0.5/1；只属于一个场景的条目取最高，贯穿多段的条目取平均。缺证据的条目为 0，不再按字段名封顶。G 要求能启动且至少一条轨迹重放成功。两边都 G=1 时必须抽帧成对且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {
@@ -277,26 +248,16 @@ export function scoreAttempt({
   scenarios,
   missing_scenarios,
 }) {
-  const hasD = true;
   const g = G ? 1 : 0;
-  const visualsReady = looks_source === 'subagent' && looks_status === 'OK' && V != null && A != null;
-  let m = M == null ? null : roundScore(clamp01(M), 3);
-  let d = D == null ? null : roundScore(clamp01(D), 3);
-  let v = visualsReady ? roundScore(clamp01(V), 3) : null;
-  let a = visualsReady ? roundScore(clamp01(A), 3) : null;
-  if (visualsReady) {
-    const gated = applyPlayableGates({ M: m, D: d, V: v, A: a, looks_items });
-    m = gated.M == null ? m : roundScore(clamp01(gated.M), 3);
-    d = gated.D == null ? d : roundScore(clamp01(gated.D), 3);
-    v = gated.V == null ? v : roundScore(clamp01(gated.V), 3);
-    a = gated.A == null ? a : roundScore(clamp01(gated.A), 3);
-  }
-  const product_100 =
-    g === 0
-      ? 0
-      : visualsReady
-        ? roundScore(taskScore100({ G: g, M: m ?? 0, D: d ?? 0, V: v, A: a, hasD, looks_items }), 1)
-        : null;
+  const judged =
+    looks_source === 'subagent' &&
+    looks_status === 'OK' &&
+    [M, D, V, A].every((v) => v != null && Number.isFinite(v));
+  const m = judged ? roundScore(clamp01(M), 3) : null;
+  const d = judged ? roundScore(clamp01(D), 3) : null;
+  const v = judged ? roundScore(clamp01(V), 3) : null;
+  const a = judged ? roundScore(clamp01(A), 3) : null;
+  const product_100 = g === 0 ? 0 : judged ? roundScore(taskScore100({ G: g, M: m, D: d, V: v, A: a }), 1) : null;
   const row = {
     id,
     engine,

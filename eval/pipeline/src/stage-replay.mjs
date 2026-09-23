@@ -57,9 +57,9 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
       stillsDir,
       probeKeys: bundle.probe?.keys,
     });
-    const valid = (replay.traces ?? []).filter((t) => t.audit.ok);
     const primary = hyg.ok ? replay.primary : 'HYGIENE_FAIL';
-    const G = replay.g0_ok === 1 && hyg.ok && valid.length > 0 && replay.primary === 'TRACE_OK';
+    const replayed = replay.replayed_scenarios ?? [];
+    const G = replay.g0_ok === 1 && hyg.ok && replayed.length > 0;
     return writeDoc(outPath, {
       ...base,
       G,
@@ -102,9 +102,11 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     judged.primary = jobRun.code || judged.primary || 'BOOT_FAIL';
     judged.notes = [...(judged.notes ?? []), ...(jobRun.notes ?? [])];
   }
-  const valid = traces.filter((t) => t.audit.ok);
-  const G = judged.g0_ok === 1 && valid.length > 0 && judged.primary === 'TRACE_OK';
-  const missing = missingRequiredScenarios(valid, { replayedScenarios: judged.replayed_scenarios });
+  const G = judged.g0_ok === 1 && (judged.replayed_scenarios ?? []).length > 0;
+  const missing = missingRequiredScenarios(
+    traces.filter((t) => t.audit.ok),
+    { replayedScenarios: judged.replayed_scenarios },
+  );
   return writeDoc(outPath, {
     ...base,
     G,

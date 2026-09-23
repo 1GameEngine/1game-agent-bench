@@ -24,7 +24,7 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
     assert.equal(b.task.scene.height, 720);
     assert.equal(b.task.judge, 'rubric_replay');
     assert.equal(b.task.traces, 'submitted');
-    assert.equal(b.rubric.score_formula, 'G * (40*M + 10*D + 20*V + 30*A)');
+    assert.equal(b.rubric.score_formula, 'G * (15*M + 35*D + 15*V + 35*A)');
     assert.ok(b.rubric.requirements.length >= 8);
     assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id)), false);
     assert.equal(fs.existsSync(path.join(EVAL_DIR, 'pipeline', 'src', 'materialize-submission.mjs')), false);
@@ -36,9 +36,11 @@ test('chart rush looks isolate falling notes from receptor caps', () => {
   const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
   assert.deepEqual(byId.V1.applies, ['intro']);
   assert.deepEqual(byId.V2.applies, ['loop']);
-  assert.equal(byId.V2.need, 'all');
+  assert.equal(byId.V2.scope, 'scenario');
   assert.deepEqual(byId.A2.applies, ['loop']);
-  assert.equal(byId.A2.need, 'all');
+  assert.equal(byId.A2.scope, 'scenario');
+  assert.equal(byId.A1.scope, 'persistent');
+  assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
   assert.match(byId.V2.description, /下落/);
   assert.match(byId.A2.description, /底栏/);
   assert.match(b.instruction, /只有底栏没有下落物/);

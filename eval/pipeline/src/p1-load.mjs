@@ -5,7 +5,6 @@ import { P1_TASKS } from './product-100.mjs';
 import { loadYaml, loadJson } from './load.mjs';
 import { EvalError } from './util.mjs';
 import { validateRubric } from './rubric.mjs';
-import { validateProbe } from './probe.mjs';
 
 export { P1_TASKS };
 
@@ -36,12 +35,10 @@ export function loadP1Task(taskId) {
   for (const w of ENGINE_WORDS) {
     if (instruction.includes(w)) throw new EvalError('EVAL_INTERNAL', `engine word ${w} in ${taskId} instruction`);
   }
-  if (rubric.score_formula !== 'G * (40*M + 10*D + 20*V + 30*A)') {
+  if (rubric.score_formula !== 'G * (15*M + 35*D + 15*V + 35*A)') {
     throw new EvalError('EVAL_INTERNAL', `${taskId} rubric formula`);
   }
   const vr = validateRubric(rubric);
   if (!vr.ok) throw new EvalError('EVAL_INTERNAL', `${taskId} rubric ${vr.issues.join('; ')}`);
-  const vp = validateProbe(probe, rubric);
-  if (!vp.ok) throw new EvalError('EVAL_INTERNAL', `${taskId} probe ${vp.issues.join('; ')}`);
   return { task, instruction, rubric, probe, geometry: { regions: {}, labels: {} } };
 }

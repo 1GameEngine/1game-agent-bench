@@ -10,11 +10,11 @@ Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`�
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 都按引擎拆成三个 subagent，主进程只准备空工作区并在最后套公式。不支持 `--looks` 或 `--mech`，也不把机械结果存进仓库再续评。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。`probe.json` 不进入百分制。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 都按引擎拆成三个 subagent，主进程只准备空工作区并在最后套公式。不支持 `--looks` 或 `--mech`，也不把机械结果存进仓库再续评。
 
-阶段入口是 `EVAL_SUBAGENT_CMD`（cwd 为该引擎工作区，stdin 为 `{role,engine,taskId,workspace,prompt,...}`）。`role` 依次是 `builder`、`replay`、`looks`，两边引擎互不可见。未设置时以 `SUBAGENT_REQUIRED` 停止，主进程不写 `game.tsx` / `game.gd`，不重放，不看图。Builder 把提交写进工作区。Replay 只能执行 `node src/cli.mjs stage-replay ...`，由该命令写出带 `via:"stage-replay"` 和本次令牌的 `REPLAY.json`；手改文件会被 `REPLAY_UNTRUSTED` 拒绝。Looks 只看这一边的静帧和观感条目，每条带静帧 id。主进程用隐藏探针算 M/D，用观感结论算 V/A，再套同一公式和 V2/A2 闸门。`EVAL_BUILDER_CMD` 只留给单独的模型写盘试验，headline 跑分不走它。
+阶段入口是 `EVAL_SUBAGENT_CMD`（cwd 为该引擎工作区，stdin 为 `{role,engine,taskId,workspace,prompt,...}`）。`role` 依次是 `builder`、`replay`、`looks`，两边引擎互不可见。未设置时以 `SUBAGENT_REQUIRED` 停止，主进程不写 `game.tsx` / `game.gd`，不重放，不看图。Builder 把提交写进工作区。Replay 只能执行 `node src/cli.mjs stage-replay ...`，由该命令写出带 `via:"stage-replay"` 和本次令牌的 `REPLAY.json`；手改文件会被 `REPLAY_UNTRUSTED` 拒绝。Looks 只看这一边的静帧，M、D、V、A 四类都在这一步打完，每条带静帧 id。主进程只按场景取最高、贯穿取平均后套公式，不再用探针，也不做跨条目封顶。`EVAL_BUILDER_CMD` 只留给单独的模型写盘试验，headline 跑分不走它。
 
-评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
+评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M、D、V、A 都由 looks subagent 看该边静帧打出，每条 0、0.5 或 1，并引用静帧 id。只属于一个场景的条目取各段最高分，贯穿多段的条目取平均。没有证据的条目为 0，不按内部字段名封顶。G 要求能启动，并且至少一条轨迹重放成功。没有 subagent 时不出百分制。
 
 ## 读者与隔离
 
@@ -39,7 +39,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | 点击 | scene 逻辑像素；评测点 geometry 命名区中心（或 playplan 写死中心） |
 | Judge（正确性） | Headline：提交 traces 重放抽帧 + 隐藏量表。P0 夹具仍只 `1gameplay frame query --select store:state`。不用 Chromium |
 | Capture（观感） | 重放抽帧 1280×720 PNG。Capture **不是** 单独的机械金标。 |
-| Looks（V/A） | 每引擎一个 looks subagent，只看该边静帧。worker / heuristic 不得当 headline。 |
+| Looks（M/D/V/A） | 每引擎一个 looks subagent，只看该边静帧打四类。worker / heuristic 不得当 headline。 |
 | Replay | Replay subagent 只能跑 `stage-replay`。Headline 30fps submitted traces，sample 2fps，单条最长 20s。禁用 `--until` |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
@@ -96,7 +96,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (40M + 10D + 20V + 30A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动、至少一条合法 submitted trace、且全部合法 traces 重放完成。M/D 来自隐藏 `probe.json`（抽帧时刻的状态断言，条目 0/1，维度保留加权平均）。V/A 来自隐藏量表的观感条：**每个 scenario 单独 looks-job**，由 **同一真实 looks subagent** 打 2fps 抽帧（每条最多 40 张），每条须带本 job 静帧 id，否则该条为 0。fail/clear 锚点为 0 或空操作 fail/clear 视为缺场景，M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。M&lt;0.5 时 A 贡献再封顶 0.5。总分相同但四维不一致时不宣布并列。`looks_source` 不是 `subagent` 时 V/A 留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (15M + 35D + 15V + 35A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动，且至少一条合法 submitted trace 重放成功。M、D、V、A 都来自隐藏量表的画面条文：每个引擎一个 looks subagent 看 2fps 抽帧（每条最多 40 张），每条须带静帧 id，否则该条为 0。只属于一个场景的条目取最高分，贯穿多段的条目取平均。总分相同但四维不一致时不宣布并列。`looks_source` 不是 `subagent` 时四维留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 headline `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

@@ -13,8 +13,8 @@ import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { scoreProbe, visualRubric } from './probe.mjs';
-import { finalizeObservedScores } from './rubric.mjs';
+import { scoreProbe } from './probe.mjs';
+import { aggregateFrameRubric } from './rubric.mjs';
 import { orchestrateEngines } from './subagent-stage.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
@@ -117,28 +117,22 @@ export async function mechP0Godot(taskId, runId) {
 }
 
 function emptyVis(looks_status, looks_source) {
-  return { V: 0, A: 0, looks_status, looks_source };
+  return { M: null, D: null, V: null, A: null, looks_status, looks_source };
 }
 
-function visualsFromLooks(replay, looks, rubric) {
+function visualsFromLooks(looks, rubric) {
   if (!looks) return emptyVis('SKIP', 'none');
   if (looks.looks_status !== 'OK') {
     return {
-      V: null,
-      A: null,
-      looks_status: looks.looks_status,
-      looks_source: looks.looks_source ?? 'subagent',
+      ...emptyVis(looks.looks_status, looks.looks_source ?? 'subagent'),
       sample_policy: looks.sample_policy,
       jobs: looks.jobs,
     };
   }
-  const fin = finalizeObservedScores({
-    byScenario: looks.byScenario,
-    rubric: visualRubric(rubric),
-    traces: replay.traces,
-    replayedScenarios: replay.replayed_scenarios,
-  });
+  const fin = aggregateFrameRubric(looks.byScenario, rubric);
   return {
+    M: fin.M,
+    D: fin.D,
     V: fin.V,
     A: fin.A,
     items: fin.items,
@@ -163,10 +157,10 @@ export function scoreStagedPair(taskId, staged) {
     gdVis = emptyVis('INCOMPARABLE_VISUAL', 'pair');
   } else {
     ogVis = staged.onegame.replay.G
-      ? visualsFromLooks(staged.onegame.replay, staged.onegame.looks, bundle.rubric)
+      ? visualsFromLooks(staged.onegame.looks, bundle.rubric)
       : emptyVis('SKIP', 'none');
     gdVis = staged.godot.replay.G
-      ? visualsFromLooks(staged.godot.replay, staged.godot.looks, bundle.rubric)
+      ? visualsFromLooks(staged.godot.looks, bundle.rubric)
       : emptyVis('SKIP', 'none');
     if (staged.onegame.replay.G && staged.godot.replay.G) {
       if (
@@ -181,31 +175,19 @@ export function scoreStagedPair(taskId, staged) {
     }
   }
   return {
-    ogRow: rowFromReplay(taskId, 'onegame', staged.onegame.replay, ogVis, bundle),
-    gdRow: rowFromReplay(taskId, 'godot', staged.godot.replay, gdVis, bundle),
+    ogRow: rowFromReplay(taskId, 'onegame', staged.onegame.replay, ogVis),
+    gdRow: rowFromReplay(taskId, 'godot', staged.godot.replay, gdVis),
     pair: staged.pair,
   };
 }
 
-function rowFromReplay(taskId, engine, replay, vis, bundle) {
-  const probeScore = bundle?.probe
-    ? scoreProbe({
-        probe: bundle.probe,
-        rubric: bundle.rubric,
-        samples: replay.samples ?? [],
-        traces: replay.traces,
-        replayedScenarios: replay.replayed_scenarios,
-      })
-    : null;
-  const missing = [
-    ...new Set([...(probeScore?.missing_scenarios ?? []), ...(vis.missing_scenarios ?? replay.missing_scenarios ?? [])]),
-  ];
+function rowFromReplay(taskId, engine, replay, vis) {
   return scoreAttempt({
     id: taskId,
     engine,
     G: replay.G,
-    M: probeScore ? probeScore.M : 0,
-    D: probeScore ? probeScore.D : 0,
+    M: vis.M,
+    D: vis.D,
     V: vis.V,
     A: vis.A,
     primary: replay.primary,
@@ -213,9 +195,9 @@ function rowFromReplay(taskId, engine, replay, vis, bundle) {
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
     stills: replay.stills,
-    looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
+    looks_items: vis.items,
     scenarios: vis.observed_scenarios ?? replay.scenarios,
-    missing_scenarios: missing,
+    missing_scenarios: vis.missing_scenarios ?? [],
   });
 }
 

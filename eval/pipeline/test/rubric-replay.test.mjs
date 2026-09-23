@@ -2,13 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { missingRequiredScenarios, REQUIRED_SCENARIOS } from '../src/p1-trace.mjs';
 import {
+  aggregateFrameRubric,
   dropFailedAnchorScenarios,
   finalizeObservedScores,
   mergeScenarioScores,
   validateRubric,
 } from '../src/rubric.mjs';
 import { loadP1Task, P1_TASKS } from '../src/p1-load.mjs';
-import { assertionScore, scoreProbe, validateProbe } from '../src/probe.mjs';
 import { normalizeLooksScores } from '../src/looks-rubric.mjs';
 
 const mini = {
@@ -25,11 +25,11 @@ const mini = {
   ],
 };
 
-test('headline rubrics validate dim applies and fail/clear anchors', () => {
+test('headline rubrics are visible frame criteria', () => {
   for (const id of P1_TASKS) {
     const b = loadP1Task(id);
     assert.equal(validateRubric(b.rubric).ok, true, id);
-    assert.ok(b.rubric.requirements.every((r) => r.dim));
+    assert.ok(b.rubric.requirements.every((r) => r.scope === 'scenario' || r.scope === 'persistent'));
   }
 });
 
@@ -98,38 +98,20 @@ test('failed fail-anchor drops scenario and caps M/D', () => {
   assert.equal(fin.D, 0.5);
 });
 
-test('headline probes match rubric M/D and do not broadcast one mark', () => {
-  for (const id of P1_TASKS) {
-    const b = loadP1Task(id);
-    assert.equal(validateProbe(b.probe, b.rubric).ok, true, id);
-  }
+test('a missed scene zeros that item and does not cap the other mechanics', () => {
   const chart = loadP1Task('p1-chart-rush');
-  const failOnly = scoreProbe({
-    probe: chart.probe,
-    rubric: chart.rubric,
-    samples: [
-      { scenario: 'intro', frame: 0, state: { phase: 'ready', remainMs: 0, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
-      { scenario: 'loop', frame: 0, state: { phase: 'countdown', remainMs: 2000, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
-      { scenario: 'loop', frame: 30, state: { phase: 'playing', remainMs: 0, clockMs: 800, hits: 1, misses: 0, cursor: 1 } },
-      { scenario: 'fail', frame: 0, state: { phase: 'playing', hits: 0, misses: 0, cursor: 0 } },
-      { scenario: 'fail', frame: 40, state: { phase: 'clear', hits: 12, misses: 0, cursor: 16 } },
-      { scenario: 'clear', frame: 0, state: { phase: 'countdown', remainMs: 2000, clockMs: 0, hits: 0, misses: 0, cursor: 0 } },
-      { scenario: 'clear', frame: 40, state: { phase: 'clear', hits: 16, misses: 0, cursor: 16 } },
-    ],
-    traces: REQUIRED_SCENARIOS.map((scenario) => ({
-      audit: { ok: true },
-      trace: { scenario, events: [{ frame: 0, type: 'keydown', code: 'Enter' }] },
-    })),
-    replayedScenarios: REQUIRED_SCENARIOS,
-  });
-  assert.ok(failOnly.missing_scenarios.includes('fail'));
-  assert.ok(failOnly.M <= 0.5);
-  assert.equal(
-    assertionScore(chart.probe.assertions.find((a) => a.id === 'M6'), [
-      { state: { phase: 'clear', hits: 16, misses: 0, cursor: 16 } },
-    ]),
-    1,
+  const fin = aggregateFrameRubric(
+    {
+      intro: { M1: 1, V1: 1, A1: 1 },
+      loop: { M2: 1, M3: 1, D1: 1, V2: 0, A1: 1, A2: 1 },
+      clear: { M5: 1, M6: 1, D1: 1, D2: 1, A1: 1 },
+    },
+    chart.rubric,
   );
+  assert.equal(fin.items.M4, 0);
+  assert.equal(fin.items.V2, 0);
+  assert.ok(fin.M > 0.5);
+  assert.equal(fin.items.A1, 1);
 });
 
 test('rubric looks items without evidence score 0', () => {

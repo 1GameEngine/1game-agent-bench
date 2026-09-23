@@ -37,6 +37,10 @@ export function reqNeed(req) {
   return req?.need === 'all' ? 'all' : 'any';
 }
 
+export function reqScope(req) {
+  return req?.scope === 'persistent' ? 'persistent' : 'scenario';
+}
+
 export function isAnchor(req) {
   return req?.anchor === true;
 }
@@ -47,7 +51,7 @@ export function requirementsForScenario(rubric, scenario) {
 
 export function validateRubric(rubric) {
   const issues = [];
-  if (rubric?.score_formula !== 'G * (40*M + 10*D + 20*V + 30*A)') issues.push('formula');
+  if (rubric?.score_formula !== 'G * (15*M + 35*D + 15*V + 35*A)') issues.push('formula');
   const reqs = rubric?.requirements;
   if (!Array.isArray(reqs) || reqs.length < 8 || reqs.length > 24) issues.push('size');
   const ids = new Set();
@@ -55,14 +59,12 @@ export function validateRubric(rubric) {
     if (!req?.id || ids.has(req.id)) issues.push(`id ${req?.id}`);
     ids.add(req.id);
     if (!reqDim(req)) issues.push(`dim ${req.id}`);
+    if (req.scope !== 'scenario' && req.scope !== 'persistent') issues.push(`scope ${req.id}`);
     if (!req.description) issues.push(`desc ${req.id}`);
+    if (/phase|cursor|clockMs|remainMs/.test(String(req.description))) issues.push(`hidden-field ${req.id}`);
     for (const sc of reqApplies(req)) {
       if (!REQUIRED_SCENARIOS.includes(sc)) issues.push(`applies ${req.id} ${sc}`);
     }
-  }
-  for (const sc of ['fail', 'clear']) {
-    const anchors = (reqs ?? []).filter((r) => isAnchor(r) && reqApplies(r).includes(sc));
-    if (!anchors.length) issues.push(`anchor ${sc}`);
   }
   return { ok: issues.length === 0, issues };
 }
@@ -149,6 +151,42 @@ export function emptyRubricScores(rubric) {
   const items = {};
   for (const req of rubric?.requirements ?? []) items[req.id] = 0;
   return items;
+}
+
+export function aggregateFrameRubric(byScenario, rubric) {
+  const items = {};
+  const by = { M: [], D: [], V: [], A: [] };
+  const observed = byScenario ?? {};
+  for (const req of rubric?.requirements ?? []) {
+    const applies = reqApplies(req);
+    const present = applies
+      .filter((sc) => observed[sc])
+      .map((sc) => quantizeLooks(observed[sc]?.[req.id]));
+    let v = 0;
+    if (present.length && reqScope(req) === 'persistent') {
+      const all = applies.map((sc) => (observed[sc] ? quantizeLooks(observed[sc]?.[req.id]) : 0));
+      v = quantizeLooks(mean(all));
+    } else if (present.length) {
+      v = quantizeLooks(Math.max(...present));
+    }
+    items[req.id] = v;
+    const cat = reqDim(req);
+    if (by[cat]) by[cat].push({ v, w: reqWeight(req) });
+  }
+  const avg = (arr) => {
+    if (!arr.length) return 0;
+    const wsum = arr.reduce((a, x) => a + x.w, 0);
+    return clamp01(arr.reduce((a, x) => a + x.v * x.w, 0) / wsum);
+  };
+  return {
+    M: roundScore(avg(by.M), 3),
+    D: roundScore(avg(by.D), 3),
+    V: roundScore(avg(by.V), 3),
+    A: roundScore(avg(by.A), 3),
+    items,
+    observed_scenarios: Object.keys(observed),
+    missing_scenarios: [],
+  };
 }
 
 export function finalizeObservedScores({ byScenario, rubric, traces, replayedScenarios }) {

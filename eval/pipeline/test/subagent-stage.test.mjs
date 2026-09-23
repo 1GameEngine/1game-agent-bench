@@ -131,7 +131,7 @@ test('builder and looks specs hide the probe, and a forged replay is rejected', 
   assert.ok(calls.includes('godot:replay'));
 });
 
-test('main agent scores a subagent replay and looks verdict, including the V2 gate', async () => {
+test('main agent scores frame rubric without cross-item caps', async () => {
   const calls = [];
   const staged = await orchestrateEngines({
     taskId: 'p1-chart-rush',
@@ -158,8 +158,9 @@ test('main agent scores a subagent replay and looks verdict, including the V2 ga
       }
       assert.deepEqual(
         spec.rubric_items.map((item) => item.id).sort(),
-        ['A1', 'A2', 'V1', 'V2'],
+        ['A1', 'A2', 'D1', 'D2', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'V1', 'V2'],
       );
+      assert.doesNotMatch(JSON.stringify(spec.rubric_items), /phase|cursor|clockMs|remainMs/);
       assert.doesNotMatch(JSON.stringify(spec.stills), spec.engine === 'onegame' ? /godot/ : /onegame/);
       const scenarios = {};
       for (const [sc, frames] of Object.entries(spec.stills)) {
@@ -178,10 +179,10 @@ test('main agent scores a subagent replay and looks verdict, including the V2 ga
   const scored = scoreStagedPair('p1-chart-rush', staged);
   assert.equal(scored.ogRow.looks_source, 'subagent');
   assert.equal(scored.gdRow.looks_source, 'subagent');
-  assert.equal(scored.ogRow.V, 0);
-  assert.equal(scored.ogRow.A, 0.5);
-  assert.equal(scored.ogRow.product_100, 15);
-  assert.equal(scored.gdRow.product_100, 15);
+  assert.equal(scored.ogRow.M, 1);
+  assert.equal(scored.ogRow.V, 0.5);
+  assert.equal(scored.ogRow.product_100, 75);
+  assert.equal(scored.gdRow.product_100, 75);
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(path.dirname(staged.onegame.outPath), 'builder-onegame.json'), 'utf8')).source,
     'subagent',
