@@ -11,16 +11,13 @@ import { scanHygiene } from './hygiene.mjs';
 import { primaryOf } from './verdict.mjs';
 import { loadP1Task } from './p1-load.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
-import { buildLooksJob } from './looks-judge.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTraces } from './p1-trace.mjs';
-import { scoreProbe, visualRubric } from './probe.mjs';
-import { looksJudgeConfigured } from './looks-judge.mjs';
-import { requirementsForScenario } from './rubric.mjs';
+import { missingRequiredScenarios, readTraces } from './p1-trace.mjs';
+import { scoreProbe } from './probe.mjs';
 import { runModelBuilder } from './model-builder.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
@@ -266,62 +263,6 @@ function rowFromMech(taskId, engine, mech, vis) {
   });
 }
 
-function stillsForJob(stills) {
-  return (stills ?? [])
-    .filter((s) => s.ok && (s.png || (s.path && fs.existsSync(s.path))))
-    .map((s) => ({
-      id: s.id,
-      dump_ok: s.dump_ok ?? 0,
-      dump: s.dump,
-      ok: true,
-      path: s.path,
-      png: s.png,
-    }));
-}
-
-function prepareLooksJobs(taskId, og, gd) {
-  const instruction = og.bundle?.instruction ?? gd.bundle?.instruction;
-  const geometry = og.bundle?.geometry ?? gd.bundle?.geometry;
-  const rubric = visualRubric(og.bundle?.rubric ?? gd.bundle?.rubric);
-  const jobs = [];
-  for (const side of [
-    { engine: 'onegame', mech: og },
-    { engine: 'godot', mech: gd },
-  ]) {
-    if (!side.mech.G) continue;
-    const by = groupStillsByScenario(stillsForJob(side.mech.stills));
-    for (const [scenario, list] of by) {
-      if (!list.length) continue;
-      if (!requirementsForScenario(rubric, scenario).length) continue;
-      const capped = capLooksStills(list);
-      const jobDir = path.join(side.mech.jobDir, scenario);
-      const job = buildLooksJob({
-        taskId,
-        engine: side.engine,
-        instruction,
-        geometry,
-        stills: capped.stills,
-        jobDir,
-        rubric,
-        scenario,
-        sample_policy: capped.sample_policy,
-      });
-      jobs.push({
-        taskId,
-        engine: side.engine,
-        scenario,
-        sample_policy: capped.sample_policy,
-        jobDir,
-        requestPath: job.requestPath,
-        promptPath: job.promptPath,
-        verdictPath: job.verdictPath,
-        stills: capped.stills.map((s) => ({ id: s.id, path: s.path, dump: s.dump })),
-      });
-    }
-  }
-  return jobs;
-}
-
 function serializeMech(mech) {
   return {
     G: Boolean(mech.G),
@@ -344,29 +285,6 @@ function serializeMech(mech) {
     missing_scenarios: mech.missing_scenarios,
     samples: mech.samples ?? [],
   };
-}
-
-function pendingVis() {
-  return {
-    V: null,
-    A: null,
-    M: null,
-    D: null,
-    looks_status: 'PENDING',
-    looks_source: 'none',
-    items: {},
-  };
-}
-
-function pendingRows(packs) {
-  const rows = [];
-  for (const pack of packs) {
-    const og = { ...pack.og, bundle: pack.bundle };
-    const gd = { ...pack.gd, bundle: pack.bundle };
-    rows.push(rowFromMech(pack.id, 'onegame', og, pendingVis()));
-    rows.push(rowFromMech(pack.id, 'godot', gd, pendingVis()));
-  }
-  return rows;
 }
 
 async function pairAndRows(taskId, og, gd) {
@@ -402,44 +320,18 @@ function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs }) 
   return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
 }
 
-export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}) {
-  const phase = opts.phase ?? 'all';
-  const dir = path.join(WORK_DIR, suiteRunId);
-  const mechPath = path.join(dir, 'MECH.json');
-
-  if (phase === 'looks') {
-    const saved = JSON.parse(fs.readFileSync(mechPath, 'utf8'));
-    const rows = [];
-    for (const pack of saved.tasks) {
-      const og = { ...pack.og, bundle: pack.bundle };
-      const gd = { ...pack.gd, bundle: pack.bundle };
-      const paired = await pairAndRows(pack.id, og, gd);
-      rows.push(paired.ogRow, paired.gdRow);
-    }
-    return writeSuiteReports(suiteRunId, {
-      rows,
-      p0taskRows: saved.p0taskRows ?? [],
-      p1attempts: saved.p1attempts ?? [],
-      packs: saved.tasks ?? [],
-    });
-  }
-
+export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
   const rows = [];
   const p0taskRows = [];
   const p1attempts = [];
   const packs = [];
-  const looksJobs = [];
-  const judgeNow = phase === 'all' && looksJudgeConfigured();
 
   for (const taskId of P0_TASKS) {
     process.stderr.write(`product P0 pair ${taskId}\n`);
     const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
     const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
-    looksJobs.push(...prepareLooksJobs(taskId, og, gd));
-    if (judgeNow) {
-      const paired = await pairAndRows(taskId, og, gd);
-      rows.push(paired.ogRow, paired.gdRow);
-    }
+    const paired = await pairAndRows(taskId, og, gd);
+    rows.push(paired.ogRow, paired.gdRow);
     p0taskRows.push({ id: taskId, ...og.mechanical });
     packs.push({
       id: taskId,
@@ -458,11 +350,8 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
     process.stderr.write(`product P1 pair ${taskId}\n`);
     const og = await mechP1Onegame(taskId, `${suiteRunId}-${taskId}`);
     const gd = await mechP1Godot(taskId, `${suiteRunId}-${taskId}`);
-    looksJobs.push(...prepareLooksJobs(taskId, og, gd));
-    if (judgeNow) {
-      const paired = await pairAndRows(taskId, og, gd);
-      rows.push(paired.ogRow, paired.gdRow);
-    }
+    const paired = await pairAndRows(taskId, og, gd);
+    rows.push(paired.ogRow, paired.gdRow);
     p1attempts.push(og.attempt, gd.attempt);
     packs.push({
       id: taskId,
@@ -475,21 +364,6 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, opts = {}
       og: serializeMech(og),
       gd: serializeMech(gd),
     });
-  }
-
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(mechPath, `${JSON.stringify({ suiteRunId, tasks: packs, p0taskRows, p1attempts }, null, 2)}\n`);
-  fs.writeFileSync(path.join(dir, 'LOOKS_JOBS.json'), `${JSON.stringify({ jobs: looksJobs }, null, 2)}\n`);
-
-  if (!judgeNow) {
-    process.stderr.write(`wrote ${looksJobs.length} looks jobs; 观感未评。填 looks-verdict.json 后 --looks\n`);
-    const reported = writeSuiteReports(suiteRunId, {
-      rows: pendingRows(packs),
-      p0taskRows,
-      p1attempts,
-      packs,
-    });
-    return { ...reported, mechPath, looksJobs, looks_pending: true };
   }
 
   return writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs });

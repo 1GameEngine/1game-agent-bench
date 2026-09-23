@@ -136,7 +136,7 @@ export function buildProduct100({ runId, rows }) {
       .join('；');
     const head =
       looks_phase === 'pending'
-        ? '观感未评，百分制不可比。机械 G/M/D 已出，胜负要等同一 looks subagent 写完 looks-verdict.json。'
+        ? '观感未评，百分制不可比。同一次跑分里没有 looks subagent，不保存机械结果再续评。'
         : looks_phase === 'unpaired'
           ? '观感不成对，百分制不可比。静帧或 looks job 两边不一致，不得宣布胜者。'
           : looks_phase === 'evidence'

@@ -12,7 +12,6 @@ import { runP1Compare } from './p1-run.mjs';
 import { runProduct100 } from './product-run.mjs';
 import { writeScoreboardFromRun } from './scoreboard.mjs';
 import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
-import { installLooksVerdicts } from './looks-install.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -133,18 +132,11 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     if (cmd === 'run-product-100') {
+      if (hasFlag(argv, '--looks') || hasFlag(argv, '--mech')) {
+        throw new EvalError('EVAL_INTERNAL', 'run-product-100 一次跑完。不支持 --looks / --mech，也不保存机械结果供续评。');
+      }
       const runId = argValue(argv, '--run-id') ?? `p100-${Date.now()}`;
-      const phase = hasFlag(argv, '--looks') ? 'looks' : hasFlag(argv, '--mech') ? 'mech' : 'all';
-      if (phase !== 'looks' && process.env.EVAL_LOOKS_ALLOW_WORKER !== '1') {
-        process.env.EVAL_LOOKS_REQUIRE_EXTERNAL = process.env.EVAL_LOOKS_REQUIRE_EXTERNAL || '1';
-      }
-      const { report, out, mechPath, looksJobs, htmlPath, looks_pending } = await runProduct100(runId, { phase });
-      if (phase === 'mech' || looks_pending) {
-        process.stdout.write(`${JSON.stringify({ phase: looks_pending ? 'pending' : 'mech', looks_phase: report?.looks_phase ?? null, mechPath, looks_jobs: looksJobs?.length ?? 0, product_100: report?.product_100 ?? null, winner_sentence: report?.winner_sentence ?? null }, null, 2)}\n`);
-        process.stderr.write(`wrote ${mechPath}\n`);
-        if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
-        return;
-      }
+      const { report, out, htmlPath } = await runProduct100(runId);
       process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, looks_phase: report.looks_phase, winner_sentence: report.winner_sentence }, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
@@ -164,19 +156,6 @@ export async function main(argv = process.argv.slice(2)) {
       if (!jobPath) throw new EvalError('EVAL_INTERNAL', '--job required');
       const job = JSON.parse(fs.readFileSync(jobPath, 'utf8'));
       process.stdout.write(`${buildLooksUserPrompt(job)}\n`);
-      return;
-    }
-    if (cmd === 'install-looks') {
-      const runId = argValue(argv, '--run-id');
-      const verdictsPath = argValue(argv, '--verdicts');
-      if (!runId || !verdictsPath) throw new EvalError('EVAL_INTERNAL', '--run-id and --verdicts required');
-      const jobsPath = path.join(WORK_DIR, runId, 'LOOKS_JOBS.json');
-      const jobs = JSON.parse(fs.readFileSync(jobsPath, 'utf8')).jobs ?? [];
-      const payload = JSON.parse(fs.readFileSync(verdictsPath, 'utf8'));
-      const verdicts = Array.isArray(payload) ? payload : payload.jobs;
-      const result = installLooksVerdicts({ jobs, verdicts });
-      process.stdout.write(`${JSON.stringify({ ok: result.ok, written: result.written.length, issues: result.issues }, null, 2)}\n`);
-      process.exitCode = result.ok ? 0 : 1;
       return;
     }
     if (cmd === 'apply-looks') {
@@ -201,7 +180,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | emit-scoreboard --run-id <id> | looks-prompt --job <json> | install-looks --run-id <id> --verdicts <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {

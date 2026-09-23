@@ -337,10 +337,5 @@ export function writeScoreboard({ dir, report, rows, packs }) {
 
 export function writeScoreboardFromRun(runDir) {
   const report = JSON.parse(fs.readFileSync(path.join(runDir, 'PRODUCT_100.json'), 'utf8'));
-  let packs = [];
-  const mechPath = path.join(runDir, 'MECH.json');
-  if (fs.existsSync(mechPath)) {
-    packs = JSON.parse(fs.readFileSync(mechPath, 'utf8')).tasks ?? [];
-  }
-  return writeScoreboard({ dir: runDir, report, rows: report.tasks, packs });
+  return writeScoreboard({ dir: runDir, report, rows: report.tasks, packs: [] });
 }
