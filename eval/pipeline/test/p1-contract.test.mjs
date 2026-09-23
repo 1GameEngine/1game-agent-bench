@@ -2,14 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { P1_TASKS, loadP1Task } from '../src/p1-load.mjs';
-import { auditTrace, missingRequiredScenarios, readTraces, REQUIRED_SCENARIOS } from '../src/p1-trace.mjs';
+import { auditTrace, missingRequiredScenarios, REQUIRED_SCENARIOS } from '../src/p1-trace.mjs';
 import { applyScenarioCap } from '../src/rubric.mjs';
 import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
 import { EVAL_DIR } from '../src/paths.mjs';
-import { materializeSubmission } from '../src/materialize-submission.mjs';
-import os from 'node:os';
 import path from 'node:path';
 
 test('P1 compare_tasks are headline games with hidden rubric and traces', () => {
@@ -28,16 +26,8 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
     assert.equal(b.task.traces, 'submitted');
     assert.equal(b.rubric.score_formula, 'G * (40*M + 10*D + 20*V + 30*A)');
     assert.ok(b.rubric.requirements.length >= 8);
-    for (const engine of ['onegame', 'godot']) {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'submit-'));
-      materializeSubmission(id, engine, dir, { replace: true });
-      const traces = readTraces(path.join(dir, 'demo_outputs'));
-      assert.equal(traces.length, 4);
-      assert.equal(traces.every((t) => t.audit.ok), true);
-      assert.deepEqual(missingRequiredScenarios(traces), []);
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
     assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id)), false);
+    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'pipeline', 'src', 'materialize-submission.mjs')), false);
   }
 });
 

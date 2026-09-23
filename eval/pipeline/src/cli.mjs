@@ -126,7 +126,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     if (cmd === 'run-p1-compare') {
-      const { report, out } = runP1Compare(argValue(argv, '--run-id') ?? `p1-${Date.now()}`);
+      const { report, out } = await runP1Compare(argValue(argv, '--run-id') ?? `p1-${Date.now()}`);
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       process.exitCode = report.checkpoints_ok === report.attempts ? 0 : 1;

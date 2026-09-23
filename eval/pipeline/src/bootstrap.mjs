@@ -5,7 +5,6 @@ import { PIN, REQUIRED_ONEGAME, gameDir as gameDirFor, oracleGame, oracleTraces 
 import { EvalError } from './util.mjs';
 import { mountAssetLibrary } from './assets.mjs';
 import { execFileOk, whichPnpm } from './exec.mjs';
-import { hasSubmissionGenerator, materializeSubmission } from './materialize-submission.mjs';
 
 function nodeMajor() {
   return Number(process.versions.node.split('.')[0]);
@@ -125,15 +124,11 @@ export function bootstrap({ taskId, runId, instruction, oracle = false, replaceE
   fs.writeFileSync(path.join(cwd, 'instruction.md'), instruction);
   mountAssetLibrary(cwd, taskId);
   if (oracle) {
-    if (hasSubmissionGenerator(taskId)) {
-      materializeSubmission(taskId, 'onegame', cwd);
-    } else {
-      const src = oracleGame(taskId);
-      fs.copyFileSync(src, path.join(cwd, 'src', 'game.tsx'));
-      const traces = oracleTraces(taskId, 'onegame');
-      if (fs.existsSync(traces)) {
-        fs.cpSync(traces, path.join(cwd, 'demo_outputs'), { recursive: true });
-      }
+    const src = oracleGame(taskId);
+    fs.copyFileSync(src, path.join(cwd, 'src', 'game.tsx'));
+    const traces = oracleTraces(taskId, 'onegame');
+    if (fs.existsSync(traces)) {
+      fs.cpSync(traces, path.join(cwd, 'demo_outputs'), { recursive: true });
     }
   }
   return { gameDir: cwd };

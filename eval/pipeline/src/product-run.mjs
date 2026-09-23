@@ -21,7 +21,7 @@ import { capLooksStills, groupStillsByScenario, missingRequiredScenarios, readTr
 import { scoreProbe, visualRubric } from './probe.mjs';
 import { looksJudgeConfigured } from './looks-judge.mjs';
 import { requirementsForScenario } from './rubric.mjs';
-import { freshSubmissionDir } from './materialize-submission.mjs';
+import { runModelBuilder } from './model-builder.mjs';
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -128,7 +128,13 @@ export async function mechP1Onegame(taskId, runId) {
     taskId,
     runId: `${runId}-og`,
     instruction: bundle.instruction,
-    oracle: true,
+    oracle: false,
+  });
+  await runModelBuilder({
+    taskId,
+    engine: 'onegame',
+    instruction: bundle.instruction,
+    dest: boot.gameDir,
   });
   const hyg = scanHygiene({ gameDir: boot.gameDir });
   const stillsDir = path.join(WORK_DIR, `${runId}-og`, 'stills');
@@ -160,7 +166,13 @@ export async function mechP1Godot(taskId, runId) {
   const staged = stageGodotProject({
     taskId,
     runId: `${runId}-gd`,
-    srcDir: freshSubmissionDir(taskId, 'godot', `${runId}-gd`),
+    srcDir: await runModelBuilder({
+      taskId,
+      engine: 'godot',
+      instruction: bundle.instruction,
+      dest: path.join(WORK_DIR, `${runId}-gd-generated`, 'godot'),
+      wipe: true,
+    }).then((built) => built.dest),
   });
   if (staged.tamper) {
     return {

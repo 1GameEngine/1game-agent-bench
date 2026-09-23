@@ -10,7 +10,7 @@ Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`�
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**。每次 `run-product-100` / `run-p1-compare` 在 `work/` 里重新写出提交物再重放。评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
+实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，机械断言在 `tasks/<id>/judge/probe.json`，Builder 不可见。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 的机械阶段都会让模型按题面为 1Game 和 Godot **各重写一版**再重放。`--looks` 只读已有机械结果，不再出码。模型入口是 `EVAL_BUILDER_CMD`（cwd 为该引擎提交目录，stdin 为 `{engine,instruction,prompt,dest}` 的 JSON；退出码 0 时可以自己写好文件，或把 `{"files":{...}}` 打到 stdout）或 `EVAL_BUILDER_API_KEY`（OpenAI 兼容 chat completions，可用 `EVAL_BUILDER_BASE_URL` / `EVAL_BUILDER_MODEL`）。未配置模型时机械阶段以 `BUILDER_REQUIRED` 停止，不会落盘上一轮源码。评测重放的是这次写出的 traces（`demo_outputs/*.json`，`eval.trace/1`，30fps）。M/D 由抽帧时刻的 store 断言打出；V/A 按 scenario 抽帧后由 looks subagent 逐条打分，每条必须引用本 job 的静帧。缺 intro/loop/fail/clear（含空 fail/clear，或锚点项为 0）则 M、D 封顶 0.5。**循环核心看不见（V2=0）时 M、D 同样封顶 0.5**；本题 V 取 V1 与 V2 的低值，A2=0 时 A 封顶 0.5。G 要求启动成功且全部合法 traces 重放完成。没有 subagent 时不出百分制。
 
 ## 读者与隔离
 
@@ -80,7 +80,7 @@ pnpm test                 # 合同/审计/Judge 子集/报表禁令
 # Kenney CC0 四包已在 eval/assets/library。要重拉：node scripts/fetch-kenney.mjs
 pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
-pnpm run run-p1-compare   # headline × 两引擎 oracle → COMPARE_SCALAR.json（过程）
+pnpm run run-p1-compare   # headline × 两引擎：模型按题面重写后再重放 → COMPARE_SCALAR.json（过程）
 pnpm run run-product-100 -- --run-id <id>          # 无评委时停在机械分 + looks-job，百分制为空，页眉「观感未评」
 pnpm run run-product-100 -- --run-id <id> --mech   # 同上，只强调机械阶段
 # 同一 looks subagent 按 LOOKS_JOBS 逐条写带静帧 id 的裁决后：
