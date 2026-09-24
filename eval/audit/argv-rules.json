@@ -1,0 +1,45 @@
+{
+  "schema": "eval.argv-rules/1",
+  "allowed_heads": [
+    ["1gameplay", "create"],
+    ["1gameplay", "step"],
+    ["1gameplay", "frame", "query"],
+    ["1gameplay", "frame", "screenshot"]
+  ],
+  "capture_heads": [["1gameplay", "frame", "screenshot"]],
+  "judge_select": "store:state",
+  "judge_forbidden_commands": ["screenshot", "paint"],
+  "p0_forbidden_tokens": [
+    "--until",
+    "--until-ms",
+    "--from-frame",
+    "--dry-run",
+    "--surface",
+    "branch",
+    "--branch"
+  ],
+  "mutex_pairs": [
+    ["--click", "--until"],
+    ["--event", "--until"],
+    ["--until", "--repeat"],
+    ["--click", "--event"]
+  ],
+  "p0_step": {
+    "tick": {
+      "required_ms": "16",
+      "repeat_optional": true,
+      "forbid_omitted_ms": true
+    },
+    "click": {
+      "flag": "--click",
+      "coord_pattern": "^-?\\d+,-?\\d+$",
+      "forbid_ms": true,
+      "centers": "geometry_region_centers_or_frozen_playplan"
+    }
+  },
+  "notes": [
+    "Replay spawn uses child_process.execFile; never bash -c.",
+    "P0 disables --until for the whole track.",
+    "Click steps write only --click; tick steps must pass --ms 16."
+  ]
+}

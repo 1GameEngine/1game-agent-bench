@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.task/1",
+  "title": "eval.task/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tier", "entry", "scene", "store_keys", "rng", "physics", "judge"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^p0-" },
+    "tier": { "const": "P0" },
+    "entry": { "const": "src/game.tsx" },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "width", "height"],
+      "properties": {
+        "count": { "const": 1 },
+        "width": { "const": 1280 },
+        "height": { "const": 720 }
+      }
+    },
+    "store_keys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "rng": { "const": "forbidden" },
+    "physics": { "const": "forbidden" },
+    "judge": { "const": "store_subset" }
+  }
+}

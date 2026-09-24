@@ -1,0 +1,9 @@
+{
+  "schema": "eval.playplan/1",
+  "steps": [
+    {
+      "id": "t188",
+      "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--ms", "16", "--repeat", "188"]
+    }
+  ]
+}

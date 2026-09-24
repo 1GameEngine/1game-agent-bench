@@ -1,0 +1,20 @@
+{
+  "name": "eval-p0-pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "run-oracles": "node src/cli.mjs run-oracles",
+    "run-p1-compare": "node src/cli.mjs run-p1-compare",
+    "run-product-100": "node src/cli.mjs run-product-100",
+    "test": "node --test test/*.test.mjs",
+    "test-negatives": "node src/cli.mjs test-negatives"
+  },
+  "dependencies": {
+    "yaml": "2.8.1"
+  }
+}

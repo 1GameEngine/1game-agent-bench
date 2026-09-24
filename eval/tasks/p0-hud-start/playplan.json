@@ -1,0 +1,7 @@
+{
+  "schema": "eval.playplan/1",
+  "steps": [
+    { "id": "dead", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "200,80"] },
+    { "id": "start", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] }
+  ]
+}

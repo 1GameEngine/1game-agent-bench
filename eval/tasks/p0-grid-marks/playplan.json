@@ -1,0 +1,8 @@
+{
+  "schema": "eval.playplan/1",
+  "steps": [
+    { "id": "cell0", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "240,360"] },
+    { "id": "cell1", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "640,360"] },
+    { "id": "cell2", "argv": ["1gameplay", "step", "out/eval.1gamerecord", "--click", "1040,360"] }
+  ]
+}

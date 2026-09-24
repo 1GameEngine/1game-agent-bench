@@ -1,0 +1,12 @@
+node_modules/
+work/
+*.log
+.DS_Store
+eval/pipeline/node_modules/
+eval/pipeline/.test-work/
+*.1gamerecord
+*.1gamerecord.swp
+eval/tools/godot/*.x86_64
+eval/tools/godot/*.zip
+# Godot sidecars from staging a symlink into a project; not Kenney originals
+eval/assets/library/**/*.import

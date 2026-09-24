@@ -1,0 +1,8 @@
+id: p0-grid-marks
+tier: P0
+entry: src/game.tsx
+scene: { count: 1, width: 1280, height: 720 }
+store_keys: [cells, turn]
+rng: forbidden
+physics: forbidden
+judge: store_subset

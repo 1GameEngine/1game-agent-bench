@@ -1,0 +1,101 @@
+{
+  "score_formula": "G * (15*M + 35*D + 15*V + 35*A)",
+  "requirements": [
+    {
+      "id": "M1",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "description": "未开始停在 Start。还没有倒计时，也没有落下的音符。"
+    },
+    {
+      "id": "M2",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "循环已经离开标题，处于可以打谱的局面。"
+    },
+    {
+      "id": "M3",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "循环里能看出命中在增加。"
+    },
+    {
+      "id": "M4",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "description": "失败结束画面能读到 Chart miss，读不到 Chart clear。"
+    },
+    {
+      "id": "M5",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "description": "通关结束画面能读到 Chart clear，能读出 hits 至少 12，读不到 Chart miss。"
+    },
+    {
+      "id": "M6",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "description": "通关过程能看出谱面在往前走，音符被打掉或判定在推进，而不是停在第一下。"
+    },
+    {
+      "id": "D1",
+      "dim": "D",
+      "scope": "persistent",
+      "applies": ["loop", "clear"],
+      "weight": 1,
+      "description": "这些轨迹都能看出先倒计时，再进入游玩。"
+    },
+    {
+      "id": "D2",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "description": "通关过程里进度和命中都在往前。"
+    },
+    {
+      "id": "V1",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "description": "未开始：四轨在画面下方排开，Start 找得到，受体上是方向键图。只看到底栏不能给循环加分。"
+    },
+    {
+      "id": "V2",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "打谱中：轨道中段（标题和判定区之间）能看见正在下落的音符。空场、只有底栏受体、或音符钉死在判定条上且看不出在落，记 0。终局条幅不算本条。"
+    },
+    {
+      "id": "A1",
+      "dim": "A",
+      "scope": "persistent",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "weight": 1,
+      "description": "夜店或谱面风格统一。失败能读到 Chart miss，通关能读到 Chart clear。"
+    },
+    {
+      "id": "A2",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "下落物是四张不同方向键图，出现在判定区上方的轨道里。底栏四颗键帽不算落下的音符。"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+id: p1-chart-rush
+tier: P1
+entry: src/game.tsx
+scene:
+  count: 1
+  width: 1280
+  height: 720
+rng: forbidden
+physics: forbidden
+judge: rubric_replay
+traces: submitted
+replay_fps: 30

@@ -1,0 +1,32 @@
+suite_id: eval-spec/1
+headline_track: product_100
+p0_in_headline: false
+clock:
+  dt_ms: 16
+  wait_means: N_ticks
+  max_dt_ms: 16
+replay:
+  fps: 30
+  traces: submitted
+  sample_fps: 2
+  max_demo_seconds: 20
+physics: forbidden
+rng: forbidden
+engines:
+  onegame:
+    npm_train: "1.21.0"
+    paint: napi-canvas
+  godot:
+    version: "4.4.1"
+    render: headless
+    inject: EvalProbe
+tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
+compare_tasks:
+  - p1-chart-rush
+scoring:
+  dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
+  overall: forbidden
+  product_100: required
+  headline: product_100
+  looks: subagent
+  rubric: hidden

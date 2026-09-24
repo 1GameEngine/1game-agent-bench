@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.compare-scalar/1",
+  "title": "COMPARE_SCALAR (P1 only; P0 reports must not emit this object)",
+  "description": "Reserved. headline = CHECKPOINTS_OK / ATTEMPTS. Do not include in P0 reports.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "headline_track", "checkpoints_ok", "attempts"],
+  "properties": {
+    "schema": { "const": "eval.compare-scalar/1" },
+    "headline_track": { "const": "COMPARE_SCALAR" },
+    "checkpoints_ok": { "type": "integer", "minimum": 0 },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "comparable": { "type": "boolean" },
+    "winner": { "const": false },
+    "report_id": { "type": "string" },
+    "notice": { "type": "string" },
+    "headline": { "type": "string" },
+    "g0_ok": { "type": "integer", "minimum": 0 },
+    "g0_conditional": { "type": "string" },
+    "engines": { "type": "object" },
+    "tasks": { "type": "array" },
+    "overall": false,
+    "total_score": false
+  }
+}
