@@ -43,7 +43,8 @@ async function scoreVisualsSide({
   traces,
   replayed_scenarios,
 }) {
-  const visRubric = visualRubric(rubric);
+  const visRubric =
+    Array.isArray(rubric?.requirements) && rubric.requirements.length ? rubric : visualRubric(rubric);
   const by = scenarioStillsMap(stills);
   const scenarios = Object.keys(by).filter((sc) => by[sc].length);
   if (!scenarios.length) {

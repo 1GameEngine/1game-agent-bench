@@ -87,7 +87,7 @@
       "scope": "persistent",
       "applies": ["intro", "loop", "fail", "clear"],
       "weight": 1,
-      "description": "夜店或谱面风格统一。失败能读到 Chart miss，通关能读到 Chart clear。"
+      "description": "夜店或谱面风格在这些画面里一致：深色背景、轨道和键帽，而不是空白调试屏。"
     },
     {
       "id": "A2",

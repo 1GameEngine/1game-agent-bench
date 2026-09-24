@@ -65,7 +65,7 @@ ${files}
 
 traces 使用 schema eval.trace/1，viewport 1280×720。01 的 scenario 是 intro，02 是 loop，03 是 fail，04 是 clear。事件只有 keydown、keyup、click。
 1Game 只改 src/game.tsx 和 demo_outputs，入口从 @1game/engine-bundle/runtime/worker 导入并 bindStore。方向键图用静态 import 引用 assets 里的 png。
-Godot 主场景是 game.tscn，脚本 game.gd，窗口 1280×720。方向键图用 res://assets/ 下的 png。不要写 EvalProbe，不要用 CharacterBody2D 或 RigidBody 决定对错。
+Godot 主场景是 game.tscn，脚本 game.gd，窗口 1280×720。方向键图用 res://assets/ 下的 png。在 _ready 里 set_process(false)。不要写 EvalProbe 或 dump。不要用 CharacterBody2D 或 RigidBody 决定对错。
 `;
 }
 

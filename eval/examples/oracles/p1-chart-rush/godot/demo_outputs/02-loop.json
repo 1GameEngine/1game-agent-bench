@@ -1,0 +1,51 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "loop",
+  "duration_frames": 181,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 0,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 0,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 120,
+      "type": "keydown",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 120,
+      "type": "keyup",
+      "code": "ArrowLeft"
+    },
+    {
+      "frame": 150,
+      "type": "keydown",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 150,
+      "type": "keyup",
+      "code": "ArrowDown"
+    },
+    {
+      "frame": 180,
+      "type": "keydown",
+      "code": "ArrowUp"
+    },
+    {
+      "frame": 180,
+      "type": "keyup",
+      "code": "ArrowUp"
+    }
+  ]
+}

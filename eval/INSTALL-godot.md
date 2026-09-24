@@ -36,6 +36,8 @@ eval/tools/godot/Godot_v4.4.1-stable_linux.x86_64 --version
 
 Freeze：最后一条闭集动作 + `post_ticks` → `get_tree().paused = true` → dump。
 
-## 附录 A（Godot 状态容器）
+## 附录 A（P0 dump）
 
-把题面字段做成 **当前主场景根节点脚本上的同名变量**（`bool` / `int` / 闭集字符串）。注入的 EvalProbe 只 `get` 这些字段。不要读 playplan/checkpoint 文件。
+P0 夹具才把题面字段做成当前主场景根节点脚本上的同名变量。注入的 EvalProbe 只 `get` 这些字段，供 checkpoint。不要读 playplan/checkpoint 文件。
+
+Headline 百分制不读这些字段。轨迹重放只交静帧。Godot 玩法写在主场景根节点上，并在 `_ready` 里 `set_process(false)`，让 Runner 以 `_process(0.033)` 单步推进。

@@ -39,9 +39,9 @@ test('builder prompt is the task text plus the engine appendix', () => {
   const task = loadP1Task('p1-chart-rush');
   const og = buildBuilderPrompt({ engine: 'onegame', instruction: task.instruction });
   const gd = buildBuilderPrompt({ engine: 'godot', instruction: task.instruction });
-  assert.match(og, /只有底栏没有下落物/);
+  assert.match(og, /只有底栏、没有下落的音符/);
   assert.match(og, /createGameStore/);
-  assert.match(gd, /当前主场景根节点脚本/);
+  assert.match(gd, /set_process\(false\)/);
   assert.notEqual(og, gd);
   for (const prompt of [og, gd]) {
     assert.doesNotMatch(prompt, /probe\.json/);

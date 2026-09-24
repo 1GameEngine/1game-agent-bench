@@ -1,30 +1,25 @@
 # 谱面冲刺
 
-做一个 1280×720 的四轨节奏小游戏，标题文案必须是 Chart Rush。禁止随机生成谱面。
+做一款 1280×720 的四轨下落式节奏游戏，标题文案是 Chart Rush。玩家在夜店或谱面风格的画面里，跟着从轨道中段落下的音符敲方向键。谱面由你设计，但同一套操作每次结果相同。不要用物理模拟决定有没有打中。
 
-## 开局
+## 玩家会经历什么
 
-- 按钮 Start 矩形 (440,200,400,120)。点 Start 或按 Enter 开始。
-- 开始后倒计时 3000 毫秒，然后进入 playing。
-
-## 谱面
-
-- 四轨按键固定为 ArrowLeft / ArrowDown / ArrowUp / ArrowRight，轨道从左到右。
-- 16 个音符：第 i 个（从 0 计）在 playing 后 400×(i+1) 毫秒落到第 i%4 轨。
-- 判定窗 ±132 毫秒。命中 hits+1 并消费该音符；错过窗或打错轨 misses+1。
-- misses≥6 失败，画面 Chart miss。16 个音符结束后 hits≥12 通关，画面 Chart clear。
+- 未开始时停在标题。能看到 Start，四条轨道排在画面下方，每条轨道用一张方向键图。这时还没有倒计时，也没有音符在落。
+- 点 Start，或按 Enter，之后先出现一段看得清的倒计时，再进入可以打谱的游玩。
+- 音符沿着轨道往判定区落。四个方向用不同的键帽图。画面底部的键帽是受体，不是落下的音符。
+- 打中时，玩家能看出命中在增加，谱面在往前走。
+- 一直打空或打错会失败。失败画面能读到 Chart miss，读不到 Chart clear。
+- 把这首谱面打到通关时，画面能读到 Chart clear，能读出命中已经够通关，读不到 Chart miss。通关过程里进度和命中都在往前。
 
 ## 素材
 
-工作区有只读 Kenney CC0 图库 `asset-library/`。本题方向键图在工程 `assets/arrow-left.png`、`arrow-down.png`、`arrow-up.png`、`arrow-right.png`（来自 `input-prompts-pixel`）。四条轨道和落下的音符用对应方向的键帽图。
+工作区有只读图库 `asset-library/`。方向键图在工程 `assets/arrow-left.png`、`assets/arrow-down.png`、`assets/arrow-up.png`、`assets/arrow-right.png`。轨道和落下的音符用这些键帽图。
 
-## 验收会看的玩法
+## 需要交的演示
 
-未开始的标题（Start + 四轨键帽）、循环里音符从轨道中段落到判定区、空放漏击失败（Chart miss）、打完通关（Chart clear）。只有底栏没有下落物，不算把谱面画出来。
+在 `demo_outputs/` 里放可重放操作，每条标明 intro、loop、fail、clear 之一：未开始的标题、打谱中的循环、失败、通关。只有底栏、没有下落的音符，不算把谱面演示出来。
 
 ## 实现约束
 
 - 画面逻辑尺寸 1280×720，恰好一个场景。
-- 禁止随机。禁止用物理引擎决定对错。
 - 不要实现评测探测接口。不要读取评测仓、量表或官方操作表。
-- 提交物须含可重放 traces（放在 demo_outputs，每条标明 intro / loop / fail / clear 之一）。

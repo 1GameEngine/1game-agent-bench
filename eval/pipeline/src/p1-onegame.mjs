@@ -19,7 +19,6 @@ import {
   scenarioSet,
   stillPlayMeta,
 } from './p1-trace.mjs';
-import { pickState } from './probe.mjs';
 
 function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
@@ -169,7 +168,7 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
 }
 
-export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
+export function runOnegameTraces({ gameDir, stillsDir, tracesDir }) {
   const notes = [];
   const stills = [];
   const samples = [];
@@ -264,12 +263,6 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
           dump_ok: 1,
           dump: meta,
           ...cap,
-        });
-        const q = queryStore(gameDir);
-        samples.push({
-          scenario: item.trace.scenario,
-          frame: last,
-          state: q.store.empty ? {} : pickState(q.store.value, probeKeys),
         });
       }
       i += run;

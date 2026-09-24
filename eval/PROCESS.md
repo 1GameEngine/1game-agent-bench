@@ -19,6 +19,6 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
-M、D、V、A 都由每个引擎的 looks subagent 看 2fps 抽帧（每条最多 40 张）打出。裁决必须逐条带静帧 id；没有证据的条目为 0。单场景条目取最高，贯穿条目取平均。**百分制只在真实 looks subagent 打完且 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。`probe.json` 不进入百分制。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者，也不写出 `product_100`。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
+M、D、V、A 都由每个引擎的 looks subagent 看 2fps 抽帧（每条最多 40 张）打出。裁决必须逐条带静帧 id；没有证据的条目为 0。单场景条目取最高，贯穿条目取平均。**百分制只在真实 looks subagent 打完且 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。Headline 不读取 `probe.json`、根节点字段或 store 快照。P0 夹具仍可用注入的 EvalProbe 做 dump，该结果不进百分制。内置 looks-job worker 仅 `EVAL_LOOKS_ALLOW_WORKER=1` 调试，`looks_source=worker`，不得宣布胜者，也不写出 `product_100`。无外部评委 → `SUBAGENT_UNAVAILABLE`。`EVAL_LOOKS_BACKEND=heuristic` 仅调试。
 
 两引擎都 `G=1` 时，抽帧必须成对且均为 **1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

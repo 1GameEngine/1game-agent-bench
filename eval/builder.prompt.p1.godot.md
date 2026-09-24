@@ -22,6 +22,6 @@
 - 不要把 napi-canvas 截图或 Xvfb 录像当正确性。
 - 不要使用 until、节点路径、颜色、时间戳、帧号当金标字段。
 
-## 附录 A：Godot 状态容器
+## 附录 A：Godot
 
-把玩法做成当前主场景根节点脚本。评测会注入驱动 traces 的 Runner；不要自己写 EvalProbe，不要把它做成玩法逻辑。禁止用 CharacterBody2D / RigidBody 决定对错。
+把玩法写在主场景根节点脚本上。评测注入的 Runner 每帧把按键和点击交给根节点 `_input`，并调用一次 `_process(0.033)`。请在 `_ready` 里 `set_process(false)`，避免引擎再推进一帧。不要实现 EvalProbe，不要提供 dump。百分制不读取根节点上的变量。禁止用 CharacterBody2D / RigidBody 决定对错。

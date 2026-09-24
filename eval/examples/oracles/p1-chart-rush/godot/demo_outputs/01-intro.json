@@ -1,0 +1,10 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "intro",
+  "duration_frames": 46,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": []
+}

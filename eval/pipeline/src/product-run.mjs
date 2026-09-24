@@ -13,7 +13,6 @@ import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { scoreProbe } from './probe.mjs';
 import { aggregateFrameRubric } from './rubric.mjs';
 import { orchestrateEngines } from './subagent-stage.mjs';
 
@@ -205,24 +204,12 @@ function rowFromMech(taskId, engine, mech, vis) {
   if (mech.rowReady && !mech.G) {
     return { ...mech.rowReady, looks_status: vis.looks_status, looks_source: vis.looks_source };
   }
-  const probeScore = mech.bundle?.probe
-    ? scoreProbe({
-        probe: mech.bundle.probe,
-        rubric: mech.bundle.rubric,
-        samples: mech.samples ?? [],
-        traces: mech.traces,
-        replayedScenarios: mech.replayed_scenarios,
-      })
-    : null;
-  const missing = [
-    ...new Set([...(probeScore?.missing_scenarios ?? []), ...(vis.missing_scenarios ?? mech.missing_scenarios ?? [])]),
-  ];
   return scoreAttempt({
     id: taskId,
     engine,
     G: mech.G,
-    M: probeScore ? probeScore.M : vis.M,
-    D: probeScore ? probeScore.D : vis.D,
+    M: vis.M,
+    D: vis.D,
     V: vis.V,
     A: vis.A,
     primary: mech.primary,
@@ -230,9 +217,9 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
     stills: mech.stills,
-    looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
+    looks_items: vis.items,
     scenarios: vis.observed_scenarios ?? mech.scenarios,
-    missing_scenarios: missing,
+    missing_scenarios: vis.missing_scenarios ?? [],
   });
 }
 
@@ -328,7 +315,6 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
         instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
         geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
         rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
-        probe: og.bundle?.probe ?? gd.bundle?.probe,
       },
       og: serializeMech(og),
       gd: serializeMech(gd),
@@ -347,7 +333,6 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
         instruction: staged.bundle.instruction,
         geometry: staged.bundle.geometry,
         rubric: staged.bundle.rubric,
-        probe: staged.bundle.probe,
       },
       og: serializeReplay(staged.onegame.replay),
       gd: serializeReplay(staged.godot.replay),

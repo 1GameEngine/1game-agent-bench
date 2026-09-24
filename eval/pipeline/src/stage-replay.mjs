@@ -55,7 +55,6 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     const replay = runOnegameTraces({
       gameDir: workspace,
       stillsDir,
-      probeKeys: bundle.probe?.keys,
     });
     const primary = hyg.ok ? replay.primary : 'HYGIENE_FAIL';
     const replayed = replay.replayed_scenarios ?? [];
@@ -93,7 +92,7 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
   const traces = readTraces(path.join(staged.dest, 'demo_outputs'));
   const jobRun = runGodotJob({
     projectDir: staged.dest,
-    job: makeTraceJob({ traces, stillsDir, probeKeys: bundle.probe?.keys }),
+    job: makeTraceJob({ traces, stillsDir }),
     outPath: path.join(WORK_DIR, runId, 'traces.jsonl'),
     timeoutMs: 300_000,
   });

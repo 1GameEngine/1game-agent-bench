@@ -7,8 +7,13 @@ import { applyScenarioCap } from '../src/rubric.mjs';
 import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
-import { EVAL_DIR } from '../src/paths.mjs';
+import { EVAL_DIR, taskDir } from '../src/paths.mjs';
 import path from 'node:path';
+import { makeTraceJob } from '../src/p1-godot.mjs';
+
+function dirOf(id) {
+  return taskDir(id);
+}
 
 test('P1 compare_tasks are headline games with hidden rubric and traces', () => {
   const suite = loadSuite();
@@ -26,7 +31,8 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
     assert.equal(b.task.traces, 'submitted');
     assert.equal(b.rubric.score_formula, 'G * (15*M + 35*D + 15*V + 35*A)');
     assert.ok(b.rubric.requirements.length >= 8);
-    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id)), false);
+    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id, 'godot', 'project.godot')), true);
+    assert.equal(fs.existsSync(path.join(dirOf(id), 'judge', 'probe.json')), false);
     assert.equal(fs.existsSync(path.join(EVAL_DIR, 'pipeline', 'src', 'materialize-submission.mjs')), false);
   }
 });
@@ -43,7 +49,16 @@ test('chart rush looks isolate falling notes from receptor caps', () => {
   assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
   assert.match(byId.V2.description, /下落/);
   assert.match(byId.A2.description, /底栏/);
-  assert.match(b.instruction, /只有底栏没有下落物/);
+  assert.match(b.instruction, /Chart Rush/);
+  assert.match(b.instruction, /只有底栏、没有下落的音符/);
+  assert.doesNotMatch(b.instruction, /440|132|misses|phase|cursor|clockMs/);
+  assert.equal(b.probe, undefined);
+  const job = makeTraceJob({ traces: [], stillsDir: '/tmp/stills' });
+  assert.equal('probe_keys' in job, false);
+  const product = fs.readFileSync(new URL('../src/product-run.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(product, /scoreProbe/);
+  const runner = fs.readFileSync(new URL('../godot/EvalRunner.gd', import.meta.url), 'utf8');
+  assert.doesNotMatch(runner, /probe_keys|event": "probe"/);
 });
 
 test('P1 builder prompts share body bytes', () => {

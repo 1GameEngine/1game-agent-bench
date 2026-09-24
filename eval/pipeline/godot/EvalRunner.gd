@@ -250,14 +250,6 @@ func _snapshot(id: String) -> void:
 	await _capture_sample(id)
 
 func _capture_sample(id: String) -> void:
-	var keys: Array = _job.get("probe_keys", [])
-	if not keys.is_empty():
-		var root := get_tree().current_scene
-		if root != null:
-			var state := {}
-			for k in keys:
-				state[String(k)] = root.get(String(k))
-			_emit({"event": "probe", "id": id, "state": state})
 	if _stills_dir == "":
 		return
 	_lock_window()

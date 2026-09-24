@@ -15,7 +15,9 @@ export function loadP1Task(taskId) {
   const task = loadYaml(path.join(dir, 'task.yaml'));
   const instruction = fs.readFileSync(path.join(dir, 'instruction.md'), 'utf8');
   const rubric = loadJson(path.join(dir, 'judge', 'rubric.json'));
-  const probe = loadJson(path.join(dir, 'judge', 'probe.json'));
+  if (fs.existsSync(path.join(dir, 'judge', 'probe.json'))) {
+    throw new EvalError('EVAL_INTERNAL', `${taskId} probe.json must not ship; M/D come from replay stills`);
+  }
   if (task.id !== taskId || task.tier !== 'P1') throw new EvalError('EVAL_INTERNAL', `P1 task meta ${taskId}`);
   if (task.judge !== 'rubric_replay' || task.rng !== 'forbidden' || task.physics !== 'forbidden') {
     throw new EvalError('EVAL_INTERNAL', `P1 flags ${taskId}`);
@@ -40,5 +42,5 @@ export function loadP1Task(taskId) {
   }
   const vr = validateRubric(rubric);
   if (!vr.ok) throw new EvalError('EVAL_INTERNAL', `${taskId} rubric ${vr.issues.join('; ')}`);
-  return { task, instruction, rubric, probe, geometry: { regions: {}, labels: {} } };
+  return { task, instruction, rubric, geometry: { regions: {}, labels: {} } };
 }

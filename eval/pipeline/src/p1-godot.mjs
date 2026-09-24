@@ -183,7 +183,7 @@ export function makeJob({ bundle, steps, stillsDir }) {
   };
 }
 
-export function makeTraceJob({ traces, stillsDir, probeKeys }) {
+export function makeTraceJob({ traces, stillsDir }) {
   const valid = (traces ?? []).filter((t) => t.audit?.ok);
   return {
     traces: valid.map((t) => t.trace),
@@ -191,7 +191,6 @@ export function makeTraceJob({ traces, stillsDir, probeKeys }) {
     sample_every: 15,
     max_frames: 600,
     frame_dt: 0.033,
-    probe_keys: probeKeys ?? [],
   };
 }
 
@@ -226,13 +225,8 @@ export function judgeTraceEvents(events, stillsDir) {
       stills.push({ id: ev.id, dump_ok: 0, dump: meta, ok: false, status: 'CAPTURE_FAIL' });
     }
   }
-  for (const ev of events.filter((e) => e.event === 'probe')) {
-    const parsed = parseStillId(ev.id);
-    samples.push({
-      scenario: parsed.scenario,
-      frame: parsed.frame,
-      state: ev.state && typeof ev.state === 'object' ? ev.state : {},
-    });
+  if (events.some((e) => e.event === 'probe')) {
+    notes.push('probe events ignored; percentile score uses stills only');
   }
   const scenarios = [...new Set(events.filter((e) => e.event === 'trace_done').map((e) => e.scenario))];
   return { primary: 'TRACE_OK', notes, g0_ok: 1, stills, samples, scenarios, replayed_scenarios: scenarios };
