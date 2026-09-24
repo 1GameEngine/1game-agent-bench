@@ -274,16 +274,22 @@ func _capture_sample(id: String) -> void:
 	_emit({"event": "still", "id": id, "path": path, "w": img.get_width(), "h": img.get_height()})
 
 func _grab_still() -> Image:
+	var tree := get_tree()
+	var was_paused := tree.paused
+	tree.paused = true
+	var img: Image = null
 	for _i in 3:
 		RenderingServer.force_draw(true)
-		await get_tree().process_frame
-		var img := _image_from(_cap)
+		await tree.process_frame
+		img = _image_from(_cap)
 		if _still_ok(img):
-			return img
+			break
 		img = _image_from(get_viewport())
 		if _still_ok(img):
-			return img
-	return null
+			break
+		img = null
+	tree.paused = was_paused
+	return img
 
 func _image_from(vp: Viewport) -> Image:
 	if vp == null:
