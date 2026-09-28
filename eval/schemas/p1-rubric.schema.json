@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval.p1-rubric/1",
+  "title": "Hidden still rubric",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["score_formula", "requirements"],
+  "properties": {
+    "score_formula": { "const": "G * (15*M + 35*D + 15*V + 35*A)" },
+    "requirements": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "dim", "scope", "applies", "weight", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "dim": { "enum": ["M", "D", "V", "A"] },
+          "scope": { "enum": ["scenario", "persistent"] },
+          "applies": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "weight": { "type": "number", "exclusiveMinimum": 0 },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

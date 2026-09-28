@@ -11,11 +11,20 @@ import { scorePairedLooks } from './looks-pair.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
-import { assertNoForbiddenScoreKeys } from './util.mjs';
+import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
-import { scoreProbe } from './probe.mjs';
-import { aggregateFrameRubric } from './rubric.mjs';
-import { orchestrateEngines } from './subagent-stage.mjs';
+import { aggregateObserved } from './rubric.mjs';
+import { orchestrateEngines, orchestrateOracle } from './subagent-stage.mjs';
+import { ORACLE_FLOOR } from './product-100.mjs';
+
+export function assertProductSubagent() {
+  if (process.env.EVAL_LOOKS_ALLOW_WORKER === '1' || process.env.EVAL_LOOKS_BACKEND === 'heuristic') {
+    throw new EvalError('SUBAGENT_REQUIRED', '百分制只接受 looks subagent。worker 和 heuristic 不能出分。');
+  }
+  if (!process.env.EVAL_SUBAGENT_CMD) {
+    throw new EvalError('SUBAGENT_REQUIRED', '出码、重放、观感都必须由 subagent 执行。设置 EVAL_SUBAGENT_CMD。');
+  }
+}
 
 export async function mechP0Onegame(taskId, runId) {
   const bundle = loadTaskBundle(taskId);
@@ -120,16 +129,17 @@ function emptyVis(looks_status, looks_source) {
   return { M: null, D: null, V: null, A: null, looks_status, looks_source };
 }
 
-function visualsFromLooks(looks, rubric) {
+function visualsFromLooks(looks, rubric, requiredScenarios) {
   if (!looks) return emptyVis('SKIP', 'none');
   if (looks.looks_status !== 'OK') {
     return {
       ...emptyVis(looks.looks_status, looks.looks_source ?? 'subagent'),
       sample_policy: looks.sample_policy,
       jobs: looks.jobs,
+      missing_scenarios: looks.missing_scenarios ?? [],
     };
   }
-  const fin = aggregateFrameRubric(looks.byScenario, rubric);
+  const fin = aggregateObserved(looks.byScenario, rubric, requiredScenarios);
   return {
     M: fin.M,
     D: fin.D,
@@ -156,11 +166,12 @@ export function scoreStagedPair(taskId, staged) {
     ogVis = emptyVis('INCOMPARABLE_VISUAL', 'pair');
     gdVis = emptyVis('INCOMPARABLE_VISUAL', 'pair');
   } else {
+    const required = bundle.task?.scenarios?.required ?? [];
     ogVis = staged.onegame.replay.G
-      ? visualsFromLooks(staged.onegame.looks, bundle.rubric)
+      ? visualsFromLooks(staged.onegame.looks, bundle.rubric, required)
       : emptyVis('SKIP', 'none');
     gdVis = staged.godot.replay.G
-      ? visualsFromLooks(staged.godot.looks, bundle.rubric)
+      ? visualsFromLooks(staged.godot.looks, bundle.rubric, required)
       : emptyVis('SKIP', 'none');
     if (staged.onegame.replay.G && staged.godot.replay.G) {
       if (
@@ -205,24 +216,12 @@ function rowFromMech(taskId, engine, mech, vis) {
   if (mech.rowReady && !mech.G) {
     return { ...mech.rowReady, looks_status: vis.looks_status, looks_source: vis.looks_source };
   }
-  const probeScore = mech.bundle?.probe
-    ? scoreProbe({
-        probe: mech.bundle.probe,
-        rubric: mech.bundle.rubric,
-        samples: mech.samples ?? [],
-        traces: mech.traces,
-        replayedScenarios: mech.replayed_scenarios,
-      })
-    : null;
-  const missing = [
-    ...new Set([...(probeScore?.missing_scenarios ?? []), ...(vis.missing_scenarios ?? mech.missing_scenarios ?? [])]),
-  ];
   return scoreAttempt({
     id: taskId,
     engine,
     G: mech.G,
-    M: probeScore ? probeScore.M : vis.M,
-    D: probeScore ? probeScore.D : vis.D,
+    M: vis.M,
+    D: vis.D,
     V: vis.V,
     A: vis.A,
     primary: mech.primary,
@@ -230,9 +229,9 @@ function rowFromMech(taskId, engine, mech, vis) {
     looks_status: vis.looks_status,
     looks_source: vis.looks_source,
     stills: mech.stills,
-    looks_items: { ...(probeScore?.items ?? {}), ...(vis.items ?? {}) },
+    looks_items: vis.items,
     scenarios: vis.observed_scenarios ?? mech.scenarios,
-    missing_scenarios: missing,
+    missing_scenarios: vis.missing_scenarios ?? mech.missing_scenarios ?? [],
   });
 }
 
@@ -309,7 +308,22 @@ function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs }) 
   return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
 }
 
+export async function runOracleGate({ taskId, runId = `oracle-${taskId}`, runSubagent, prepare } = {}) {
+  if (!taskId) throw new EvalError('EVAL_INTERNAL', 'oracle gate needs a task id');
+  assertProductSubagent();
+  const staged = await orchestrateOracle({ taskId, runId, runSubagent, prepare });
+  const scored = scoreStagedPair(taskId, staged);
+  const rows = [scored.ogRow, scored.gdRow];
+  for (const row of rows) {
+    if (row.G !== 1 || typeof row.product_100 !== 'number' || row.product_100 < ORACLE_FLOOR) {
+      throw new EvalError('ORACLE_FLOOR', `${row.engine} G=${row.G} product_100=${row.product_100} floor=${ORACLE_FLOOR}`);
+    }
+  }
+  return { scored, rows, floor: ORACLE_FLOOR };
+}
+
 export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
+  assertProductSubagent();
   const rows = [];
   const p0taskRows = [];
   const p1attempts = [];
@@ -347,7 +361,6 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
         instruction: staged.bundle.instruction,
         geometry: staged.bundle.geometry,
         rubric: staged.bundle.rubric,
-        probe: staged.bundle.probe,
       },
       og: serializeReplay(staged.onegame.replay),
       gd: serializeReplay(staged.godot.replay),

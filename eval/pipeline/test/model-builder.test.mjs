@@ -37,8 +37,8 @@ function submission(engine, marker) {
 
 test('builder prompt is the task text plus the engine appendix', () => {
   const task = loadP1Task('p1-chart-rush');
-  const og = buildBuilderPrompt({ engine: 'onegame', instruction: task.instruction });
-  const gd = buildBuilderPrompt({ engine: 'godot', instruction: task.instruction });
+  const og = buildBuilderPrompt({ engine: 'onegame', instruction: task.instruction, task: task.task });
+  const gd = buildBuilderPrompt({ engine: 'godot', instruction: task.instruction, task: task.task });
   assert.match(og, /只有底栏没有下落物/);
   assert.match(og, /createGameStore/);
   assert.match(gd, /当前主场景根节点脚本/);

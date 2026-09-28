@@ -5,9 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { orchestrateEngines, assertReplayDocument, defaultRunSubagent } from '../src/subagent-stage.mjs';
+import { orchestrateEngines, orchestrateOracle, assertReplayDocument, defaultRunSubagent } from '../src/subagent-stage.mjs';
 import { runStageReplay } from '../src/stage-replay.mjs';
-import { scoreStagedPair } from '../src/product-run.mjs';
+import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/product-run.mjs';
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
@@ -210,6 +210,75 @@ test('stage-replay is the only writer of a trusted replay document', () => {
   const missing = spawnSync(process.execPath, [cli, 'stage-replay', '--engine', 'onegame'], { encoding: 'utf8' });
   assert.notEqual(missing.status, 0);
   assert.match(missing.stderr, /stage-replay needs/);
+});
+
+test('oracle gate scores reference projects through the looks subagent', async () => {
+  const prev = process.env.EVAL_SUBAGENT_CMD;
+  const prevWorker = process.env.EVAL_LOOKS_ALLOW_WORKER;
+  process.env.EVAL_SUBAGENT_CMD = 'stub';
+  delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+  try {
+    const result = await runOracleGate({
+      taskId: 'p1-chart-rush',
+      runId: 'oracle-gate',
+      prepare: ({ engine }) => {
+        const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `oracle-${engine}-`));
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+      },
+      runSubagent: async (spec) => {
+        assert.notEqual(spec.role, 'builder');
+        if (spec.role === 'replay') {
+          const stills = ['intro', 'loop', 'fail', 'clear'].map((scenario) => {
+            const id = `${scenario}_f0`;
+            const file = path.join(spec.workspace, `${id}.png`);
+            fs.writeFileSync(file, 'png');
+            return { id, ok: true, path: file, dump_ok: 1 };
+          });
+          fs.writeFileSync(spec.replay.out, `${JSON.stringify(replayDoc(spec, stills))}\n`);
+          return '';
+        }
+        const scenarios = {};
+        for (const [sc, frames] of Object.entries(spec.stills)) {
+          scenarios[sc] = {};
+          for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
+            scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+          }
+        }
+        return JSON.stringify({ scenarios });
+      },
+    });
+    assert.equal(result.rows[0].product_100, 100);
+    assert.equal(result.rows[1].product_100, 100);
+    await assert.rejects(
+      () => runOracleGate({ taskId: 'p1-chart-rush', runId: 'oracle-low', prepare: () => {
+        const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-low-'));
+        return { workspace, replayRunId: 'x', outPath: path.join(workspace, 'REPLAY.json') };
+      }, runSubagent: async (spec) => {
+        if (spec.role === 'replay') {
+          fs.writeFileSync(spec.replay.out, `${JSON.stringify({ ...replayDoc(spec, []), G: false, g0_ok: 0 })}\n`);
+        }
+        return '';
+      } }),
+      (err) => err.primary === 'ORACLE_FLOOR',
+    );
+  } finally {
+    if (prev === undefined) delete process.env.EVAL_SUBAGENT_CMD;
+    else process.env.EVAL_SUBAGENT_CMD = prev;
+    if (prevWorker === undefined) delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+    else process.env.EVAL_LOOKS_ALLOW_WORKER = prevWorker;
+  }
+});
+
+test('worker and heuristic cannot open a product run', () => {
+  const prevCmd = process.env.EVAL_SUBAGENT_CMD;
+  const prevWorker = process.env.EVAL_LOOKS_ALLOW_WORKER;
+  process.env.EVAL_SUBAGENT_CMD = 'stub';
+  process.env.EVAL_LOOKS_ALLOW_WORKER = '1';
+  assert.throws(() => assertProductSubagent(), (err) => err.primary === 'SUBAGENT_REQUIRED');
+  if (prevCmd === undefined) delete process.env.EVAL_SUBAGENT_CMD;
+  else process.env.EVAL_SUBAGENT_CMD = prevCmd;
+  if (prevWorker === undefined) delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+  else process.env.EVAL_LOOKS_ALLOW_WORKER = prevWorker;
 });
 
 test('product and compare entrypoints do not replay or build inline', () => {

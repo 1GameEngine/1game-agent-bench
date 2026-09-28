@@ -6,6 +6,7 @@ export const P1_TASKS = ['p1-chart-rush'];
 export const SUITE_TASKS = [...P1_TASKS];
 
 export const WEIGHTS = { M: 15, D: 35, V: 15, A: 35 };
+export const ORACLE_FLOOR = 80;
 
 export function hasDepth(_taskId) {
   return true;
@@ -190,7 +191,16 @@ function suiteComparableFromRows(rows) {
     const og = rows.find((r) => r.id === id && r.engine === 'onegame') ?? zeroRow(id, 'onegame', 'ENGINE_TASK_UNSUPPORTED');
     const gd = rows.find((r) => r.id === id && r.engine === 'godot') ?? zeroRow(id, 'godot', 'ENGINE_TASK_UNSUPPORTED');
     if (!og.G && !gd.G) continue;
-    if (og.G !== gd.G) continue;
+    if (Boolean(og.G) !== Boolean(gd.G)) {
+      const live = og.G ? og : gd;
+      if (live.looks_status !== 'OK' || live.looks_source !== 'subagent' || typeof live.product_100 !== 'number') {
+        reasons.push({
+          id,
+          reason: live.looks_status && live.looks_status !== 'OK' ? String(live.looks_status) : 'product_100_withheld',
+        });
+      }
+      continue;
+    }
     if (og.looks_status === 'INCOMPARABLE_VISUAL' || gd.looks_status === 'INCOMPARABLE_VISUAL') {
       reasons.push({ id, reason: 'INCOMPARABLE_VISUAL' });
       continue;
@@ -272,8 +282,8 @@ export function scoreAttempt({
     looks_status: looks_status ?? 'SKIP',
     looks_source: looks_source ?? 'none',
     scenarios: scenarios ?? [],
+    missing_scenarios: missing_scenarios ?? [],
   };
-  if (missing_scenarios?.length) row.missing_scenarios = missing_scenarios;
   if (stills?.length) {
     row.stills = stills.map((s) => ({
       id: s.id,

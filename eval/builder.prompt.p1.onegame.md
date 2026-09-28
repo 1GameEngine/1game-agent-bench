@@ -13,7 +13,7 @@
 - 文案必须与题面逐字一致（禁止一边 Start 一边「开始」）。
 - 逻辑画面 1280×720。
 - 禁止随机。禁止用物理决定对错。
-- 提交 `demo_outputs/` 下的 traces：每条 JSON 标明 scenario 为 intro / loop / fail / clear 之一，30fps，事件只有 keydown / keyup / click。
+- 提交 `demo_outputs/` 下的 traces：scenario 必须是题面列出的演示名，30fps，事件只有 keydown / keyup / click。单条不超过题面给出的时长上限。
 
 ## 禁止
 

@@ -1,4 +1,5 @@
-import { reqApplies, reqDim, reqNeed, reqWeight, isAnchor, finalizeObservedScores } from './rubric.mjs';
+import { reqApplies, reqDim, reqWeight } from './rubric.mjs';
+import { aggregateObserved } from './rubric.mjs';
 
 function eq(actual, expected) {
   if (typeof expected === 'boolean') {
@@ -97,7 +98,7 @@ export function validateProbe(probe, rubric) {
     }
     const need = a.need === 'all' ? 'all' : 'any';
     if (need !== reqNeed(req)) issues.push(`need ${req.id}`);
-    if (isAnchor(req) !== Boolean(a.anchor)) issues.push(`anchor ${req.id}`);
+    if (Boolean(req.anchor) !== Boolean(a.anchor)) issues.push(`anchor ${req.id}`);
     const reqAppliesSet = [...reqApplies(req)].sort().join(',');
     const got = [...(a.applies ?? [])].sort().join(',');
     if (reqAppliesSet !== got) issues.push(`applies ${req.id}`);
@@ -119,20 +120,7 @@ export function scoreProbe({ probe, rubric, samples, traces, replayedScenarios }
       byScenario[sc][req.id] = assertionScore(assertion, rows);
     }
   }
-  const fin = finalizeObservedScores({
-    byScenario,
-    rubric: scoped,
-    traces,
-    replayedScenarios,
-  });
-  return {
-    M: fin.M,
-    D: fin.D,
-    items: fin.items,
-    missing_scenarios: fin.missing_scenarios,
-    observed_scenarios: fin.observed_scenarios,
-    dropped_anchors: fin.dropped_anchors,
-  };
+  return aggregateObserved(byScenario, scoped, replayedScenarios ?? []);
 }
 
 export function pickState(state, keys) {

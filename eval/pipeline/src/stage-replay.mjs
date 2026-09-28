@@ -5,7 +5,7 @@ import { loadP1Task } from './p1-load.mjs';
 import { runOnegameTraces } from './p1-onegame.mjs';
 import { stageGodotProject, runGodotJob, makeTraceJob, judgeTraceEvents } from './p1-godot.mjs';
 import { scanHygiene } from './hygiene.mjs';
-import { missingRequiredScenarios, readTraces } from './p1-trace.mjs';
+import { missingRequiredScenarios, readTraces, sampleEvery, tracePolicy } from './p1-trace.mjs';
 import { EvalError } from './util.mjs';
 
 function publicStill(still) {
@@ -52,10 +52,11 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
   if (engine === 'onegame') {
     const hyg = scanHygiene({ gameDir: workspace });
     const stillsDir = path.join(WORK_DIR, runId, 'stills');
+    const policy = tracePolicy(bundle.task);
     const replay = runOnegameTraces({
       gameDir: workspace,
       stillsDir,
-      probeKeys: bundle.probe?.keys,
+      policy,
     });
     const primary = hyg.ok ? replay.primary : 'HYGIENE_FAIL';
     const replayed = replay.replayed_scenarios ?? [];
@@ -90,10 +91,16 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     });
   }
   const stillsDir = path.join(WORK_DIR, runId, 'stills');
-  const traces = readTraces(path.join(staged.dest, 'demo_outputs'));
+  const policy = tracePolicy(bundle.task);
+  const traces = readTraces(path.join(staged.dest, 'demo_outputs'), policy);
   const jobRun = runGodotJob({
     projectDir: staged.dest,
-    job: makeTraceJob({ traces, stillsDir, probeKeys: bundle.probe?.keys }),
+    job: makeTraceJob({
+      traces,
+      stillsDir,
+      sampleEvery: sampleEvery(policy.sampleFps),
+      maxFrames: policy.maxFrames,
+    }),
     outPath: path.join(WORK_DIR, runId, 'traces.jsonl'),
     timeoutMs: 300_000,
   });
@@ -103,10 +110,11 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     judged.notes = [...(judged.notes ?? []), ...(jobRun.notes ?? [])];
   }
   const G = judged.g0_ok === 1 && (judged.replayed_scenarios ?? []).length > 0;
-  const missing = missingRequiredScenarios(
-    traces.filter((t) => t.audit.ok),
-    { replayedScenarios: judged.replayed_scenarios },
-  );
+  const missing = missingRequiredScenarios(traces.filter((t) => t.audit.ok), {
+    required: policy.scenarios,
+    allowEmpty: policy.allowEmpty,
+    replayedScenarios: judged.replayed_scenarios,
+  });
   return writeDoc(outPath, {
     ...base,
     G,
