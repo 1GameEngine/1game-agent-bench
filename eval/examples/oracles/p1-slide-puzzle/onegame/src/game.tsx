@@ -55,7 +55,9 @@ function begin(draft: GameState) {
   if (draft.phase === 'ready') draft.phase = 'playing';
 }
 
-function onKey(code: string) {
+function onKey(event: { detail?: { code?: string }; code?: string } | undefined) {
+  const code = event?.detail?.code || event?.code || '';
+  if (!code) return;
   commitChange('key', (draft: GameState) => {
     if (ended(draft)) return;
     if (code === 'Enter') begin(draft);
@@ -78,22 +80,32 @@ function clickTile(idx: number) {
 
 function App() {
   useFrame(() => {});
-  const banner = store.phase === 'fail' ? 'Puzzle fail' : store.phase === 'clear' ? 'Puzzle clear' : '';
   return (
-    <scene name="main" width={1280} height={720} backgroundColor="#10243a" onKeyDown={(event) => onKey(event.code)}>
+    <scene name="main" width={1280} height={720} backgroundColor="#10243a" onKeyDown={(event) => onKey(event)}>
       <text x={80} y={28} width={1120} height={72} text="Slide Puzzle" textColor="#f8fafc" textSize={56} textAlign="center" />
-      {store.board.map((n, i) => {
-        const c = i % 3;
-        const r = Math.floor(i / 3);
-        if (n === 0) {
-          return <node key={i} x={400 + c * 160 + 8} y={120 + r * 160 + 8} width={144} height={144} backgroundColor="#0b1726" />;
-        }
-        return (
-          <node key={i} x={400 + c * 160 + 8} y={120 + r * 160 + 8} width={144} height={144} backgroundColor={COLORS[n - 1]} clickable onClick={() => clickTile(i)}>
-            <text x={0} y={36} width={144} height={72} text={String(n)} textColor="#10243a" textSize={54} textAlign="center" />
-          </node>
-        );
-      })}
+      {Array.from({ length: 9 }, (_, i) => (
+        <node
+          key={i}
+          x={400 + (i % 3) * 160 + 8}
+          y={120 + Math.floor(i / 3) * 160 + 8}
+          width={144}
+          height={144}
+          backgroundColor={store.board[i] === 0 ? '#0b1726' : COLORS[store.board[i] - 1]}
+          clickable
+          onClick={() => clickTile(i)}
+        >
+          <text
+            x={0}
+            y={36}
+            width={144}
+            height={72}
+            text={store.board[i] === 0 ? '0' : String(store.board[i])}
+            textColor={store.board[i] === 0 ? '#0b1726' : '#10243a'}
+            textSize={54}
+            textAlign="center"
+          />
+        </node>
+      ))}
       <node x={60} y={620} width={240} height={70} backgroundColor="#f4a261" clickable onClick={() => commitChange('reset', (draft: GameState) => reset(draft))}>
         <text x={0} y={14} width={240} height={42} text="Reset" textColor="#10243a" textSize={32} textAlign="center" />
       </node>
@@ -101,8 +113,16 @@ function App() {
         <text x={0} y={14} width={400} height={42} text="Start" textColor="#f8fafc" textSize={32} textAlign="center" />
       </node>
       <text x={900} y={150} width={340} height={48} text={`moves ${store.moves} / 14`} textColor="#f8fafc" textSize={32} textAlign="left" />
-      <text x={900} y={210} width={340} height={48} text={`resets ${store.resets}`} textColor="#f8fafc" textSize={32} textAlign="left" />
-      <text x={900} y={300} width={340} height={64} text={banner} textColor="#fef08a" textSize={36} textAlign="left" />
+      <text
+        x={900}
+        y={210}
+        width={340}
+        height={80}
+        text={store.phase === 'fail' ? 'Puzzle fail' : store.phase === 'clear' ? 'Puzzle clear' : `resets ${store.resets}`}
+        textColor={store.phase === 'fail' || store.phase === 'clear' ? '#fef08a' : '#f8fafc'}
+        textSize={32}
+        textAlign="left"
+      />
     </scene>
   );
 }
