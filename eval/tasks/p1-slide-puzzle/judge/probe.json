@@ -3,8 +3,7 @@
     "phase",
     "moves",
     "resets",
-    "placed",
-    "blank"
+    "placed"
   ],
   "assertions": [
     {
@@ -170,5 +169,11 @@
         }
       ]
     }
-  ]
+  ],
+  "semantics": {
+    "phase": "ready 未开始；playing 可操作；fail 失败终态；clear 通关终态",
+    "moves": "已完成的滑动次数，Reset 与无效输入不计，Reset 不清零",
+    "resets": "Reset 生效次数",
+    "placed": "数字方块 1–8 中位于目标格的个数，空位不计；开局为 4，通关为 8"
+  }
 }

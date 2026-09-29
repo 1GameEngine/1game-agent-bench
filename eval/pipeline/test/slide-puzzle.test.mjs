@@ -143,3 +143,68 @@ test('slide puzzle: reset, fail budget and trace length are in the spec', () => 
   assert.deepEqual(byId.D3.applies, ['loop']);
   assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
 });
+
+function placedOf(board) {
+  return board.filter((v, i) => v !== 0 && v === GOAL[i]).length;
+}
+
+function sampleRun(scenario, steps) {
+  let board = START;
+  let moves = 0;
+  let resets = 0;
+  let phase = 'ready';
+  const rows = [];
+  const push = () => rows.push({ scenario, frame: rows.length * 15, state: { phase, moves, resets, placed: placedOf(board) } });
+  push();
+  for (const k of steps) {
+    if (phase === 'clear' || phase === 'fail') break;
+    phase = 'playing';
+    if (k === 'Reset') {
+      board = START;
+      resets += 1;
+    } else {
+      const n = slide(board, k);
+      if (n) {
+        board = n;
+        moves += 1;
+      }
+    }
+    if (board.join() === GOAL.join()) phase = 'clear';
+    else if (moves >= LIMIT) phase = 'fail';
+    push();
+  }
+  return rows;
+}
+
+test('slide puzzle: probe fields have documented meaning and score synthetic runs', async () => {
+  const { scoreProbe, checkPasses } = await import('../src/probe.mjs');
+  const b = loadP1Task('p1-slide-puzzle');
+  assert.deepEqual(Object.keys(b.probe.semantics).sort(), [...b.probe.keys].sort());
+  assert.equal(placedOf(START), 4);
+  assert.equal(placedOf(GOAL), 8);
+
+  const wasted = Array.from({ length: 14 }, (_, i) => (i % 2 ? 'ArrowRight' : 'ArrowLeft'));
+  const samples = [
+    ...sampleRun('intro', []),
+    ...sampleRun('loop', ['ArrowLeft', 'ArrowRight', 'ArrowLeft', 'Reset', 'ArrowLeft']),
+    ...sampleRun('fail', wasted),
+    ...sampleRun('clear', shortest()),
+  ];
+  const traces = ['intro', 'loop', 'fail', 'clear'].map((scenario) => ({ trace: { scenario, events: [{ frame: 0, type: 'keydown', code: 'Enter' }] } }));
+  const good = scoreProbe({ probe: b.probe, rubric: b.rubric, samples, traces, replayedScenarios: ['intro', 'loop', 'fail', 'clear'] });
+  assert.equal(good.M, 1);
+  assert.equal(good.D, 1);
+  assert.deepEqual(good.dropped_anchors, []);
+
+  const noReset = samples.filter((s) => !(s.scenario === 'loop')).concat(sampleRun('loop', ['ArrowLeft', 'ArrowRight']));
+  const weak = scoreProbe({ probe: b.probe, rubric: b.rubric, samples: noReset, traces, replayedScenarios: ['intro', 'loop', 'fail', 'clear'] });
+  assert.equal(weak.items.D3, 0);
+  assert.ok(weak.D < 1);
+
+  const loop = samples.filter((s) => s.scenario === 'loop');
+  assert.equal(checkPasses(loop, { op: 'rise', key: 'resets' }), true);
+  assert.equal(checkPasses(loop.slice(0, 3), { op: 'rise', key: 'resets' }), false);
+  const failRows = samples.filter((s) => s.scenario === 'fail');
+  assert.equal(failRows.at(-1).state.phase, 'fail');
+  assert.equal(failRows.at(-1).state.moves, LIMIT);
+});
