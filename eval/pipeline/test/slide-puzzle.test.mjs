@@ -90,3 +90,22 @@ test('slide puzzle task: spec text, hidden rubric and probe agree', () => {
   for (const a of b.probe.assertions) for (const c of a.checks) assert.ok(probeKeys.has(c.key), c.key);
   assert.equal(b.task.id, 'p1-slide-puzzle');
 });
+
+test('every headline probe agrees with its rubric', async () => {
+  const { validateProbe } = await import('../src/probe.mjs');
+  const { P1_TASKS } = await import('../src/p1-load.mjs');
+  for (const id of P1_TASKS) {
+    const b = loadP1Task(id);
+    assert.deepEqual(validateProbe(b.probe, b.rubric), { ok: true, issues: [] }, id);
+  }
+});
+
+test('slide puzzle: reset, fail budget and trace length are in the spec', () => {
+  const b = loadP1Task('p1-slide-puzzle');
+  assert.match(b.instruction, /仅在 playing 时生效/);
+  assert.match(b.instruction, /不超过 20 秒/);
+  const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
+  assert.deepEqual(byId.D2.applies, ['fail']);
+  assert.deepEqual(byId.D3.applies, ['loop']);
+  assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
+});

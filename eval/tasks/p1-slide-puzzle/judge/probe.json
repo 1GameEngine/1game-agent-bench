@@ -1,69 +1,164 @@
 {
-  "keys": ["phase", "moves", "resets", "placed", "blank"],
+  "keys": [
+    "phase",
+    "moves",
+    "resets",
+    "placed",
+    "blank"
+  ],
   "assertions": [
     {
       "id": "M1",
-      "applies": ["intro"],
-      "need": "all",
+      "applies": [
+        "intro"
+      ],
       "weight": 1,
       "checks": [
-        { "op": "all_eq", "key": "phase", "value": "ready" },
-        { "op": "all_eq", "key": "moves", "value": 0 }
+        {
+          "op": "all_eq",
+          "key": "phase",
+          "value": "ready"
+        },
+        {
+          "op": "all_eq",
+          "key": "moves",
+          "value": 0
+        }
       ]
     },
     {
       "id": "M2",
-      "applies": ["loop"],
-      "need": "all",
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "checks": [{ "op": "any_eq", "key": "phase", "value": "playing" }]
+      "checks": [
+        {
+          "op": "any_eq",
+          "key": "phase",
+          "value": "playing"
+        }
+      ]
     },
     {
       "id": "M3",
-      "applies": ["loop"],
-      "need": "all",
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "checks": [{ "op": "rise", "key": "moves" }]
+      "checks": [
+        {
+          "op": "rise",
+          "key": "moves"
+        }
+      ]
     },
     {
       "id": "M4",
-      "applies": ["fail"],
-      "need": "all",
+      "applies": [
+        "fail"
+      ],
       "weight": 1,
-      "anchor": true,
       "checks": [
-        { "op": "last_eq", "key": "phase", "value": "fail" },
-        { "op": "last_gte", "key": "moves", "value": 14 },
-        { "op": "forbid_eq", "key": "phase", "value": "clear" }
+        {
+          "op": "last_eq",
+          "key": "phase",
+          "value": "fail"
+        },
+        {
+          "op": "last_gte",
+          "key": "moves",
+          "value": 14
+        },
+        {
+          "op": "forbid_eq",
+          "key": "phase",
+          "value": "clear"
+        }
       ]
     },
     {
       "id": "M5",
-      "applies": ["clear"],
-      "need": "all",
+      "applies": [
+        "clear"
+      ],
       "weight": 1,
-      "anchor": true,
       "checks": [
-        { "op": "last_eq", "key": "phase", "value": "clear" },
-        { "op": "last_eq", "key": "placed", "value": 8 },
-        { "op": "forbid_eq", "key": "phase", "value": "fail" }
+        {
+          "op": "last_eq",
+          "key": "phase",
+          "value": "clear"
+        },
+        {
+          "op": "last_eq",
+          "key": "placed",
+          "value": 8
+        },
+        {
+          "op": "forbid_eq",
+          "key": "phase",
+          "value": "fail"
+        }
+      ]
+    },
+    {
+      "id": "M6",
+      "applies": [
+        "clear"
+      ],
+      "weight": 1,
+      "checks": [
+        {
+          "op": "rise",
+          "key": "placed"
+        }
       ]
     },
     {
       "id": "D1",
-      "applies": ["loop", "clear"],
-      "need": "all",
+      "applies": [
+        "loop",
+        "clear"
+      ],
       "weight": 1,
-      "checks": [{ "op": "any_eq", "key": "phase", "value": "playing" }]
+      "checks": [
+        {
+          "op": "any_eq",
+          "key": "phase",
+          "value": "playing"
+        }
+      ]
     },
     {
       "id": "D2",
-      "applies": ["clear"],
-      "need": "all",
+      "applies": [
+        "fail"
+      ],
       "weight": 1,
       "checks": [
-        { "op": "rise", "key": "moves" },
-        { "op": "rise", "key": "placed" }
+        {
+          "op": "last_gte",
+          "key": "moves",
+          "value": 14
+        },
+        {
+          "op": "last_eq",
+          "key": "phase",
+          "value": "fail"
+        }
+      ]
+    },
+    {
+      "id": "D3",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "checks": [
+        {
+          "op": "rise",
+          "key": "resets"
+        }
       ]
     }
   ]

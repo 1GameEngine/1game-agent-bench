@@ -70,17 +70,27 @@
         "clear"
       ],
       "weight": 1,
-      "description": "游玩中同时呈现棋盘、步数（moves / 14）和 Reset 入口，规则约束（步数上限）看得出来。"
+      "description": "游玩中同时呈现棋盘、moves / 14 和 Reset 入口。"
     },
     {
       "id": "D2",
       "dim": "D",
       "scope": "scenario",
       "applies": [
-        "clear"
+        "fail"
       ],
       "weight": 1,
-      "description": "通关画面里步数与 resets 仍可读，并且步数小于等于 14，说明是在步数预算内解出。"
+      "description": "失败画面仍显示 3×3 棋盘、moves 14 / 14 与 Reset 入口，步数上限是画面上看得见的约束，而不是只弹出一句失败文案。"
+    },
+    {
+      "id": "D3",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "循环里按过 Reset 后，棋盘回到开局布局 1 5 2 / 4 空 6 / 7 3 8，resets 数字增加，moves 没有被清零。"
     },
     {
       "id": "V1",
@@ -100,7 +110,7 @@
         "loop"
       ],
       "weight": 1,
-      "description": "对局中方块数字清晰可读，空位位置明显，能看出哪些方块与空位相邻。"
+      "description": "对局中数字方块清晰可读，空位位置一眼可辨，moves / 14 与 resets 文字不与棋盘重叠。"
     },
     {
       "id": "A1",
