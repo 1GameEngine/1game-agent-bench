@@ -16,8 +16,8 @@ import { loadSuite } from '../src/load.mjs';
 test('suite winner is product_100', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
-  assert.equal(SUITE_TASKS.length, 1);
-  assert.deepEqual(SUITE_TASKS, ['p1-chart-rush']);
+  assert.equal(SUITE_TASKS.length, 2);
+  assert.deepEqual(SUITE_TASKS, ['p1-chart-rush', 'p1-slide-puzzle']);
   assert.equal(P0_TASKS.length, 0);
 });
 
