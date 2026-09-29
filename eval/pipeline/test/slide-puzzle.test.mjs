@@ -72,7 +72,7 @@ test('slide puzzle: edge slide is a no-op and does not count', () => {
   assert.equal(slide([1, 2, 0, 4, 5, 3, 7, 8, 6], 'ArrowRight')?.join(), [1, 0, 2, 4, 5, 3, 7, 8, 6].join());
 });
 
-test('slide puzzle task: spec text, hidden rubric and probe agree', () => {
+test('slide puzzle task: spec text and hidden rubric agree', () => {
   const b = loadP1Task('p1-slide-puzzle');
   assert.match(b.instruction, /Slide Puzzle/);
   assert.match(b.instruction, /Puzzle clear/);
@@ -86,15 +86,10 @@ test('slide puzzle task: spec text, hidden rubric and probe agree', () => {
   assert.equal(byId.A1.scope, 'persistent');
   const dims = new Set(b.rubric.requirements.map((r) => r.dim));
   assert.deepEqual([...dims].sort(), ['A', 'D', 'M', 'V']);
-  const probeKeys = new Set(b.probe.keys);
-  for (const a of b.probe.assertions) for (const c of a.checks) assert.ok(probeKeys.has(c.key), c.key);
+  assert.deepEqual(b.task.scenarios.required, ['intro', 'loop', 'fail', 'clear']);
+  assert.equal(b.task.sample_fps, 2);
+  assert.equal(b.task.max_demo_seconds, 19);
   assert.equal(b.task.id, 'p1-slide-puzzle');
-});
-
-test('slide puzzle: probe agrees with rubric', async () => {
-  const { validateProbe } = await import('../src/probe.mjs');
-  const b = loadP1Task('p1-slide-puzzle');
-  assert.deepEqual(validateProbe(b.probe, b.rubric), { ok: true, issues: [] });
 });
 
 test('slide puzzle: Start, Reset and board rectangles do not overlap', () => {
@@ -176,13 +171,9 @@ function sampleRun(scenario, steps) {
   return rows;
 }
 
-test('slide puzzle: probe fields have documented meaning and score synthetic runs', async () => {
-  const { scoreProbe, checkPasses } = await import('../src/probe.mjs');
-  const b = loadP1Task('p1-slide-puzzle');
-  assert.deepEqual(Object.keys(b.probe.semantics).sort(), [...b.probe.keys].sort());
+test('slide puzzle: synthetic runs cover reset, fail budget, and a gradual clear', () => {
   assert.equal(placedOf(START), 4);
   assert.equal(placedOf(GOAL), 8);
-
   const wasted = Array.from({ length: 14 }, (_, i) => (i % 2 ? 'ArrowRight' : 'ArrowLeft'));
   const samples = [
     ...sampleRun('intro', []),
@@ -190,21 +181,14 @@ test('slide puzzle: probe fields have documented meaning and score synthetic run
     ...sampleRun('fail', wasted),
     ...sampleRun('clear', shortest()),
   ];
-  const traces = ['intro', 'loop', 'fail', 'clear'].map((scenario) => ({ trace: { scenario, events: [{ frame: 0, type: 'keydown', code: 'Enter' }] } }));
-  const good = scoreProbe({ probe: b.probe, rubric: b.rubric, samples, traces, replayedScenarios: ['intro', 'loop', 'fail', 'clear'] });
-  assert.equal(good.M, 1);
-  assert.equal(good.D, 1);
-  assert.deepEqual(good.dropped_anchors, []);
-
-  const noReset = samples.filter((s) => !(s.scenario === 'loop')).concat(sampleRun('loop', ['ArrowLeft', 'ArrowRight']));
-  const weak = scoreProbe({ probe: b.probe, rubric: b.rubric, samples: noReset, traces, replayedScenarios: ['intro', 'loop', 'fail', 'clear'] });
-  assert.equal(weak.items.D3, 0);
-  assert.ok(weak.D < 1);
-
   const loop = samples.filter((s) => s.scenario === 'loop');
-  assert.equal(checkPasses(loop, { op: 'rise', key: 'resets' }), true);
-  assert.equal(checkPasses(loop.slice(0, 3), { op: 'rise', key: 'resets' }), false);
+  assert.ok(loop.at(-1).state.resets > loop[0].state.resets);
+  assert.ok(loop.at(-1).state.moves > 0);
   const failRows = samples.filter((s) => s.scenario === 'fail');
   assert.equal(failRows.at(-1).state.phase, 'fail');
   assert.equal(failRows.at(-1).state.moves, LIMIT);
+  const clearRows = samples.filter((s) => s.scenario === 'clear');
+  assert.ok(clearRows.length > 3);
+  assert.equal(clearRows.at(-1).state.phase, 'clear');
+  assert.equal(clearRows.at(-1).state.placed, 8);
 });
