@@ -10,6 +10,8 @@ import { auditModelSubmission, buildBuilderPrompt } from './model-builder.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
+import { oracleGodot } from './paths.mjs';
+import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
 
@@ -33,6 +35,7 @@ export function defaultPrepare({ engine, taskId, runId, instruction }) {
   fs.rmSync(workspace, { recursive: true, force: true });
   fs.mkdirSync(workspace, { recursive: true });
   fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
+  mountAssetLibrary(workspace, taskId);
   return {
     workspace,
     replayRunId: `${runId}-gd`,
@@ -100,7 +103,7 @@ export function buildLooksStagePrompt({ instruction, frames, items }) {
     .map(([sc, list]) => `${sc}: ${list.map((s) => s.id).join(', ')}`)
     .join('\n');
   const lines = items
-    .map((item) => `- ${item.id}（${item.dim}，场景 ${item.applies.join('/')}）：${item.description}`)
+    .map((item) => `- ${item.id}（${item.dim}，场景 ${(item.applies ?? []).join('/')}）：${item.description}`)
     .join('\n');
   let text = `你只看这一边提交的静帧。M、D、V、A 都按画面打，不要读内部状态字段，不要看另一边，不要改计分公式。
 每条分数必须引用该场景列表里的静帧 id。score 只能是 0、0.5 或 1。
@@ -121,15 +124,17 @@ ${lines}
   return text;
 }
 
-export function looksFramePlan(stills, rubric) {
+export function looksFramePlan(stills, rubric, sampleFps = 2) {
   const by = scenarioStillsMap(stills);
   const frames = {};
   const policies = [];
+  let overflow = false;
   for (const sc of Object.keys(by).sort()) {
     if (!by[sc].length) continue;
     if (!requirementsForScenario(rubric, sc).length) continue;
-    const capped = capLooksStills(by[sc]);
+    const capped = capLooksStills(by[sc], undefined, sampleFps);
     policies.push(capped.sample_policy);
+    if (!capped.ok) overflow = true;
     frames[sc] = capped.stills.map((s) => ({ id: s.id, path: s.path }));
   }
   const uniq = [...new Set(policies)];
@@ -137,6 +142,7 @@ export function looksFramePlan(stills, rubric) {
     frames,
     jobs: Object.keys(frames).length,
     sample_policy: uniq.length === 1 ? uniq[0] : uniq.join(','),
+    overflow,
   };
 }
 
@@ -158,6 +164,9 @@ function readReplay(outPath, expect) {
 }
 
 export function acceptLooksText(text, { frames, rubric }) {
+  if (!frames || Object.keys(frames).length === 0) {
+    return { looks_status: 'EVIDENCE_INCOMPLETE', looks_source: 'subagent', byScenario: {} };
+  }
   const raw = String(text ?? '').trim();
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -194,13 +203,13 @@ function rubricItems(rubric) {
   }));
 }
 
-function builderSpec({ engine, taskId, workspace, instruction }) {
+function builderSpec({ engine, taskId, workspace, instruction, task }) {
   return {
     role: 'builder',
     engine,
     taskId,
     workspace,
-    prompt: buildBuilderPrompt({ engine, instruction }),
+    prompt: buildBuilderPrompt({ engine, instruction, task }),
   };
 }
 
@@ -245,16 +254,16 @@ async function runRole(runSubagent, spec) {
   return out ?? '';
 }
 
-function planPair(built, rubric) {
+function planPair(built, rubric, sampleFps) {
   const og = built.onegame.replay;
   const gd = built.godot.replay;
   const plans = {
-    onegame: looksFramePlan(og.stills, rubric),
-    godot: looksFramePlan(gd.stills, rubric),
+    onegame: looksFramePlan(og.stills, rubric, sampleFps),
+    godot: looksFramePlan(gd.stills, rubric, sampleFps),
   };
   if (!og.G && !gd.G) return { pair: 'BOTH_G0', run: [], plans };
   if (og.G && gd.G) {
-    if (!stillsComplete(og.stills) || !stillsComplete(gd.stills)) {
+    if (plans.onegame.overflow || plans.godot.overflow || !stillsComplete(og.stills) || !stillsComplete(gd.stills)) {
       return { pair: 'INCOMPARABLE_VISUAL', run: [], plans };
     }
     const ogKeys = Object.keys(scenarioStillsMap(og.stills)).sort().join(',');
@@ -262,7 +271,37 @@ function planPair(built, rubric) {
     if (ogKeys !== gdKeys) return { pair: 'INCOMPARABLE_VISUAL', run: [], plans };
     return { pair: 'BOTH_G', run: ['onegame', 'godot'], plans };
   }
-  return { pair: 'G_ASYMMETRIC', run: [og.G ? 'onegame' : 'godot'], plans };
+  const live = og.G ? 'onegame' : 'godot';
+  const liveReplay = og.G ? og : gd;
+  if (plans[live].overflow || !stillsComplete(liveReplay.stills)) {
+    return { pair: 'INCOMPARABLE_VISUAL', run: [], plans };
+  }
+  return { pair: 'G_ASYMMETRIC', run: [live], plans };
+}
+
+export function defaultPrepareOracle({ engine, taskId, runId, instruction }) {
+  if (engine === 'godot') {
+    const workspace = path.join(WORK_DIR, `${runId}-oracle-gd`);
+    fs.rmSync(workspace, { recursive: true, force: true });
+    fs.cpSync(oracleGodot(taskId), workspace, { recursive: true });
+    fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
+    return {
+      workspace,
+      replayRunId: `${runId}-gd`,
+      outPath: path.join(WORK_DIR, `${runId}-gd`, 'REPLAY.json'),
+    };
+  }
+  const boot = bootstrap({
+    taskId,
+    runId: `${runId}-og`,
+    instruction,
+    oracle: true,
+  });
+  return {
+    workspace: boot.gameDir,
+    replayRunId: `${runId}-og`,
+    outPath: path.join(WORK_DIR, `${runId}-og`, 'REPLAY.json'),
+  };
 }
 
 export async function orchestrateEngines({
@@ -271,6 +310,7 @@ export async function orchestrateEngines({
   prepare = defaultPrepare,
   runSubagent = defaultRunSubagent,
   loadTask = loadP1Task,
+  skipBuilder = false,
 } = {}) {
   const bundle = loadTask(taskId);
   const prepped = {};
@@ -282,16 +322,21 @@ export async function orchestrateEngines({
     ['onegame', 'godot'].map(async (engine) => {
       const prep = prepped[engine];
       const token = randomBytes(16).toString('hex');
-      await runRole(runSubagent, builderSpec({ engine, taskId, workspace: prep.workspace, instruction: bundle.instruction }));
-      auditModelSubmission(prep.workspace, engine);
-      const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
-      fs.mkdirSync(path.dirname(stampPath), { recursive: true });
-      fs.writeFileSync(stampPath, `${JSON.stringify({ source: 'subagent', taskId, engine }, null, 2)}\n`);
+      if (!skipBuilder) {
+        await runRole(
+          runSubagent,
+          builderSpec({ engine, taskId, workspace: prep.workspace, instruction: bundle.instruction, task: bundle.task }),
+        );
+        auditModelSubmission(prep.workspace, engine, taskId);
+        const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
+        fs.mkdirSync(path.dirname(stampPath), { recursive: true });
+        fs.writeFileSync(stampPath, `${JSON.stringify({ source: 'subagent', taskId, engine }, null, 2)}\n`);
+      }
       await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
       built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
     }),
   );
-  const planned = planPair(built, bundle.rubric);
+  const planned = planPair(built, bundle.rubric, bundle.task.sample_fps);
   await Promise.all(
     planned.run.map(async (engine) => {
       const text = await runRole(
@@ -323,4 +368,12 @@ export async function orchestrateEngines({
     onegame: built.onegame,
     godot: built.godot,
   };
+}
+
+export async function orchestrateOracle(opts = {}) {
+  return orchestrateEngines({
+    ...opts,
+    skipBuilder: true,
+    prepare: opts.prepare ?? defaultPrepareOracle,
+  });
 }

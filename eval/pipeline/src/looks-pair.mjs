@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { scoreVisuals } from './looks-judge.mjs';
-import { finalizeObservedScores } from './rubric.mjs';
+import { aggregateObserved } from './rubric.mjs';
 import { capLooksStills, groupStillsByScenario } from './p1-trace.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { visualRubric } from './probe.mjs';
@@ -81,12 +81,8 @@ async function scoreVisualsSide({
   }
   const uniqPolicy = [...new Set(policies)];
   const sample_policy = uniqPolicy.length === 1 ? uniqPolicy[0] : uniqPolicy.join(',');
-  const agg = finalizeObservedScores({
-    byScenario,
-    rubric: visRubric,
-    traces,
-    replayedScenarios: replayed_scenarios,
-  });
+  const required = [...new Set((visRubric?.requirements ?? []).flatMap((req) => req.applies ?? []))];
+  const agg = aggregateObserved(byScenario, visRubric, required);
   return {
     V: agg.V,
     A: agg.A,

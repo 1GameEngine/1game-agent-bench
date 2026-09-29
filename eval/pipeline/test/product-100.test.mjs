@@ -7,6 +7,7 @@ import {
   SUITE_TASKS,
   winnerOf,
   P0_TASKS,
+  ORACLE_FLOOR,
 } from '../src/product-100.mjs';
 import { encodePngRgba, decodePng, nearestNeighborScale, toJudgeStill, STILL_W, STILL_H } from '../src/png-nn.mjs';
 import { heuristicFrame } from '../src/looks.mjs';
@@ -182,6 +183,20 @@ test('scoreAttempt records rubric M/D/V/A without dump slices', () => {
   assert.deepEqual(row.scenarios, ['intro', 'loop', 'fail', 'clear']);
   assert.equal(row.M_pos, undefined);
   assert.equal(row.D_mech, undefined);
+});
+
+test('one live engine still needs a subagent score', () => {
+  const rows = [
+    scoreAttempt({ id: 'p1-chart-rush', engine: 'onegame', G: 1, M: null, D: null, V: null, A: null, primary: 'TRACE_OK', g0_ok: 1, looks_status: 'PENDING', looks_source: 'none' }),
+    scoreAttempt({ id: 'p1-chart-rush', engine: 'godot', G: 0, M: 0, D: 0, V: 0, A: 0, primary: 'BOOT_FAIL', g0_ok: 0, looks_status: 'SKIP', looks_source: 'none' }),
+  ];
+  const report = buildProduct100({ runId: 'half', rows });
+  assert.equal(report.comparable, false);
+  assert.equal(report.product_100.onegame, null);
+});
+
+test('oracle floor is 80', () => {
+  assert.equal(ORACLE_FLOOR, 80);
 });
 
 test('window lock 1280x720; 320x180 stills rejected', () => {

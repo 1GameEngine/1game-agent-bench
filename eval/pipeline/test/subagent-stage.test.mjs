@@ -5,9 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { orchestrateEngines, assertReplayDocument, defaultRunSubagent } from '../src/subagent-stage.mjs';
+import { orchestrateEngines, orchestrateOracle, assertReplayDocument, defaultRunSubagent, acceptLooksText, defaultPrepare } from '../src/subagent-stage.mjs';
 import { runStageReplay } from '../src/stage-replay.mjs';
-import { scoreStagedPair } from '../src/product-run.mjs';
+import { traceEventArgv } from '../src/p1-onegame.mjs';
+import { auditModelSubmission } from '../src/model-builder.mjs';
+import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/product-run.mjs';
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
@@ -210,6 +212,156 @@ test('stage-replay is the only writer of a trusted replay document', () => {
   const missing = spawnSync(process.execPath, [cli, 'stage-replay', '--engine', 'onegame'], { encoding: 'utf8' });
   assert.notEqual(missing.status, 0);
   assert.match(missing.stderr, /stage-replay needs/);
+});
+
+test('oracle gate scores reference projects through the looks subagent', async () => {
+  const prev = process.env.EVAL_SUBAGENT_CMD;
+  const prevWorker = process.env.EVAL_LOOKS_ALLOW_WORKER;
+  process.env.EVAL_SUBAGENT_CMD = 'stub';
+  delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+  try {
+    const result = await runOracleGate({
+      taskId: 'p1-chart-rush',
+      runId: 'oracle-gate',
+      prepare: ({ engine }) => {
+        const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `oracle-${engine}-`));
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+      },
+      runSubagent: async (spec) => {
+        assert.notEqual(spec.role, 'builder');
+        if (spec.role === 'replay') {
+          const stills = ['intro', 'loop', 'fail', 'clear'].map((scenario) => {
+            const id = `${scenario}_f0`;
+            const file = path.join(spec.workspace, `${id}.png`);
+            fs.writeFileSync(file, 'png');
+            return { id, ok: true, path: file, dump_ok: 1 };
+          });
+          fs.writeFileSync(spec.replay.out, `${JSON.stringify(replayDoc(spec, stills))}\n`);
+          return '';
+        }
+        const scenarios = {};
+        for (const [sc, frames] of Object.entries(spec.stills)) {
+          scenarios[sc] = {};
+          for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
+            scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+          }
+        }
+        return JSON.stringify({ scenarios });
+      },
+    });
+    assert.equal(result.rows[0].product_100, 100);
+    assert.equal(result.rows[1].product_100, 100);
+    await assert.rejects(
+      () => runOracleGate({ taskId: 'p1-chart-rush', runId: 'oracle-low', prepare: () => {
+        const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-low-'));
+        return { workspace, replayRunId: 'x', outPath: path.join(workspace, 'REPLAY.json') };
+      }, runSubagent: async (spec) => {
+        if (spec.role === 'replay') {
+          fs.writeFileSync(spec.replay.out, `${JSON.stringify({ ...replayDoc(spec, []), G: false, g0_ok: 0 })}\n`);
+        }
+        return '';
+      } }),
+      (err) => err.primary === 'ORACLE_FLOOR',
+    );
+  } finally {
+    if (prev === undefined) delete process.env.EVAL_SUBAGENT_CMD;
+    else process.env.EVAL_SUBAGENT_CMD = prev;
+    if (prevWorker === undefined) delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+    else process.env.EVAL_LOOKS_ALLOW_WORKER = prevWorker;
+  }
+});
+
+test('worker and heuristic cannot open a product run', () => {
+  const prevCmd = process.env.EVAL_SUBAGENT_CMD;
+  const prevWorker = process.env.EVAL_LOOKS_ALLOW_WORKER;
+  process.env.EVAL_SUBAGENT_CMD = 'stub';
+  process.env.EVAL_LOOKS_ALLOW_WORKER = '1';
+  assert.throws(() => assertProductSubagent(), (err) => err.primary === 'SUBAGENT_REQUIRED');
+  if (prevCmd === undefined) delete process.env.EVAL_SUBAGENT_CMD;
+  else process.env.EVAL_SUBAGENT_CMD = prevCmd;
+  if (prevWorker === undefined) delete process.env.EVAL_LOOKS_ALLOW_WORKER;
+  else process.env.EVAL_LOOKS_ALLOW_WORKER = prevWorker;
+});
+
+test('empty looks frames are incomplete evidence', () => {
+  const accepted = acceptLooksText('{"scenarios":{}}', { frames: {}, rubric: { requirements: [] } });
+  assert.equal(accepted.looks_status, 'EVIDENCE_INCOMPLETE');
+});
+
+test('trace key events do not advance the frame clock', () => {
+  const argv = traceEventArgv('out/eval.1gamerecord', { type: 'keydown', code: 'Enter' });
+  assert.equal(argv[argv.indexOf('--ms') + 1], '0');
+});
+
+test('godot trace runner rejects an over-long trace', () => {
+  const src = fs.readFileSync(new URL('../godot/EvalRunner.gd', import.meta.url), 'utf8');
+  assert.match(src, /TRACE_TOO_LONG/);
+  assert.doesNotMatch(src, /mini\(int\(trace\.get\("duration_frames"/);
+});
+
+test('a repeated scenario fails the submission audit', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'dup-trace-'));
+  writeSubmission(workspace, 'onegame');
+  fs.copyFileSync(
+    path.join(workspace, 'demo_outputs', '02_loop.json'),
+    path.join(workspace, 'demo_outputs', '05_loop_again.json'),
+  );
+  assert.throws(() => auditModelSubmission(workspace, 'onegame', 'p1-chart-rush'), (err) => err.primary === 'BUILDER_INVALID');
+});
+
+test('godot builder workspace receives the chart rush sprites', () => {
+  const prep = defaultPrepare({
+    engine: 'godot',
+    taskId: 'p1-chart-rush',
+    runId: 'asset-mount',
+    instruction: '# 谱面冲刺\n',
+  });
+  assert.equal(fs.existsSync(path.join(prep.workspace, 'assets', 'arrow-left.png')), true);
+  assert.equal(fs.lstatSync(path.join(prep.workspace, 'asset-library')).isSymbolicLink(), true);
+  fs.rmSync(path.dirname(prep.workspace), { recursive: true, force: true });
+});
+
+test('one live engine with too many stills does not get a looks score', async () => {
+  const calls = [];
+  const staged = await orchestrateEngines({
+    taskId: 'p1-chart-rush',
+    runId: 'asymmetric-cap',
+    prepare: ({ engine }) => {
+      const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `cap-${engine}-`));
+      return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+    },
+    runSubagent: async (spec) => {
+      calls.push(`${spec.engine}:${spec.role}`);
+      if (spec.role === 'builder') {
+        writeSubmission(spec.workspace, spec.engine);
+        return '';
+      }
+      if (spec.role === 'replay') {
+        if (spec.engine === 'godot') {
+          fs.writeFileSync(
+            spec.replay.out,
+            `${JSON.stringify({ ...replayDoc(spec, []), G: false, g0_ok: 0, primary: 'BOOT_FAIL' })}\n`,
+          );
+          return '';
+        }
+        const stills = Array.from({ length: 41 }, (_, i) => {
+          const id = `intro_f${i}`;
+          const file = path.join(spec.workspace, `${id}.png`);
+          fs.writeFileSync(file, 'png');
+          return { id, ok: true, path: file, dump_ok: 1 };
+        });
+        fs.writeFileSync(spec.replay.out, `${JSON.stringify(replayDoc(spec, stills))}\n`);
+        return '';
+      }
+      throw new Error('looks must not run when the live side overflows');
+    },
+  });
+  assert.equal(staged.pair, 'INCOMPARABLE_VISUAL');
+  assert.deepEqual(calls.filter((c) => c.endsWith(':looks')), []);
+  const scored = scoreStagedPair('p1-chart-rush', staged);
+  assert.equal(scored.ogRow.G, 1);
+  assert.equal(scored.ogRow.looks_status, 'INCOMPARABLE_VISUAL');
+  assert.equal(scored.ogRow.product_100, null);
 });
 
 test('product and compare entrypoints do not replay or build inline', () => {

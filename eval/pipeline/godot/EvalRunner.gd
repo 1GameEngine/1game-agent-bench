@@ -107,8 +107,12 @@ func _run_traces() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		_lock_window()
-		var n := mini(int(trace.get("duration_frames", 1)), max_frames)
 		var scenario := String(trace.get("scenario", "play"))
+		var n := int(trace.get("duration_frames", 1))
+		if n > max_frames:
+			_emit({"event": "error", "code": "TRACE_TOO_LONG", "scenario": scenario, "frames": n, "max_frames": max_frames})
+			get_tree().quit(5)
+			return
 		var by := {}
 		for ev in trace.get("events", []):
 			var fr := int(ev.get("frame", 0))

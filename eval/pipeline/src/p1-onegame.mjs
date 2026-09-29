@@ -8,18 +8,7 @@ import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { captureOnegameStill } from './capture.mjs';
 import { loadArgvRules } from './load.mjs';
 import { allowedClickCenters } from './argv-audit.mjs';
-import {
-  FRAME_MS,
-  auditTrace,
-  capFrames,
-  eventsByFrame,
-  missingRequiredScenarios,
-  readTraces,
-  sampleEvery,
-  scenarioSet,
-  stillPlayMeta,
-} from './p1-trace.mjs';
-import { pickState } from './probe.mjs';
+import { FRAME_MS, duplicateScenarioNames, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet } from './p1-trace.mjs';
 
 function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
@@ -79,14 +68,17 @@ function tickFrames(cwd, n) {
   return { ok: proc.status === 0, proc };
 }
 
-function applyTraceEvent(cwd, ev) {
+export function traceEventArgv(recordRel, ev) {
   if (ev.type === 'click') {
     const coord = `${Math.round(Number(ev.x))},${Math.round(Number(ev.y))}`;
-    const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--click', coord]);
-    return { ok: proc.status === 0, proc };
+    return ['1gameplay', 'step', recordRel, '--click', coord];
   }
   const event = JSON.stringify({ type: ev.type, data: { code: ev.code } });
-  const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--ms', '1', '--event', event]);
+  return ['1gameplay', 'step', recordRel, '--ms', '0', '--event', event];
+}
+
+function applyTraceEvent(cwd, ev) {
+  const proc = gp(cwd, traceEventArgv(RECORD_REL, ev));
   return { ok: proc.status === 0, proc };
 }
 
@@ -169,13 +161,17 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
 }
 
-export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
+export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy }) {
   const notes = [];
   const stills = [];
   const samples = [];
   const dir = tracesDir ?? path.join(gameDir, 'demo_outputs');
-  const submitted = readTraces(dir);
+  const submitted = readTraces(dir, policy);
   const valid = submitted.filter((t) => t.audit.ok);
+  const missOpts = {
+    required: policy?.scenarios ?? [],
+    allowEmpty: policy?.allowEmpty ?? ['intro'],
+  };
   if (!submitted.length) {
     return {
       primary: 'TRACE_MISSING',
@@ -184,18 +180,21 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
       stills,
       traces: submitted,
       scenarios: [],
-      missing_scenarios: missingRequiredScenarios([]),
+      missing_scenarios: missingRequiredScenarios([], missOpts),
     };
   }
-  if (!valid.length) {
+  const duplicates = duplicateScenarioNames(valid);
+  if (!valid.length || duplicates.length) {
+    const notes = submitted.flatMap((t) => t.audit.issues.map((i) => `${t.file}: ${i}`)).slice(0, 12);
+    if (duplicates.length) notes.push(`duplicate scenario ${[...new Set(duplicates)].join(', ')}`);
     return {
       primary: 'TRACE_INVALID',
       g0_ok: 0,
-      notes: submitted.flatMap((t) => t.audit.issues.map((i) => `${t.file}: ${i}`)).slice(0, 12),
+      notes,
       stills,
       traces: submitted,
       scenarios: scenarioSet(submitted),
-      missing_scenarios: missingRequiredScenarios(submitted),
+      missing_scenarios: missingRequiredScenarios(submitted, missOpts),
     };
   }
 
@@ -213,7 +212,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
   }
 
   const rules = loadArgvRules();
-  const every = sampleEvery();
+  const every = sampleEvery(policy?.sampleFps);
   let primary = 'TRACE_OK';
   const replayed_scenarios = [];
 
@@ -224,7 +223,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
       notes.push(`replay create failed ${item.file}`);
       break;
     }
-    const n = capFrames(item.trace.duration_frames);
+    const n = item.trace.duration_frames;
     const by = eventsByFrame(item.trace);
     let i = 0;
     let failed = false;
@@ -265,11 +264,9 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
           dump: meta,
           ...cap,
         });
-        const q = queryStore(gameDir);
         samples.push({
           scenario: item.trace.scenario,
           frame: last,
-          state: q.store.empty ? {} : pickState(q.store.value, probeKeys),
         });
       }
       i += run;
@@ -287,7 +284,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, probeKeys }) {
     traces: submitted,
     scenarios: scenarioSet(valid),
     replayed_scenarios,
-    missing_scenarios: missingRequiredScenarios(valid, { replayedScenarios: replayed_scenarios }),
+    missing_scenarios: missingRequiredScenarios(valid, { ...missOpts, replayedScenarios: replayed_scenarios }),
   };
 }
 

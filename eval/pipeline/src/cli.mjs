@@ -9,7 +9,7 @@ import { buildReport, writeReport } from './report.mjs';
 import { primaryOf } from './verdict.mjs';
 import { auditPlayplanStep, allowedClickCenters } from './argv-audit.mjs';
 import { runP1Compare } from './p1-run.mjs';
-import { runProduct100 } from './product-run.mjs';
+import { runOracleGate, runProduct100 } from './product-run.mjs';
 import { writeScoreboardFromRun } from './scoreboard.mjs';
 import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
 import { runStageReplay } from './stage-replay.mjs';
@@ -146,6 +146,14 @@ export async function main(argv = process.argv.slice(2)) {
       process.stdout.write(`${JSON.stringify({ via: doc.via, primary: doc.primary, G: doc.G })}\n`);
       return;
     }
+    if (cmd === 'run-oracle-gate') {
+      const taskId = argValue(argv, '--task');
+      if (!taskId) throw new EvalError('EVAL_INTERNAL', '--task required');
+      const runId = argValue(argv, '--run-id') ?? `oracle-${taskId}`;
+      const { rows, floor } = await runOracleGate({ taskId, runId });
+      process.stdout.write(`${JSON.stringify({ floor, rows }, null, 2)}\n`);
+      return;
+    }
     if (cmd === 'run-product-100') {
       if (hasFlag(argv, '--looks') || hasFlag(argv, '--mech')) {
         throw new EvalError('EVAL_INTERNAL', 'run-product-100 一次跑完。不支持 --looks / --mech，也不保存机械结果供续评。');
@@ -195,7 +203,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {

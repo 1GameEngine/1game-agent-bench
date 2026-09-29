@@ -329,8 +329,8 @@ function renderMain() {
         <tbody>${rows}</tbody>
       </table>
       <p class="legend">${esc(REPORT.formula)}</p>
-      <h3>机械 G / M / D</h3>
-      <p class="why">这一列来自重放探针，不叫 product_100，也不决定谁赢。</p>
+      <h3>G / M / D</h3>
+      <p class="why">M 和 D 与 V、A 一样来自 looks subagent。缺场景写在格子末尾，不单独封顶。</p>
       <table>
         <thead><tr><th>游戏</th>${thEngines()}</tr></thead>
         <tbody>${REPORT.games.map((g) => {

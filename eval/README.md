@@ -10,7 +10,7 @@ Headline 在 `compare_tasks`：`p1-chart-rush`。P0 四题仍可 `run-oracles`�
 
 Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`builder.prompt.p1.onegame.md`](builder.prompt.p1.onegame.md) 与 [`builder.prompt.p1.godot.md`](builder.prompt.p1.godot.md)（仅附录 A 不同）。
 
-实现 SSOT 是题面 `instruction.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。`probe.json` 不进入百分制。Headline 的游戏工程和 traces **不入库**，流水线里也没有内嵌成品。每次 `run-product-100` / `run-p1-compare` 都按引擎拆成三个 subagent，主进程只准备空工作区并在最后套公式。不支持 `--looks` 或 `--mech`，也不把机械结果存进仓库再续评。
+实现说明是题面 `instruction.md`，末尾拼上 `tasks/_shared/constraints.md`。隐藏量表在 `tasks/<id>/judge/rubric.json`，Builder 不可见。题目不再带 `probe.json`。参考作在 `examples/oracles/<id>/{onegame,godot}/`，只给 `run-oracle-gate` 验收，不进 Builder 工作区。每次 `run-product-100` / `run-p1-compare` 都按引擎拆成 builder、replay、looks 三个 subagent。`run-oracle-gate` 跳过 builder，重放参考作后再走 looks subagent。未设置 `EVAL_SUBAGENT_CMD`，或打开 worker / heuristic，都不出百分制。
 
 阶段入口是 `EVAL_SUBAGENT_CMD`（cwd 为该引擎工作区，stdin 为 `{role,engine,taskId,workspace,prompt,...}`）。`role` 依次是 `builder`、`replay`、`looks`，两边引擎互不可见。未设置时以 `SUBAGENT_REQUIRED` 停止，主进程不写 `game.tsx` / `game.gd`，不重放，不看图。Builder 把提交写进工作区。Replay 只能执行 `node src/cli.mjs stage-replay ...`，由该命令写出带 `via:"stage-replay"` 和本次令牌的 `REPLAY.json`；手改文件会被 `REPLAY_UNTRUSTED` 拒绝。Looks 只看这一边的静帧，M、D、V、A 四类都在这一步打完，每条带静帧 id。主进程只按场景取最高、贯穿取平均后套公式，不再用探针，也不做跨条目封顶。`EVAL_BUILDER_CMD` 只留给单独的模型写盘试验，headline 跑分不走它。
 
@@ -40,7 +40,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 | Judge（正确性） | Headline：提交 traces 重放抽帧 + 隐藏量表。P0 夹具仍只 `1gameplay frame query --select store:state`。不用 Chromium |
 | Capture（观感） | 重放抽帧 1280×720 PNG。Capture **不是** 单独的机械金标。 |
 | Looks（M/D/V/A） | 每引擎一个 looks subagent，只看该边静帧打四类。worker / heuristic 不得当 headline。 |
-| Replay | Replay subagent 只能跑 `stage-replay`。Headline 30fps submitted traces，sample 2fps，单条最长 20s。禁用 `--until` |
+| Replay | Replay subagent 只能跑 `stage-replay`。30fps 提交轨迹。抽样频率和单条上限写在题目的 `sample_fps`、`max_demo_seconds` 里，乘积不超过 40 张静帧。超长轨迹审计失败，不截断。 |
 
 作者入口激活器是 `1game-skill`（来自 `@1game/skill`），**不是** `npx skills add`。
 
@@ -86,6 +86,7 @@ pnpm run run-oracles      # P0 四份 oracle，五维全 1
 pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # headline × 两引擎：builder / replay / looks 三个 subagent，再写 COMPARE_SCALAR.json
 pnpm run run-product-100 -- --run-id <id>          # 同上三个 subagent。主进程套公式。未配置 EVAL_SUBAGENT_CMD 时 SUBAGENT_REQUIRED
+pnpm run run-oracle-gate -- --task <id>            # 跳过 builder，重放参考作后由 looks subagent 打分，两边都要 ≥ 80
 node src/cli.mjs emit-scoreboard --run-id <id>     # 只用 PRODUCT_100.json 重出分数页（模板固定，加题加引擎只扩数据）
 # 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
@@ -96,7 +97,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (15M + 35D + 15V + 35A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动，且至少一条合法 submitted trace 重放成功。M、D、V、A 都来自隐藏量表的画面条文：每个引擎一个 looks subagent 看 2fps 抽帧（每条最多 40 张），每条须带静帧 id，否则该条为 0。只属于一个场景的条目取最高分，贯穿多段的条目取平均。总分相同但四维不一致时不宣布并列。`looks_source` 不是 `subagent` 时四维留空，`product_100` 为空。两边都 `G=1` 时必须抽帧成对、job 数与 `sample_policy` 相同、`looks_source=subagent`。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (15M + 35D + 15V + 35A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动，且至少一条合法 submitted trace 重放成功。缺了题目要求的场景时该题仍出分：只作用于那些场景的条目为 0，贯穿条目把缺场景按 0 算进平均；适用场景有缺席时该条最高 0.5。行上写出 `missing_scenarios`。M、D、V、A 只来自本次 looks subagent。每条须带静帧 id，否则整份证据不全，套件分留空。只属于一个场景的条目取最高分，贯穿条目取平均。一边能启动、另一边不能时，启动的那边仍必须有 subagent 裁决。任一题不可比，套件分留空。参考作门要求两边 `product_100 ≥ 80`。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 headline `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { P1_TASKS, loadP1Task } from '../src/p1-load.mjs';
-import { auditTrace, missingRequiredScenarios, REQUIRED_SCENARIOS } from '../src/p1-trace.mjs';
-import { applyScenarioCap } from '../src/rubric.mjs';
+import { auditTrace, missingRequiredScenarios, tracePolicy } from '../src/p1-trace.mjs';
+import { aggregateObserved } from '../src/rubric.mjs';
 import { buildCompareScalar } from '../src/p1-report.mjs';
 import { assertNoForbiddenScoreKeys } from '../src/util.mjs';
 import { loadSuite } from '../src/load.mjs';
@@ -26,7 +26,17 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
     assert.equal(b.task.traces, 'submitted');
     assert.equal(b.rubric.score_formula, 'G * (15*M + 35*D + 15*V + 35*A)');
     assert.ok(b.rubric.requirements.length >= 8);
-    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id)), false);
+    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'tasks', id, 'judge', 'probe.json')), false);
+    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id, 'onegame', 'src', 'game.tsx')), true);
+    assert.equal(fs.existsSync(path.join(EVAL_DIR, 'examples', 'oracles', id, 'godot', 'game.gd')), true);
+    const policy = tracePolicy(b.task);
+    for (const engine of ['onegame', 'godot']) {
+      const dir = path.join(EVAL_DIR, 'examples', 'oracles', id, engine, 'demo_outputs');
+      for (const name of fs.readdirSync(dir)) {
+        const trace = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+        assert.equal(auditTrace(trace, policy).ok, true, `${engine}/${name}`);
+      }
+    }
     assert.equal(fs.existsSync(path.join(EVAL_DIR, 'pipeline', 'src', 'materialize-submission.mjs')), false);
   }
 });
@@ -72,11 +82,38 @@ test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {
   assert.throws(() => assertNoForbiddenScoreKeys({ overall: 1 }));
 });
 
-test('missing required scenarios cap M and D', () => {
-  const traces = [{ trace: { scenario: 'intro' } }];
-  const capped = applyScenarioCap({ M: 1, D: 1, V: 1, A: 1 }, traces);
-  assert.equal(capped.M, 0.5);
-  assert.equal(capped.D, 0.5);
-  assert.deepEqual(capped.missing_scenarios, REQUIRED_SCENARIOS.filter((s) => s !== 'intro'));
+test('missing fail scenario zeros that item and lowers a persistent score', () => {
+  const chart = loadP1Task('p1-chart-rush');
+  const traces = [{ audit: { ok: true }, trace: { scenario: 'intro', events: [] } }];
+  assert.deepEqual(
+    missingRequiredScenarios(traces, { required: chart.task.scenarios.required, allowEmpty: chart.task.scenarios.allow_empty }),
+    ['loop', 'fail', 'clear'],
+  );
+  const fin = aggregateObserved(
+    {
+      intro: { M1: 1, V1: 1, A1: 1 },
+      loop: { M2: 1, M3: 1, D1: 1, V2: 1, A1: 1, A2: 1 },
+      clear: { M5: 1, M6: 1, D1: 1, D2: 1, A1: 1 },
+    },
+    chart.rubric,
+    chart.task.scenarios.required,
+  );
+  assert.equal(fin.items.M4, 0);
+  assert.deepEqual(fin.missing_scenarios, ['fail']);
+  assert.equal(fin.items.A1, 0.5);
+  assert.equal(fin.items.D1, 1);
+  assert.ok(fin.M > 0.5);
+  const soft = aggregateObserved(
+    {
+      intro: { A1: 1 },
+      loop: { A1: 1 },
+      fail: { A1: 0.5 },
+      clear: { A1: 1 },
+    },
+    chart.rubric,
+    chart.task.scenarios.required,
+  );
+  assert.equal(soft.items.A1, 1);
+  assert.deepEqual(soft.missing_scenarios, []);
   assert.equal(auditTrace({ schema: 'eval.trace/1' }).ok, false);
 });
