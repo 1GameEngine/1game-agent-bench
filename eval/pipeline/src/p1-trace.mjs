@@ -108,6 +108,20 @@ export function scenarioContentOk(trace, allowEmpty = ['intro']) {
   return Array.isArray(unwrapTrace(trace)?.events) && unwrapTrace(trace).events.length > 0;
 }
 
+export function duplicateScenarioNames(traces) {
+  const seen = new Set();
+  const dups = [];
+  for (const t of traces ?? []) {
+    const audit = t?.audit ?? { ok: true };
+    if (!audit.ok) continue;
+    const sc = unwrapTrace(t)?.scenario;
+    if (!sc) continue;
+    if (seen.has(sc)) dups.push(sc);
+    else seen.add(sc);
+  }
+  return dups;
+}
+
 export function scenarioSet(traces) {
   return [...new Set((traces ?? []).map((t) => unwrapTrace(t)?.scenario).filter(Boolean))];
 }

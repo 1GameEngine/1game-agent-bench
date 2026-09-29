@@ -8,7 +8,7 @@ import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { captureOnegameStill } from './capture.mjs';
 import { loadArgvRules } from './load.mjs';
 import { allowedClickCenters } from './argv-audit.mjs';
-import { FRAME_MS, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet } from './p1-trace.mjs';
+import { FRAME_MS, duplicateScenarioNames, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet } from './p1-trace.mjs';
 
 function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
@@ -68,14 +68,17 @@ function tickFrames(cwd, n) {
   return { ok: proc.status === 0, proc };
 }
 
-function applyTraceEvent(cwd, ev) {
+export function traceEventArgv(recordRel, ev) {
   if (ev.type === 'click') {
     const coord = `${Math.round(Number(ev.x))},${Math.round(Number(ev.y))}`;
-    const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--click', coord]);
-    return { ok: proc.status === 0, proc };
+    return ['1gameplay', 'step', recordRel, '--click', coord];
   }
   const event = JSON.stringify({ type: ev.type, data: { code: ev.code } });
-  const proc = gp(cwd, ['1gameplay', 'step', RECORD_REL, '--ms', '1', '--event', event]);
+  return ['1gameplay', 'step', recordRel, '--ms', '0', '--event', event];
+}
+
+function applyTraceEvent(cwd, ev) {
+  const proc = gp(cwd, traceEventArgv(RECORD_REL, ev));
   return { ok: proc.status === 0, proc };
 }
 
@@ -180,11 +183,14 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy }) {
       missing_scenarios: missingRequiredScenarios([], missOpts),
     };
   }
-  if (!valid.length) {
+  const duplicates = duplicateScenarioNames(valid);
+  if (!valid.length || duplicates.length) {
+    const notes = submitted.flatMap((t) => t.audit.issues.map((i) => `${t.file}: ${i}`)).slice(0, 12);
+    if (duplicates.length) notes.push(`duplicate scenario ${[...new Set(duplicates)].join(', ')}`);
     return {
       primary: 'TRACE_INVALID',
       g0_ok: 0,
-      notes: submitted.flatMap((t) => t.audit.issues.map((i) => `${t.file}: ${i}`)).slice(0, 12),
+      notes,
       stills,
       traces: submitted,
       scenarios: scenarioSet(submitted),

@@ -100,7 +100,20 @@ test('missing fail scenario zeros that item and lowers a persistent score', () =
   );
   assert.equal(fin.items.M4, 0);
   assert.deepEqual(fin.missing_scenarios, ['fail']);
-  assert.equal(fin.items.A1, 1);
+  assert.equal(fin.items.A1, 0.5);
+  assert.equal(fin.items.D1, 1);
   assert.ok(fin.M > 0.5);
+  const soft = aggregateObserved(
+    {
+      intro: { A1: 1 },
+      loop: { A1: 1 },
+      fail: { A1: 0.5 },
+      clear: { A1: 1 },
+    },
+    chart.rubric,
+    chart.task.scenarios.required,
+  );
+  assert.equal(soft.items.A1, 1);
+  assert.deepEqual(soft.missing_scenarios, []);
   assert.equal(auditTrace({ schema: 'eval.trace/1' }).ok, false);
 });

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { EVAL_DIR } from './paths.mjs';
-import { missingRequiredScenarios, readTraces, tracePolicy } from './p1-trace.mjs';
+import { duplicateScenarioNames, missingRequiredScenarios, readTraces, tracePolicy } from './p1-trace.mjs';
 import { loadP1Task } from './p1-load.mjs';
 import { EvalError } from './util.mjs';
 
@@ -140,6 +140,10 @@ function assertSubmission(dest, engine, task) {
     if (hit?.trace?.scenario !== item.scenario) {
       throw new EvalError('BUILDER_INVALID', `${item.rel} scenario must be ${item.scenario}`);
     }
+  }
+  const duplicates = duplicateScenarioNames(traces);
+  if (duplicates.length) {
+    throw new EvalError('BUILDER_INVALID', `model traces repeat scenario ${[...new Set(duplicates)].join(', ')}`);
   }
   const missingScenarios = missingRequiredScenarios(traces, {
     required: policy.scenarios,

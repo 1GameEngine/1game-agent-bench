@@ -97,7 +97,7 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 
 ## 计分
 
-**胜负：可比的 `product_100`。** 每题 \(S = G \times (15M + 35D + 15V + 35A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动，且至少一条合法 submitted trace 重放成功。缺了题目要求的场景时该题仍出分：只作用于那些场景的条目为 0，贯穿条目把缺场景按 0 算进平均，并在行上写出 `missing_scenarios`。M、D、V、A 只来自本次 looks subagent。每条须带静帧 id，否则整份证据不全，套件分留空。只属于一个场景的条目取最高分，贯穿条目取平均。一边能启动、另一边不能时，启动的那边仍必须有 subagent 裁决。任一题不可比，套件分留空。参考作门要求两边 `product_100 ≥ 80`。
+**胜负：可比的 `product_100`。** 每题 \(S = G \times (15M + 35D + 15V + 35A)\)。\(G=0\) 则该题 0，仍占套件等权一份。\(G\) 定义为能启动，且至少一条合法 submitted trace 重放成功。缺了题目要求的场景时该题仍出分：只作用于那些场景的条目为 0，贯穿条目把缺场景按 0 算进平均；适用场景有缺席时该条最高 0.5。行上写出 `missing_scenarios`。M、D、V、A 只来自本次 looks subagent。每条须带静帧 id，否则整份证据不全，套件分留空。只属于一个场景的条目取最高分，贯穿条目取平均。一边能启动、另一边不能时，启动的那边仍必须有 subagent 裁决。任一题不可比，套件分留空。参考作门要求两边 `product_100 ≥ 80`。
 
 过程：P0 夹具五个 0/1 **create_ok / replay_ok / store_match / argv_ok / hygiene_ok** 与 headline `COMPARE_SCALAR`。禁止把它们写进谁赢的句子。
 

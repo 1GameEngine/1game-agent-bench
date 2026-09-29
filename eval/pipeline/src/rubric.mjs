@@ -96,6 +96,14 @@ export function validateRubric(rubric, opts = {}) {
   return { ok: issues.length === 0, issues };
 }
 
+function persistentItemScore(values, missingScene) {
+  if (!values.length) return 0;
+  const avg = mean(values);
+  if (!missingScene) return quantizeLooks(avg);
+  if (avg < 0.25) return 0;
+  return 0.5;
+}
+
 function averageDim(arr) {
   if (!arr.length) return 0;
   const wsum = arr.reduce((a, x) => a + x.w, 0);
@@ -130,7 +138,7 @@ export function aggregateObserved(byScenario, rubric, requiredScenarios = []) {
     let v = 0;
     if (reqScope(req) === 'persistent') {
       const all = applies.map((sc) => (observed[sc] ? quantizeLooks(observed[sc]?.[req.id]) : 0));
-      v = all.length ? quantizeLooks(mean(all)) : 0;
+      v = persistentItemScore(all, applies.some((sc) => !observed[sc]));
     } else {
       const present = applies.filter((sc) => observed[sc]).map((sc) => quantizeLooks(observed[sc]?.[req.id]));
       v = present.length ? quantizeLooks(Math.max(...present)) : 0;

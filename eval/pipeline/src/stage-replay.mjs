@@ -5,7 +5,7 @@ import { loadP1Task } from './p1-load.mjs';
 import { runOnegameTraces } from './p1-onegame.mjs';
 import { stageGodotProject, runGodotJob, makeTraceJob, judgeTraceEvents } from './p1-godot.mjs';
 import { scanHygiene } from './hygiene.mjs';
-import { missingRequiredScenarios, readTraces, sampleEvery, tracePolicy } from './p1-trace.mjs';
+import { duplicateScenarioNames, missingRequiredScenarios, readTraces, sampleEvery, tracePolicy } from './p1-trace.mjs';
 import { EvalError } from './util.mjs';
 
 function publicStill(still) {
@@ -93,6 +93,20 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
   const stillsDir = path.join(WORK_DIR, runId, 'stills');
   const policy = tracePolicy(bundle.task);
   const traces = readTraces(path.join(staged.dest, 'demo_outputs'), policy);
+  const duplicates = duplicateScenarioNames(traces);
+  if (duplicates.length) {
+    const notes = [`duplicate scenario ${[...new Set(duplicates)].join(', ')}`];
+    return writeDoc(outPath, {
+      ...base,
+      G: false,
+      primary: 'TRACE_INVALID',
+      g0_ok: 0,
+      notes,
+      traces,
+      scenarios: traces.map((t) => t.trace?.scenario).filter(Boolean),
+      attempt: { id: taskId, engine, primary: 'TRACE_INVALID', g0_ok: 0, notes },
+    });
+  }
   const jobRun = runGodotJob({
     projectDir: staged.dest,
     job: makeTraceJob({

@@ -11,6 +11,7 @@ import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
 import { oracleGodot } from './paths.mjs';
+import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
 
@@ -34,6 +35,7 @@ export function defaultPrepare({ engine, taskId, runId, instruction }) {
   fs.rmSync(workspace, { recursive: true, force: true });
   fs.mkdirSync(workspace, { recursive: true });
   fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
+  mountAssetLibrary(workspace, taskId);
   return {
     workspace,
     replayRunId: `${runId}-gd`,
@@ -162,6 +164,9 @@ function readReplay(outPath, expect) {
 }
 
 export function acceptLooksText(text, { frames, rubric }) {
+  if (!frames || Object.keys(frames).length === 0) {
+    return { looks_status: 'EVIDENCE_INCOMPLETE', looks_source: 'subagent', byScenario: {} };
+  }
   const raw = String(text ?? '').trim();
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
@@ -266,7 +271,12 @@ function planPair(built, rubric, sampleFps) {
     if (ogKeys !== gdKeys) return { pair: 'INCOMPARABLE_VISUAL', run: [], plans };
     return { pair: 'BOTH_G', run: ['onegame', 'godot'], plans };
   }
-  return { pair: 'G_ASYMMETRIC', run: [og.G ? 'onegame' : 'godot'], plans };
+  const live = og.G ? 'onegame' : 'godot';
+  const liveReplay = og.G ? og : gd;
+  if (plans[live].overflow || !stillsComplete(liveReplay.stills)) {
+    return { pair: 'INCOMPARABLE_VISUAL', run: [], plans };
+  }
+  return { pair: 'G_ASYMMETRIC', run: [live], plans };
 }
 
 export function defaultPrepareOracle({ engine, taskId, runId, instruction }) {
