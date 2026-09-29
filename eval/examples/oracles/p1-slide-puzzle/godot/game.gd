@@ -156,7 +156,7 @@ func _click(p: Vector2) -> void:
 	var idx := r * 3 + c
 	var z := board.find(0)
 	var same_row := int(idx / 3) == int(z / 3)
-	var adj := (same_row and abs(idx - z) == 1) or abs(idx - z) == 3
+	var adj: bool = (same_row and abs(idx - z) == 1) or abs(idx - z) == 3
 	if not adj:
 		return
 	var key := ""
