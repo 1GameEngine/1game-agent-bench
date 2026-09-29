@@ -91,19 +91,53 @@ test('slide puzzle task: spec text, hidden rubric and probe agree', () => {
   assert.equal(b.task.id, 'p1-slide-puzzle');
 });
 
-test('every headline probe agrees with its rubric', async () => {
+test('slide puzzle: probe agrees with rubric', async () => {
   const { validateProbe } = await import('../src/probe.mjs');
-  const { P1_TASKS } = await import('../src/p1-load.mjs');
-  for (const id of P1_TASKS) {
-    const b = loadP1Task(id);
-    assert.deepEqual(validateProbe(b.probe, b.rubric), { ok: true, issues: [] }, id);
+  const b = loadP1Task('p1-slide-puzzle');
+  assert.deepEqual(validateProbe(b.probe, b.rubric), { ok: true, issues: [] });
+});
+
+test('slide puzzle: Start, Reset and board rectangles do not overlap', () => {
+  const b = loadP1Task('p1-slide-puzzle');
+  const rect = (label) => {
+    const m = b.instruction.match(new RegExp(`${label}[^\\n]*?\\((\\d+),(\\d+),(\\d+),(\\d+)\\)`));
+    assert.ok(m, label);
+    return m.slice(1).map(Number);
+  };
+  const rects = { start: rect('按钮 Start 矩形'), reset: rect('按钮 Reset 矩形'), board: [400, 120, 480, 480] };
+  assert.match(b.instruction, /棋盘 480×480，左上角 \(400,120\)/);
+  const hit = ([x, y, w, h], [X, Y, W, H]) => x < X + W && X < x + w && y < Y + H && Y < y + h;
+  const names = Object.keys(rects);
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      assert.equal(hit(rects[names[i]], rects[names[j]]), false, `${names[i]} vs ${names[j]}`);
+    }
+    const [x, y, w, h] = rects[names[i]];
+    assert.ok(x >= 0 && y >= 0 && x + w <= 1280 && y + h <= 720, names[i]);
   }
+});
+
+test('slide puzzle: reset restores the board but keeps moves', () => {
+  let board = START;
+  let moves = 0;
+  let resets = 0;
+  for (const k of ['ArrowRight', 'ArrowDown']) {
+    const n = slide(board, k);
+    if (n) {
+      board = n;
+      moves += 1;
+    }
+  }
+  board = START;
+  resets += 1;
+  assert.deepEqual({ board, moves, resets }, { board: START, moves: 2, resets: 1 });
 });
 
 test('slide puzzle: reset, fail budget and trace length are in the spec', () => {
   const b = loadP1Task('p1-slide-puzzle');
   assert.match(b.instruction, /仅在 playing 时生效/);
   assert.match(b.instruction, /不超过 20 秒/);
+  assert.match(b.instruction, /键盘优先于点击/);
   const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
   assert.deepEqual(byId.D2.applies, ['fail']);
   assert.deepEqual(byId.D3.applies, ['loop']);

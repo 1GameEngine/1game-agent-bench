@@ -4,8 +4,8 @@
 
 ## 开局
 
-- 按钮 Start 矩形 (440,300,400,120)。点 Start 或按 Enter 开始，开始后立即进入 playing，没有倒计时。
-- 开始前棋盘已经画出，但点击棋盘、方向键和 Reset 都不生效。点击 Start 的那一次点击不会同时滑动棋盘上的方块。
+- 按钮 Start 矩形 (440,620,400,70)。点 Start 或按 Enter 开始，开始后立即进入 playing，没有倒计时。
+- 开始前棋盘已经画出，但点击棋盘、方向键和 Reset 都不生效。Start、Reset 与棋盘三块矩形互不重叠。
 
 ## 棋盘
 
@@ -37,7 +37,7 @@
 - 画面须持续显示 moves / 14 与 resets。
 - 当棋盘等于目标布局，通关，画面 Puzzle clear。该判定先于步数判定。
 - moves 达到 14 且棋盘不是目标布局，失败，画面 Puzzle fail。
-- 同一帧内同时有多个输入时，只处理事件顺序里的第一个。
+- 同一帧内只处理一个输入：键盘优先于点击；多个按键按 Enter、R、ArrowLeft、ArrowRight、ArrowUp、ArrowDown 的顺序取第一个。
 - 通关或失败后，方向键、点击、Reset（含 R 键）都不再生效，画面停在结束状态。
 
 ## 素材
@@ -53,4 +53,4 @@
 - 画面逻辑尺寸 1280×720，恰好一个场景。
 - 禁止随机。禁止用物理引擎决定对错。
 - 不要实现评测探测接口。不要读取评测仓、量表或官方操作表。
-- 提交物须含可重放 traces（放在 demo_outputs，每条标明 intro / loop / fail / clear 之一）。每条 trace 重放时长不超过 20 秒；loop 那条须包含至少一次 Reset。
+- 提交物须含可重放 traces（放在 demo_outputs，每条标明 intro / loop / fail / clear 之一）。每条 trace 重放时长不超过 20 秒；loop 那条须包含至少一次 Reset，且 Reset 前后各停留至少 1 秒。
