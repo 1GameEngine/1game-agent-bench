@@ -97,7 +97,7 @@ func _strike(code: String) -> void:
 	if next_note >= NOTE_COUNT:
 		return
 	var due := STEP_MS * (next_note + 1)
-	var lane := LANES[next_note % 4]
+	var lane: String = str(LANES[next_note % 4])
 	if abs(play_ms - due) <= WINDOW_MS and code == lane:
 		hits += 1
 		next_note += 1

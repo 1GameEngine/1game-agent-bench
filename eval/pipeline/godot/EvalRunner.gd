@@ -285,15 +285,20 @@ func _grab_still() -> Image:
 	for _i in 3:
 		RenderingServer.force_draw(true)
 		await tree.process_frame
-		img = _image_from(_cap)
-		if _still_ok(img):
+		img = _best_still()
+		if img != null:
 			break
-		img = _image_from(get_viewport())
-		if _still_ok(img):
-			break
-		img = null
 	tree.paused = was_paused
 	return img
+
+func _best_still() -> Image:
+	var root_img := _image_from(get_viewport())
+	if _still_ok(root_img):
+		return root_img
+	var cap_img := _image_from(_cap)
+	if _still_ok(cap_img):
+		return cap_img
+	return null
 
 func _image_from(vp: Viewport) -> Image:
 	if vp == null:
@@ -306,19 +311,21 @@ func _image_from(vp: Viewport) -> Image:
 func _still_ok(img: Image) -> bool:
 	if img == null or img.get_width() != STILL_W or img.get_height() != STILL_H:
 		return false
-	img.convert(Image.FORMAT_RGBA8)
-	var lit := 0
+	var copy := img.duplicate()
+	copy.convert(Image.FORMAT_RGBA8)
+	var base: Color = copy.get_pixel(0, 0)
+	var diff := 0
 	var y := 0
 	while y < STILL_H:
 		var x := 0
 		while x < STILL_W:
-			var c := img.get_pixel(x, y)
-			if c.r + c.g + c.b > 0.08:
-				lit += 1
-				if lit >= 8:
+			var c: Color = copy.get_pixel(x, y)
+			if absf(c.r - base.r) + absf(c.g - base.g) + absf(c.b - base.b) > 0.05:
+				diff += 1
+				if diff >= 8:
 					return true
-			x += 80
-		y += 45
+			x += 40
+		y += 40
 	return false
 
 func _emit(obj: Dictionary) -> void:
