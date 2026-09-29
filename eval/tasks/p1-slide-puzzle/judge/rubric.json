@@ -1,0 +1,148 @@
+{
+  "score_formula": "G * (15*M + 35*D + 15*V + 35*A)",
+  "requirements": [
+    {
+      "id": "M1",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "intro"
+      ],
+      "weight": 1,
+      "description": "未开始停在 Start，标题 Slide Puzzle 可读。棋盘已按开局布局摆好，但 moves 为 0，还没有滑动过。",
+      "need": "all"
+    },
+    {
+      "id": "M2",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "循环已经离开标题，进入可以滑动的局面，画面上仍是 3×3 棋盘。",
+      "need": "all"
+    },
+    {
+      "id": "M3",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "循环里方块确实换了位置，空位在移动，moves 在增加。",
+      "need": "all"
+    },
+    {
+      "id": "M4",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "fail"
+      ],
+      "weight": 1,
+      "description": "失败结束画面能读到 Puzzle fail，读不到 Puzzle clear，读得出 moves 已到 14。",
+      "need": "all"
+    },
+    {
+      "id": "M5",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "clear"
+      ],
+      "weight": 1,
+      "description": "通关结束画面能读到 Puzzle clear，棋盘是 1 2 3 / 4 5 6 / 7 8 空 的目标布局，读不到 Puzzle fail。",
+      "need": "all"
+    },
+    {
+      "id": "M6",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": [
+        "clear"
+      ],
+      "weight": 1,
+      "description": "通关过程能看出方块被逐步滑回原位，而不是一步就变成目标布局。",
+      "need": "all"
+    },
+    {
+      "id": "D1",
+      "dim": "D",
+      "scope": "persistent",
+      "applies": [
+        "loop",
+        "clear"
+      ],
+      "weight": 1,
+      "description": "游玩中同时呈现棋盘、moves / 14 和 Reset 入口。",
+      "need": "all"
+    },
+    {
+      "id": "D2",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": [
+        "fail"
+      ],
+      "weight": 1,
+      "description": "失败画面仍显示 3×3 棋盘、moves 14 / 14 与 Reset 入口，步数上限是画面上看得见的约束，而不是只弹出一句失败文案。",
+      "need": "all"
+    },
+    {
+      "id": "D3",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "循环里按过 Reset 后，棋盘回到开局布局 1 5 2 / 4 空 6 / 7 3 8，resets 数字增加，moves 没有被清零。",
+      "need": "all"
+    },
+    {
+      "id": "V1",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": [
+        "intro"
+      ],
+      "weight": 1,
+      "description": "Start 在指定矩形内且不遮住棋盘，3×3 棋盘居中偏上，八块数字方块与一个空位一眼可数。"
+    },
+    {
+      "id": "V2",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "对局中数字方块清晰可读，空位位置一眼可辨，moves / 14 与 resets 文字不与棋盘重叠。"
+    },
+    {
+      "id": "A1",
+      "dim": "A",
+      "scope": "persistent",
+      "applies": [
+        "intro",
+        "loop",
+        "fail",
+        "clear"
+      ],
+      "weight": 1,
+      "description": "整体风格统一，背景、方块、按钮同一套配色，不是灰色默认调试屏。"
+    },
+    {
+      "id": "A2",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": [
+        "loop"
+      ],
+      "weight": 1,
+      "description": "方块是带底色或边框的图形，数字 1–8 用不同的图形或配色区分，空位不画方块，不是纯文字网格。"
+    }
+  ]
+}

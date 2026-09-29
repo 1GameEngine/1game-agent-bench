@@ -86,7 +86,7 @@ test('scoreboard view: one card per game, labeled engine summaries, extra engine
   assert.equal(view.engines.length, 3);
   assert.equal(view.engines[2].id, 'unity');
   assert.equal(view.engines[2].label, 'unity');
-  assert.equal(view.games.length, 2);
+  assert.equal(view.games.length, SUITE_TASKS.length + 1);
   assert.equal(view.games[0].id, P1_TASKS[0]);
   assert.ok(view.games.every((g) => Object.keys(g.scores).join(',') === 'onegame,godot,unity'));
   assert.equal(view.games[0].stills[0].shots.length, 3);

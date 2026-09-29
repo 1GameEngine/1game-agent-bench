@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { loadP1Task } from '../src/p1-load.mjs';
+import { loadP1Task, P1_TASKS } from '../src/p1-load.mjs';
 import { buildBuilderPrompt, filesFromModelText, runModelBuilder } from '../src/model-builder.mjs';
 
 function trace(scenario, events) {
@@ -121,4 +121,15 @@ process.stdout.write(body);
 
 test('builder file JSON rejects path escape', () => {
   assert.throws(() => filesFromModelText(JSON.stringify({ files: { '../x': 'no' } })), /rejected/);
+});
+
+test('every headline task yields a prompt for both engines without hidden material', () => {
+  for (const id of P1_TASKS) {
+    const task = loadP1Task(id);
+    for (const engine of ['onegame', 'godot']) {
+      const prompt = buildBuilderPrompt({ engine, instruction: task.instruction });
+      assert.ok(prompt.includes(task.instruction.trim().split('\n')[0]));
+      assert.doesNotMatch(prompt, /probe\.json|rubric\.json|"id": "M1"/);
+    }
+  }
 });
