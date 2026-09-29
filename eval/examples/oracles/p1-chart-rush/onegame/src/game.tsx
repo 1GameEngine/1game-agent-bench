@@ -63,6 +63,12 @@ function strike(draft: GameState, code: string) {
   else if (draft.nextNote >= NOTE_COUNT) draft.phase = draft.hits >= 12 ? 'clear' : 'fail';
 }
 
+function keyCode(event: { code?: string; detail?: unknown }) {
+  if (typeof event.detail === 'string') return event.detail;
+  const detail = event.detail as { code?: string } | undefined;
+  return detail?.code || event.code || '';
+}
+
 function onKey(code: string) {
   commitChange('key', (draft: GameState) => {
     if (draft.phase === 'ready' && (code === 'Enter' || code === 'Space')) begin(draft);
@@ -101,7 +107,7 @@ function App() {
     store.phase === 'fail' ? 'Chart miss' : store.phase === 'clear' ? `Chart clear   hits ${store.hits}` : store.phase === 'playing' ? `hits ${store.hits}` : '';
 
   return (
-    <scene name="main" width={1280} height={720} backgroundColor="#12081c" onKeyDown={(event) => onKey(event.code)}>
+    <scene name="main" width={1280} height={720} backgroundColor="#12081c" onKeyDown={(event) => onKey(keyCode(event))}>
       <text x={80} y={36} width={1120} height={72} text="Chart Rush" textColor="#f8e7ff" textSize={64} textAlign="center" />
       <node
         x={440}
