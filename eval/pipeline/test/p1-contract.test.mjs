@@ -15,7 +15,7 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
-  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-slide-puzzle']);
+  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-slide-puzzle', 'p1-depot-skirmish']);
   assert.equal(suite.replay.fps, 30);
   assert.equal(suite.replay.traces, 'submitted');
   for (const id of P1_TASKS) {
@@ -105,7 +105,7 @@ test('missing fail scenario zeros that item and lowers a persistent score', () =
   );
   assert.equal(fin.items.M4, 0);
   assert.deepEqual(fin.missing_scenarios, ['fail']);
-  assert.equal(fin.items.A1, 0.5);
+  assert.equal(fin.items.A1, 0.75);
   assert.equal(fin.items.D1, 1);
   assert.ok(fin.M > 0.5);
   const soft = aggregateObserved(
@@ -118,7 +118,7 @@ test('missing fail scenario zeros that item and lowers a persistent score', () =
     chart.rubric,
     chart.task.scenarios.required,
   );
-  assert.equal(soft.items.A1, 1);
+  assert.equal(soft.items.A1, 0.875);
   assert.deepEqual(soft.missing_scenarios, []);
   const zeroed = aggregateObserved(
     {
@@ -130,7 +130,7 @@ test('missing fail scenario zeros that item and lowers a persistent score', () =
     chart.rubric,
     chart.task.scenarios.required,
   );
-  assert.equal(zeroed.items.A1, 0.5);
+  assert.equal(zeroed.items.A1, 0.75);
   assert.equal(auditTrace({ schema: 'eval.trace/1' }).ok, false);
 });
 

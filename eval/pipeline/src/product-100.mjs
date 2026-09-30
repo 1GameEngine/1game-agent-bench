@@ -1,7 +1,7 @@
 export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
 export const P0_TASKS = [];
 
-export const P1_TASKS = ['p1-chart-rush', 'p1-slide-puzzle'];
+export const P1_TASKS = ['p1-chart-rush', 'p1-slide-puzzle', 'p1-depot-skirmish'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 
@@ -165,7 +165,7 @@ export function buildProduct100({ runId, rows }) {
     winner_engine,
     winner_sentence,
     notice:
-      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题 S = G × (15M + 35D + 15V + 35A)。M/D/V/A 都由 looks subagent 看重放静帧打出，条目 0/0.5/1；只属于一个场景的条目取最高，贯穿多段的条目取平均；适用场景有缺席时该条最高 0.5。缺证据的条目为 0，不再按字段名封顶。G 要求能启动且至少一条轨迹重放成功。两边都 G=1 时必须抽帧成对且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
+      `胜负只看可比的 product_100（${SUITE_TASKS.length} 题等权）。每题 S = G × (15M + 35D + 15V + 35A)。M/D/V/A 都由 looks subagent 看重放静帧打出，条目 0/0.5/1；只属于一个场景的条目取最高，贯穿多段的条目取各适用场景的平均，缺席按 0 计入。缺证据的条目为 0，不再按字段名封顶。G 要求能启动且至少一条轨迹重放成功。两边都 G=1 时必须抽帧成对且 looks_source=subagent。禁止 overall / total_score / vlm_*。`,
     engines,
     tasks: [...byEngine.onegame, ...byEngine.godot],
     process_appendix: {

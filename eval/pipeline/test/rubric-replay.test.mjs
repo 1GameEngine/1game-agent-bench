@@ -77,7 +77,7 @@ test('a missed scene zeros that item and does not cap the other mechanics', () =
   assert.equal(fin.items.M4, 0);
   assert.equal(fin.items.V2, 0);
   assert.ok(fin.M > 0.5);
-  assert.equal(fin.items.A1, 0.5);
+  assert.equal(fin.items.A1, 0.75);
   assert.equal(fin.items.D1, 1);
 });
 
