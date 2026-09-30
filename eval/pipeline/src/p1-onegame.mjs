@@ -14,6 +14,29 @@ function gp(cwd, argv) {
   return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
 }
 
+export function checkOnegameBoot(gameDir) {
+  const created = createRecord(gameDir);
+  const text = `${created.stdout ?? ''}\n${created.stderr ?? ''}`.trim();
+  if (created.status !== 0) {
+    const primary = /bindStore/i.test(text) ? 'BIND_FAIL' : 'BUILD_FAIL';
+    return { ok: false, primary, notes: [text.slice(-1200) || `1gameplay create exited ${created.status}`] };
+  }
+  let queried;
+  try {
+    queried = queryStore(gameDir);
+  } catch (err) {
+    return { ok: false, primary: 'BOOT_FAIL', notes: [String(err.message || err).slice(-1200)] };
+  }
+  if (queried.proc?.status !== 0 && queried.store.empty) {
+    const qtext = `${queried.proc?.stdout ?? ''}\n${queried.proc?.stderr ?? ''}`.trim();
+    return { ok: false, primary: 'BOOT_FAIL', notes: [qtext.slice(-1200) || 'store query failed'] };
+  }
+  if (queried.store.empty) {
+    return { ok: false, primary: 'BIND_FAIL', notes: ['BINDSTORE_EMPTY'] };
+  }
+  return { ok: true, primary: 'BOOT_OK', notes: [] };
+}
+
 function createRecord(cwd) {
   fs.mkdirSync(path.join(cwd, 'out'), { recursive: true });
   const rec = path.join(cwd, RECORD_REL);

@@ -7,6 +7,8 @@ import { WORK_DIR } from './paths.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { loadP1Task } from './p1-load.mjs';
 import { auditModelSubmission, buildBuilderPrompt } from './model-builder.mjs';
+import { checkOnegameBoot } from './p1-onegame.mjs';
+import { checkGodotBoot } from './p1-godot.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
@@ -203,13 +205,35 @@ function rubricItems(rubric) {
   }));
 }
 
-function builderSpec({ engine, taskId, workspace, instruction, task }) {
+export function checkBuilderBoot({ engine, workspace }) {
+  if (engine === 'onegame') return checkOnegameBoot(workspace);
+  if (engine === 'godot') return checkGodotBoot(workspace);
+  return { ok: false, primary: 'BOOT_FAIL', notes: [`unknown engine ${engine}`] };
+}
+
+export function builderBootAttempts() {
+  const n = Number(process.env.EVAL_BUILDER_BOOT_ATTEMPTS || 3);
+  return Number.isInteger(n) && n >= 1 ? n : 3;
+}
+
+function builderSpec({ engine, taskId, workspace, instruction, task, repair }) {
+  let prompt = buildBuilderPrompt({ engine, instruction, task });
+  if (repair) {
+    const detail = (repair.notes ?? []).join('\n').slice(-1500);
+    prompt += `
+
+## 构建 / 启动校验失败
+上一份提交没有通过出码校验（${repair.primary}）。按下面的错误修改当前工作区，不要读评测仓，不要重写无关文件。
+${detail}
+`;
+  }
   return {
     role: 'builder',
     engine,
     taskId,
     workspace,
-    prompt: buildBuilderPrompt({ engine, instruction, task }),
+    prompt,
+    attempt: repair?.attempt ?? 1,
   };
 }
 
@@ -304,6 +328,39 @@ export function defaultPrepareOracle({ engine, taskId, runId, instruction }) {
   };
 }
 
+async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts }) {
+  let repair = null;
+  let boot = { ok: false, primary: 'BOOT_FAIL', notes: ['boot check did not run'] };
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await runRole(
+      runSubagent,
+      builderSpec({
+        engine,
+        taskId,
+        workspace: prep.workspace,
+        instruction,
+        task,
+        repair,
+      }),
+    );
+    try {
+      auditModelSubmission(prep.workspace, engine, taskId);
+    } catch (err) {
+      repair = { attempt: attempt + 1, primary: err.primary || 'BUILDER_INVALID', notes: [String(err.message || err)] };
+      if (attempt === attempts) throw err;
+      continue;
+    }
+    boot = await bootCheck({ engine, workspace: prep.workspace, taskId });
+    if (boot?.ok) return { boot, attempts: attempt };
+    repair = {
+      attempt: attempt + 1,
+      primary: boot?.primary || 'BOOT_FAIL',
+      notes: boot?.notes?.length ? boot.notes : ['boot check failed'],
+    };
+  }
+  return { boot, attempts };
+}
+
 export async function orchestrateEngines({
   taskId,
   runId,
@@ -311,6 +368,7 @@ export async function orchestrateEngines({
   runSubagent = defaultRunSubagent,
   loadTask = loadP1Task,
   skipBuilder = false,
+  bootCheck = checkBuilderBoot,
 } = {}) {
   const bundle = loadTask(taskId);
   const prepped = {};
@@ -323,14 +381,22 @@ export async function orchestrateEngines({
       const prep = prepped[engine];
       const token = randomBytes(16).toString('hex');
       if (!skipBuilder) {
-        await runRole(
+        const builtOnce = await buildUntilBoot({
+          engine,
+          taskId,
+          prep,
+          instruction: bundle.instruction,
+          task: bundle.task,
           runSubagent,
-          builderSpec({ engine, taskId, workspace: prep.workspace, instruction: bundle.instruction, task: bundle.task }),
-        );
-        auditModelSubmission(prep.workspace, engine, taskId);
+          bootCheck,
+          attempts: builderBootAttempts(),
+        });
         const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
         fs.mkdirSync(path.dirname(stampPath), { recursive: true });
-        fs.writeFileSync(stampPath, `${JSON.stringify({ source: 'subagent', taskId, engine }, null, 2)}\n`);
+        fs.writeFileSync(
+          stampPath,
+          `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null }, null, 2)}\n`,
+        );
       }
       await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
       built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };

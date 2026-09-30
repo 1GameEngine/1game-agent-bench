@@ -101,6 +101,49 @@ function leakScan(dest) {
   return hits;
 }
 
+function godotLog(proc) {
+  return `${proc?.stdout ?? ''}\n${proc?.stderr ?? ''}`.trim();
+}
+
+function godotFailureKind(text) {
+  if (/Parse Error|Failed to load script|Compile Error|SCRIPT ERROR/i.test(text)) return 'BUILD_FAIL';
+  return 'BOOT_FAIL';
+}
+
+export function checkGodotBoot(workspace) {
+  const bin = godotBin();
+  if (!fs.existsSync(bin)) {
+    return { ok: false, primary: 'BOOT_FAIL', notes: [`godot binary missing: ${bin}`] };
+  }
+  if (!fs.existsSync(path.join(workspace, 'project.godot'))) {
+    return { ok: false, primary: 'BUILD_FAIL', notes: ['project.godot missing'] };
+  }
+  const env = { ...process.env, SDL_AUDIODRIVER: 'dummy', ALSA_CARD: 'dummy' };
+  const imported = execFileOk(bin, ['--headless', '--path', workspace, '--import'], {
+    cwd: workspace,
+    timeoutMs: 120_000,
+    env,
+  });
+  const importText = godotLog(imported);
+  if (imported.status !== 0 || /Parse Error|Failed to load script|Compile Error|SCRIPT ERROR/i.test(importText)) {
+    return { ok: false, primary: 'BUILD_FAIL', notes: [(importText || `godot import exited ${imported.status}`).slice(-1200)] };
+  }
+  const boot = execFileOk(bin, ['--headless', '--path', workspace, '--quit-after', '1'], {
+    cwd: workspace,
+    timeoutMs: 60_000,
+    env,
+  });
+  const bootText = godotLog(boot);
+  if (boot.status !== 0 || /Parse Error|Failed to load script|Compile Error|SCRIPT ERROR/i.test(bootText)) {
+    return {
+      ok: false,
+      primary: godotFailureKind(bootText),
+      notes: [(bootText || `godot quit-after exited ${boot.status}`).slice(-1200)],
+    };
+  }
+  return { ok: true, primary: 'BOOT_OK', notes: [] };
+}
+
 export function runGodotJob({ projectDir, job, outPath, timeoutMs }) {
   const bin = godotBin();
   if (!fs.existsSync(bin)) {
