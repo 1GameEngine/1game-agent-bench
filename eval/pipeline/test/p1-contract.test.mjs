@@ -120,5 +120,46 @@ test('missing fail scenario zeros that item and lowers a persistent score', () =
   );
   assert.equal(soft.items.A1, 1);
   assert.deepEqual(soft.missing_scenarios, []);
+  const zeroed = aggregateObserved(
+    {
+      intro: { A1: 1 },
+      loop: { A1: 1 },
+      fail: { A1: 1 },
+      clear: { A1: 0 },
+    },
+    chart.rubric,
+    chart.task.scenarios.required,
+  );
+  assert.equal(zeroed.items.A1, 0.5);
   assert.equal(auditTrace({ schema: 'eval.trace/1' }).ok, false);
+});
+
+function demoTrace(events) {
+  return {
+    schema: 'eval.trace/1',
+    scenario: 'loop',
+    duration_frames: 10,
+    viewport: { w: 1280, h: 720 },
+    events,
+  };
+}
+
+test('trace keys are rising edges and may stay down at the end', () => {
+  const repeat = auditTrace(demoTrace([
+    { frame: 0, type: 'keydown', code: 'ArrowLeft' },
+    { frame: 2, type: 'keydown', code: 'ArrowLeft' },
+  ]));
+  assert.equal(repeat.ok, false);
+  assert.ok(repeat.issues.includes('key repeat without keyup ArrowLeft'));
+  const released = auditTrace(demoTrace([
+    { frame: 0, type: 'keydown', code: 'ArrowLeft' },
+    { frame: 1, type: 'keyup', code: 'ArrowLeft' },
+    { frame: 2, type: 'keydown', code: 'ArrowLeft' },
+  ]));
+  assert.equal(released.ok, true);
+  const bareUp = auditTrace(demoTrace([{ frame: 0, type: 'keyup', code: 'ArrowLeft' }]));
+  assert.equal(bareUp.ok, false);
+  assert.ok(bareUp.issues.includes('keyup without keydown ArrowLeft'));
+  const held = auditTrace(demoTrace([{ frame: 0, type: 'keydown', code: 'Enter' }]));
+  assert.equal(held.ok, true);
 });

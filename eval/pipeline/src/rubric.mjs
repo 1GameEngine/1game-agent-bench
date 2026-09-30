@@ -99,7 +99,8 @@ export function validateRubric(rubric, opts = {}) {
 function persistentItemScore(values, missingScene) {
   if (!values.length) return 0;
   const avg = mean(values);
-  if (!missingScene) return quantizeLooks(avg);
+  const sawZero = values.some((v) => v === 0);
+  if (!missingScene && !sawZero) return quantizeLooks(avg);
   if (avg < 0.25) return 0;
   return 0.5;
 }

@@ -61,6 +61,7 @@ export function auditTrace(trace, policy = null) {
   if (trace?.viewport?.w !== 1280 || trace?.viewport?.h !== 720) issues.push('viewport');
   if (!Array.isArray(trace?.events)) issues.push('events');
   let last = -1;
+  const held = new Set();
   for (const ev of trace?.events ?? []) {
     if (!Number.isInteger(ev.frame) || ev.frame < 0) issues.push(`frame ${ev.frame}`);
     else if (Number.isInteger(trace?.duration_frames) && ev.frame >= trace.duration_frames) issues.push(`frame ${ev.frame} past duration`);
@@ -69,6 +70,11 @@ export function auditTrace(trace, policy = null) {
     if (!events.includes(ev.type)) issues.push(`type ${ev.type}`);
     if (ev.type === 'keydown' || ev.type === 'keyup') {
       if (!keys.includes(ev.code)) issues.push(`key ${ev.code}`);
+      else if (ev.type === 'keydown') {
+        if (held.has(ev.code)) issues.push(`key repeat without keyup ${ev.code}`);
+        else held.add(ev.code);
+      } else if (!held.has(ev.code)) issues.push(`keyup without keydown ${ev.code}`);
+      else held.delete(ev.code);
     }
     if (ev.type === 'click') {
       const x = Number(ev.x);
