@@ -1,0 +1,149 @@
+{
+  "score_formula": "G * (15*M + 35*D + 15*V + 35*A)",
+  "requirements": [
+    {
+      "id": "M1",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "description": "0 分：没有标题 Depot Skirmish，或单位不在开局位置，或回合不是 0 / 8。1 分：未开始停在 Start，标题 Depot Skirmish 可读，三名己方在棋盘偏下横排，三名敌方在偏上横排，货仓格在敌方上方，回合是 0 / 8。"
+    },
+    {
+      "id": "M2",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：仍停在未开始，或棋盘不见了。1 分：循环已经离开未开始，回合至少是 1 / 8，8×6 棋盘还在。"
+    },
+    {
+      "id": "M3",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：点了远处空格就跳过去，或近战一直停在开局格。1 分：近战先留在开局格，之后才走到正上方相邻的一格，没有一下跳到棋盘角落。"
+    },
+    {
+      "id": "M4",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：brute 一直还在，看不出攻击生效。1 分：循环后段 brute 从棋盘消失或生命变成 0，近战还在场上。"
+    },
+    {
+      "id": "M5",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "description": "0 分：读不到 Depot lost，或同时能读到 Depot clear，或回合不是 8 / 8。1 分：失败画面能读到 Depot lost，读不到 Depot clear，回合是 8 / 8。"
+    },
+    {
+      "id": "M6",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "description": "0 分：读不到 Depot clear，或还能看到敌人，或开局棋盘直接变成通关。1 分：通关画面能读到 Depot clear，读不到 Depot lost，三名敌人都不在棋盘上，并且能看出他们是先后消失的。"
+    },
+    {
+      "id": "D1",
+      "dim": "D",
+      "scope": "persistent",
+      "applies": ["loop", "fail", "clear"],
+      "weight": 1,
+      "description": "0 分：游玩中缺了 melee、ranged、support 三个名字中的任何一个。1 分：这些轨迹都能同时读到 melee、ranged、support。"
+    },
+    {
+      "id": "D2",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：回合数停在 1 / 8。1 分：循环里回合数从 1 / 8 变成更大的数。"
+    },
+    {
+      "id": "D3",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：敌方回合看不出来，敌人原地不动且己方生命不变。1 分：能看出敌方行动过，有敌人换了格子，或己方生命数字下降。"
+    },
+    {
+      "id": "D4",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：循环结束时三名敌人都还在。1 分：循环结束时至少一名敌人已经不在棋盘上，战斗有减员。"
+    },
+    {
+      "id": "D5",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "description": "0 分：失败时只剩一句文案，或货仓格上站了己方，或敌人已经清光。1 分：失败画面仍能看到存活的敌人、空着的货仓格、turn 8 / 8 和 Depot lost。"
+    },
+    {
+      "id": "V1",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "description": "0 分：Start 或 End 挡住棋盘，或数不出 8×6 的格子，或货仓格和地板看不出差别。1 分：Start 和 End 都在画面下方且不遮住棋盘，格子能数清，货仓格和地板是两张不同的图。"
+    },
+    {
+      "id": "V2",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：turn N / 8 读不清，或六个名字的生命数读不清，或字压住角色无法辨认。1 分：对局里 turn N / 8 和六个名字的生命都能读，文字不把角色挡住。"
+    },
+    {
+      "id": "V3",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "description": "0 分：失败时棋盘、8 / 8、Depot lost 三者缺一，或字叠在一起读不成句。1 分：失败画面上棋盘、8 / 8 和 Depot lost 同时可读。"
+    },
+    {
+      "id": "A1",
+      "dim": "A",
+      "scope": "persistent",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "weight": 1,
+      "description": "0 分：灰色默认调试屏，或失败段读不到 Depot lost，或通关段读不到 Depot clear。1 分：地牢像素风格统一，且失败段、通关段各自带上对应文案。"
+    },
+    {
+      "id": "A2",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：角色是纯色方块，或己方三人长得一样，或敌方三人长得一样。1 分：己方三人是三张不同的角色图，敌方三人是另外三张不同的角色图。"
+    },
+    {
+      "id": "A3",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：地板和货仓格是同一张图，或只是色块。1 分：地板和货仓格是两张不同的地砖图，能看出货仓入口。"
+    },
+    {
+      "id": "A4",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "description": "0 分：标题、按钮、角色各是一套未完成的线框或默认灰块。1 分：标题、按钮和角色属于同一套像素画面。"
+    }
+  ]
+}
