@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { orchestrateEngines, orchestrateOracle, assertReplayDocument, defaultRunSubagent, acceptLooksText, defaultPrepare } from '../src/subagent-stage.mjs';
 import { runStageReplay } from '../src/stage-replay.mjs';
 import { traceEventArgv } from '../src/p1-onegame.mjs';
+import { checkGodotBoot } from '../src/p1-godot.mjs';
 import { auditModelSubmission } from '../src/model-builder.mjs';
 import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/product-run.mjs';
 
@@ -43,6 +44,8 @@ function writeSubmission(workspace, engine) {
     fs.writeFileSync(out, typeof body === 'string' ? body : JSON.stringify(body));
   }
 }
+
+const bootOk = async () => ({ ok: true, primary: 'BOOT_OK', notes: [] });
 
 function replayDoc(spec, stills) {
   const traces = ['intro', 'loop', 'fail', 'clear'].map((scenario) => ({
@@ -83,6 +86,7 @@ test('unset subagent command stops before any game file is written', async () =>
           workspaces.push(workspace);
           return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
         },
+        bootCheck: bootOk,
         runSubagent: defaultRunSubagent,
       }),
     (err) => err.primary === 'SUBAGENT_REQUIRED',
@@ -107,6 +111,7 @@ test('builder and looks specs hide the probe, and a forged replay is rejected', 
           const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `forge-${engine}-`));
           return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
         },
+        bootCheck: bootOk,
         runSubagent: async (spec) => {
           calls.push(`${spec.engine}:${spec.role}`);
           const blob = JSON.stringify(spec);
@@ -142,6 +147,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `score-${engine}-`));
       return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
     },
+    bootCheck: bootOk,
     runSubagent: async (spec) => {
       calls.push(`${spec.engine}:${spec.role}`);
       if (spec.role === 'builder') {
@@ -330,6 +336,7 @@ test('one live engine with too many stills does not get a looks score', async ()
       const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `cap-${engine}-`));
       return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
     },
+    bootCheck: bootOk,
     runSubagent: async (spec) => {
       calls.push(`${spec.engine}:${spec.role}`);
       if (spec.role === 'builder') {
@@ -373,4 +380,108 @@ test('product and compare entrypoints do not replay or build inline', () => {
   assert.doesNotMatch(compare, /runModelBuilder|runOnegameTraces|runGodotJob/);
   const stage = fs.readFileSync(new URL('../src/subagent-stage.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(stage, /taskScore100|applyPlayableGates|scoreProbe/);
+});
+
+function finishReplayAndLooks(spec) {
+  if (spec.role === 'replay') {
+    const stills = ['intro', 'loop', 'fail', 'clear'].map((scenario) => {
+      const id = `${scenario}_f0`;
+      const file = path.join(spec.workspace, `${id}.png`);
+      fs.writeFileSync(file, 'png');
+      return { id, ok: true, path: file, dump_ok: 1 };
+    });
+    fs.writeFileSync(spec.replay.out, `${JSON.stringify(replayDoc(spec, stills))}\n`);
+    return '';
+  }
+  const scenarios = {};
+  for (const [sc, frames] of Object.entries(spec.stills)) {
+    scenarios[sc] = {};
+    for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
+      scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+    }
+  }
+  return JSON.stringify({ scenarios });
+}
+
+test('build failure is returned to the builder before replay', async () => {
+  const prompts = [];
+  const boots = { onegame: 0, godot: 0 };
+  await orchestrateEngines({
+    taskId: 'p1-chart-rush',
+    runId: 'boot-repair',
+    prepare: ({ engine }) => {
+      const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `boot-${engine}-`));
+      return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+    },
+    bootCheck: async ({ engine }) => {
+      boots[engine] += 1;
+      if (engine === 'onegame' && boots[engine] === 1) {
+        return { ok: false, primary: 'BUILD_FAIL', notes: ['StableUidCollisionError: duplicate stableUid "7/18"'] };
+      }
+      return { ok: true, primary: 'BOOT_OK', notes: [] };
+    },
+    runSubagent: async (spec) => {
+      if (spec.role === 'builder') {
+        prompts.push(spec);
+        writeSubmission(spec.workspace, spec.engine);
+        return '';
+      }
+      return finishReplayAndLooks(spec);
+    },
+  });
+  const og = prompts.filter((spec) => spec.engine === 'onegame');
+  assert.equal(og.length, 2);
+  assert.equal(og[0].attempt, 1);
+  assert.equal(og[1].attempt, 2);
+  assert.match(og[1].prompt, /StableUidCollisionError/);
+  assert.match(og[1].prompt, /构建 \/ 启动校验失败/);
+  assert.doesNotMatch(og[1].prompt, /rubric\.json/);
+  assert.equal(prompts.filter((spec) => spec.engine === 'godot').length, 1);
+});
+
+test('submission audit failure is returned to the builder', async () => {
+  const prompts = [];
+  await orchestrateEngines({
+    taskId: 'p1-chart-rush',
+    runId: 'audit-repair',
+    prepare: ({ engine }) => {
+      const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `audit-${engine}-`));
+      return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+    },
+    bootCheck: bootOk,
+    runSubagent: async (spec) => {
+      if (spec.role === 'builder') {
+        if (spec.engine === 'onegame') prompts.push(spec.prompt);
+        if (!(spec.engine === 'onegame' && spec.attempt === 1)) writeSubmission(spec.workspace, spec.engine);
+        return '';
+      }
+      return finishReplayAndLooks(spec);
+    },
+  });
+  assert.equal(prompts.length, 2);
+  assert.match(prompts[1], /model submission missing/);
+});
+
+test('godot boot check accepts a one-frame scene and rejects a parse error', () => {
+  function project(dir, script) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'project.godot'),
+      'config_version=5\n\n[application]\nconfig/name="boot"\nrun/main_scene="res://game.tscn"\nconfig/features=PackedStringArray("4.4")\n',
+    );
+    fs.writeFileSync(
+      path.join(dir, 'game.tscn'),
+      '[gd_scene load_steps=2 format=3]\n\n[ext_resource type="Script" path="res://game.gd" id="1_game"]\n\n[node name="Game" type="Node2D"]\nscript = ExtResource("1_game")\n',
+    );
+    fs.writeFileSync(path.join(dir, 'game.gd'), script);
+  }
+  const okDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-boot-ok-'));
+  project(okDir, 'extends Node2D\nfunc _process(_delta):\n\tpass\n');
+  const ok = checkGodotBoot(okDir);
+  assert.equal(ok.ok, true, ok.notes?.join('\n'));
+  const badDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gd-boot-bad-'));
+  project(badDir, 'extends Node2D\nfunc _ready():\n\tvar x =\n');
+  const bad = checkGodotBoot(badDir);
+  assert.equal(bad.ok, false);
+  assert.equal(bad.primary, 'BUILD_FAIL');
 });
