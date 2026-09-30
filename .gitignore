@@ -10,3 +10,5 @@ eval/tools/godot/*.x86_64
 eval/tools/godot/*.zip
 # Godot sidecars from staging a symlink into a project; not Kenney originals
 eval/assets/library/**/*.import
+# Generated per run; not a committed reference
+eval/examples/oracles/p1-slide-puzzle/

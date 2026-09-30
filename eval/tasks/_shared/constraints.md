@@ -5,4 +5,4 @@
 - 不要实现评测探测接口。不要读取评测仓或官方操作表。
 - 提交物放在 `demo_outputs`。每条轨迹的 scenario 必须是题面列出的演示名之一，30fps，视口 1280×720。
 - 单条演示不超过题面给出的时长上限。
-- 事件只有 keydown、keyup、click。
+- 事件只有 keydown、keyup、click。同一按键在 keyup 之前不能再 keydown；keyup 必须对应已经按下的键。轨迹结束时键仍可处于按下。

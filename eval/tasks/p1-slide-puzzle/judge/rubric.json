@@ -5,144 +5,105 @@
       "id": "M1",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "intro"
-      ],
+      "applies": ["intro"],
       "weight": 1,
-      "description": "未开始停在 Start，标题 Slide Puzzle 可读。棋盘已按开局布局摆好，但 moves 为 0，还没有滑动过。",
-      "need": "all"
+      "description": "0 分：没有标题 Slide Puzzle，或棋盘不是开局布局，或已经滑过。1 分：未开始停在 Start，标题 Slide Puzzle 可读，棋盘已按开局布局摆好，moves 为 0。"
     },
     {
       "id": "M2",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "loop"
-      ],
+      "applies": ["loop"],
       "weight": 1,
-      "description": "循环已经离开标题，进入可以滑动的局面，画面上仍是 3×3 棋盘。",
-      "need": "all"
+      "description": "0 分：仍停在标题，或看不出 3×3 棋盘。1 分：循环已经离开标题，进入可以滑动的局面，画面上仍是 3×3 棋盘。"
     },
     {
       "id": "M3",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "loop"
-      ],
+      "applies": ["loop"],
       "weight": 1,
-      "description": "循环里方块确实换了位置，空位在移动，moves 在增加。",
-      "need": "all"
+      "description": "0 分：方块位置不变，或 moves 没有增加。1 分：循环里方块换了位置，空位在移动，moves 在增加。"
     },
     {
       "id": "M4",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "fail"
-      ],
+      "applies": ["fail"],
       "weight": 1,
-      "description": "失败结束画面能读到 Puzzle fail，读不到 Puzzle clear，读得出 moves 已到 14。",
-      "need": "all"
+      "description": "0 分：读不到 Puzzle fail，或同时能读到 Puzzle clear，或看不出 moves 已到 14。1 分：失败结束画面能读到 Puzzle fail，读不到 Puzzle clear，读得出 moves 已到 14。"
     },
     {
       "id": "M5",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "clear"
-      ],
+      "applies": ["clear"],
       "weight": 1,
-      "description": "通关结束画面能读到 Puzzle clear，棋盘是 1 2 3 / 4 5 6 / 7 8 空 的目标布局，读不到 Puzzle fail。",
-      "need": "all"
+      "description": "0 分：读不到 Puzzle clear，或棋盘不是目标布局，或能读到 Puzzle fail。1 分：通关结束画面能读到 Puzzle clear，棋盘是 1 2 3 / 4 5 6 / 7 8 空 的目标布局，读不到 Puzzle fail。"
     },
     {
       "id": "M6",
       "dim": "M",
       "scope": "scenario",
-      "applies": [
-        "clear"
-      ],
+      "applies": ["clear"],
       "weight": 1,
-      "description": "通关过程能看出方块被逐步滑回原位，而不是一步就变成目标布局。",
-      "need": "all"
+      "description": "0 分：一步就变成目标布局，看不出逐步滑动。1 分：通关过程能看出方块被逐步滑回原位，而不是一步就变成目标布局。"
     },
     {
       "id": "D1",
       "dim": "D",
       "scope": "persistent",
-      "applies": [
-        "loop",
-        "clear"
-      ],
+      "applies": ["loop", "clear"],
       "weight": 1,
-      "description": "游玩中同时呈现棋盘、moves / 14 和 Reset 入口。",
-      "need": "all"
+      "description": "0 分：游玩中缺少棋盘、moves / 14 或 Reset 之一。1 分：游玩中同时呈现棋盘、moves / 14 和 Reset 入口。"
     },
     {
       "id": "D2",
       "dim": "D",
       "scope": "scenario",
-      "applies": [
-        "fail"
-      ],
+      "applies": ["fail"],
       "weight": 1,
-      "description": "失败画面仍显示 3×3 棋盘、moves 14 / 14 与 Reset 入口，步数上限是画面上看得见的约束，而不是只弹出一句失败文案。",
-      "need": "all"
+      "description": "0 分：失败时只剩一句文案，棋盘、14 / 14 或 Reset 看不到。1 分：失败画面仍显示 3×3 棋盘、moves 14 / 14 与 Reset 入口，步数上限是画面上看得见的约束。"
     },
     {
       "id": "D3",
       "dim": "D",
       "scope": "scenario",
-      "applies": [
-        "loop"
-      ],
+      "applies": ["loop"],
       "weight": 1,
-      "description": "循环里按过 Reset 后，棋盘回到开局布局 1 5 2 / 4 空 6 / 7 3 8，resets 数字增加，moves 没有被清零。",
-      "need": "all"
+      "description": "0 分：Reset 后棋盘没有回到开局，或 resets 没有增加，或 moves 被清零。1 分：循环里按过 Reset 后，棋盘回到开局布局 1 5 2 / 4 空 6 / 7 3 8，resets 数字增加，moves 没有被清零。"
     },
     {
       "id": "V1",
       "dim": "V",
       "scope": "scenario",
-      "applies": [
-        "intro"
-      ],
+      "applies": ["intro"],
       "weight": 1,
-      "description": "Start 在指定矩形内且不遮住棋盘，3×3 棋盘居中偏上，八块数字方块与一个空位一眼可数。"
+      "description": "0 分：Start 找不到或挡住棋盘，或数不出八块数字方块和一个空位。1 分：Start 在指定矩形内且不遮住棋盘，3×3 棋盘居中偏上，八块数字方块与一个空位一眼可数。"
     },
     {
       "id": "V2",
       "dim": "V",
       "scope": "scenario",
-      "applies": [
-        "loop"
-      ],
+      "applies": ["loop"],
       "weight": 1,
-      "description": "对局中数字方块清晰可读，空位位置一眼可辨，moves / 14 与 resets 文字不与棋盘重叠。"
+      "description": "0 分：数字读不清，或空位无法辨认，或文字压住棋盘。1 分：对局中数字方块清晰可读，空位位置一眼可辨，moves / 14 与 resets 文字不与棋盘重叠。"
     },
     {
       "id": "A1",
       "dim": "A",
       "scope": "persistent",
-      "applies": [
-        "intro",
-        "loop",
-        "fail",
-        "clear"
-      ],
+      "applies": ["intro", "loop", "fail", "clear"],
       "weight": 1,
-      "description": "整体风格统一，背景、方块、按钮同一套配色，不是灰色默认调试屏。"
+      "description": "0 分：灰色默认调试屏，或失败段读不到 Puzzle fail，或通关段读不到 Puzzle clear。1 分：整体风格统一，背景、方块、按钮同一套配色，且失败段、通关段各自带上对应文案。"
     },
     {
       "id": "A2",
       "dim": "A",
       "scope": "scenario",
-      "applies": [
-        "loop"
-      ],
+      "applies": ["loop"],
       "weight": 1,
-      "description": "方块是带底色或边框的图形，数字 1–8 用不同的图形或配色区分，空位不画方块，不是纯文字网格。"
+      "description": "0 分：纯文字网格，或空位也画了方块。1 分：方块是带底色或边框的图形，数字 1–8 用不同的图形或配色区分，空位不画方块，不是纯文字网格。"
     }
   ]
 }
