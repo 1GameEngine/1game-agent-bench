@@ -15,7 +15,7 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
-  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-slide-puzzle', 'p1-depot-skirmish']);
+  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-depot-skirmish']);
   assert.equal(suite.replay.fps, 30);
   assert.equal(suite.replay.traces, 'submitted');
   for (const id of P1_TASKS) {
