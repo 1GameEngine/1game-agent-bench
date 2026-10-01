@@ -14,6 +14,16 @@ import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/pr
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
+function looksItem(item, frames, score) {
+  const evidence = [frames[0].id];
+  if (item.dim === 'V' || item.agg === 'mean') {
+    const scored = {};
+    for (const frame of frames) scored[frame.id] = score;
+    return { score, frames: scored, evidence };
+  }
+  return { score, evidence };
+}
+
 function trace(scenario, events) {
   return {
     schema: 'eval.trace/1',
@@ -174,7 +184,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       for (const [sc, frames] of Object.entries(spec.stills)) {
         scenarios[sc] = {};
         for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-          scenarios[sc][item.id] = { score: item.id === 'V2' || item.id === 'A2' ? 0 : 1, evidence: [frames[0].id] };
+          scenarios[sc][item.id] = looksItem(item, frames, item.id === 'V2' || item.id === 'A2' ? 0 : 1);
         }
       }
       return JSON.stringify({ scenarios });
@@ -249,7 +259,7 @@ test('oracle gate scores reference projects through the looks subagent', async (
         for (const [sc, frames] of Object.entries(spec.stills)) {
           scenarios[sc] = {};
           for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-            scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+            scenarios[sc][item.id] = looksItem(item, frames, 1);
           }
         }
         return JSON.stringify({ scenarios });
@@ -397,7 +407,7 @@ function finishReplayAndLooks(spec) {
   for (const [sc, frames] of Object.entries(spec.stills)) {
     scenarios[sc] = {};
     for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-      scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+      scenarios[sc][item.id] = looksItem(item, frames, 1);
     }
   }
   return JSON.stringify({ scenarios });

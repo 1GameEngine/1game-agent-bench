@@ -58,6 +58,10 @@ test('chart rush looks isolate falling notes from receptor caps', () => {
   assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
   assert.match(byId.V2.description, /下落/);
   assert.match(byId.A2.description, /底栏/);
+  assert.match(byId.D2.description, /方向键图/);
+  assert.match(byId.M1.description, /纯色块/);
+  assert.equal(byId.V2.agg, 'mean');
+  assert.equal(byId.D1.agg, 'max');
   assert.match(b.instruction, /只有底栏没有下落物/);
 });
 

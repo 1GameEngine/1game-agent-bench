@@ -14,7 +14,7 @@ import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
 import { oracleGodot } from './paths.mjs';
 import { mountAssetLibrary } from './assets.mjs';
-import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, stripInstruction } from './looks-rubric.mjs';
+import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
@@ -109,8 +109,9 @@ export function buildLooksStagePrompt({ instruction, frames, items }) {
     .join('\n');
   let text = `你只看这一边提交的静帧。M、D、V、A 都按画面打，不要读内部状态字段，不要看另一边，不要改计分公式。
 每条分数必须引用该场景列表里的静帧 id。score 只能是 0、0.5 或 1。
-只输出一个 JSON 对象，形状：
-{"scenarios":{"intro":{"V1":{"score":0,"evidence":["某静帧id"]}}}}
+V 条目按该场景全部静帧平均：frames 必须给列表里的每一个静帧 id 打 0、0.5 或 1，空画面按 0。score 等于这些帧的平均再收成 0、0.5 或 1。漏帧或 score 对不上平均，整条作废。
+M、D、A 不填 frames。只输出一个 JSON 对象，形状：
+{"scenarios":{"intro":{"V1":{"score":0.5,"frames":{"某静帧id":0,"另一静帧id":1},"evidence":["某静帧id"]},"M1":{"score":0,"evidence":["某静帧id"]}}}}
 
 题面：
 ${stripInstruction(instruction)}
@@ -202,6 +203,7 @@ function rubricItems(rubric) {
     description: req.description,
     applies: req.applies,
     scope: req.scope === 'persistent' ? 'persistent' : 'scenario',
+    agg: reqAgg(req),
   }));
 }
 

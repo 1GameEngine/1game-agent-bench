@@ -5,97 +5,137 @@
       "id": "M1",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["intro"],
+      "applies": [
+        "intro"
+      ],
       "weight": 1,
-      "description": "0 分：已经出现倒计时或落下的音符。1 分：只有 Chart Rush 和 Start，没有倒计时，也没有落下的音符。"
+      "description": "0 分：已经出现倒计时或落下的音符。1 分：只有 Chart Rush 和 Start，没有倒计时，也没有落下的音符。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "M2",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["loop"],
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "description": "0 分：仍停在标题。1 分：已经离开标题，处于打谱。"
+      "description": "0 分：仍停在标题。1 分：已经离开标题，处于打谱。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "M3",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["loop"],
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "description": "0 分：看不出命中变化。1 分：能看出命中在增加，或音符被打掉。"
+      "description": "0 分：看不出命中变化。1 分：能看出命中在增加，或音符被打掉。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "M4",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["fail"],
+      "applies": [
+        "fail"
+      ],
       "weight": 1,
-      "description": "0 分：读不到 Chart miss，或同时读到 Chart clear。1 分：能读到 Chart miss，读不到 Chart clear。"
+      "description": "0 分：读不到 Chart miss，或同时读到 Chart clear。1 分：能读到 Chart miss，读不到 Chart clear。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "M5",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["clear"],
+      "applies": [
+        "clear"
+      ],
       "weight": 1,
-      "description": "0 分：读不到 Chart clear，或能读到 Chart miss，或看不出命中至少 12。1 分：能读到 Chart clear，能读出命中至少 12，读不到 Chart miss。"
+      "description": "0 分：读不到 Chart clear，或能读到 Chart miss，或看不出命中至少 12。1 分：能读到 Chart clear，能读出命中至少 12，读不到 Chart miss。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "M6",
       "dim": "M",
       "scope": "scenario",
-      "applies": ["clear"],
+      "applies": [
+        "clear"
+      ],
       "weight": 1,
-      "description": "0 分：谱面停在第一下。1 分：谱面在推进，音符被打掉或判定在往前。"
+      "description": "0 分：谱面停在第一下。1 分：谱面在推进，音符被打掉或判定在往前。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "D1",
       "dim": "D",
       "scope": "persistent",
-      "applies": ["loop", "clear"],
+      "applies": [
+        "loop",
+        "clear"
+      ],
       "weight": 1,
-      "description": "0 分：看不到先倒计时再打谱。1 分：这些轨迹都能看出先倒计时，再进入打谱。"
+      "description": "0 分：看不到先有可读的倒计时，或倒计时还在时已经有下落音符，或只有底栏没有下落物。1 分：这些轨迹都能看出先有可读倒计时，倒计时结束后才出现下落音符。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "D2",
       "dim": "D",
       "scope": "scenario",
-      "applies": ["clear"],
+      "applies": [
+        "clear"
+      ],
       "weight": 1,
-      "description": "0 分：进度或命中没有往前。1 分：进度和命中都在往前。"
+      "description": "0 分：clear 里看不出至少两种方向的下落音符被打掉或离开判定区。1 分：至少两种方向的下落音符被打掉或离开判定区，并且用的是四张不同的方向键图。只涨一个数字、或四种音符是同一张图换色，最高 0.5。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
     },
     {
       "id": "V1",
       "dim": "V",
       "scope": "scenario",
-      "applies": ["intro"],
+      "applies": [
+        "intro"
+      ],
       "weight": 1,
-      "description": "0 分：四轨或 Start 找不到。1 分：四轨在画面下方排开，Start 在上半部。只看到底栏不能给循环加分。"
+      "description": "0 分：四轨或 Start 找不到。1 分：四轨在画面下方排开，Start 在上半部。只看到底栏不能给循环加分。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。",
+      "agg": "mean"
     },
     {
       "id": "V2",
       "dim": "V",
       "scope": "scenario",
-      "applies": ["loop"],
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "description": "0 分：空场、只有底栏、或音符钉死在判定线上。1 分：轨道中段有正在下落的音符。"
+      "description": "0 分：空场、只有底栏、或音符钉死在判定线上。1 分：轨道中段有正在下落的音符。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。",
+      "agg": "mean"
     },
     {
       "id": "A1",
       "dim": "A",
       "scope": "persistent",
-      "applies": ["intro", "loop", "fail", "clear"],
+      "applies": [
+        "intro",
+        "loop",
+        "fail",
+        "clear"
+      ],
       "weight": 1,
-      "description": "0 分：灰默认屏，或失败段读不到 Chart miss，或通关段读不到 Chart clear。1 分：夜店或谱面风格统一，且失败段、通关段各自带上对应文案。"
+      "description": "0 分：灰默认屏，或失败段读不到 Chart miss，或通关段读不到 Chart clear。1 分：夜店或谱面风格统一，且失败段、通关段各自带上对应文案。",
+      "agg": "max"
     },
     {
       "id": "A2",
       "dim": "A",
       "scope": "scenario",
-      "applies": ["loop"],
+      "applies": [
+        "loop"
+      ],
       "weight": 1,
-      "description": "0 分：下落物不是四张不同方向键图，或只出现在底栏。1 分：下落物是四张不同方向键图，出现在判定区上方。底栏键帽不算落下的音符。"
+      "description": "0 分：下落物不是四张不同方向键图，或只出现在底栏。1 分：下落物是四张不同方向键图，出现在判定区上方。底栏键帽不算落下的音符。",
+      "agg": "max"
     }
   ]
 }
