@@ -125,10 +125,10 @@ function App() {
         textAlign="center"
       />
       {SPRITES.map((src, i) => (
-        <image x={176 + i * 220} y={520} width={88} height={88} source={src} />
+        <image key={`lane-${i}`} x={176 + i * 220} y={520} width={88} height={88} source={src} />
       ))}
       {notes.map((note) => (
-        <image x={176 + (note.i % 4) * 220} y={note.y - 24} width={88} height={88} source={note.src} />
+        <image key={`note-${note.i}`} x={176 + (note.i % 4) * 220} y={note.y - 24} width={88} height={88} source={note.src} />
       ))}
       <text x={80} y={620} width={1120} height={64} text={banner} textColor="#f8e7ff" textSize={36} textAlign="center" />
     </scene>
