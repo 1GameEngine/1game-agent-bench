@@ -36,6 +36,7 @@ export const TASK_SPRITES = {
   'p1-depot-skirmish': [
     { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'floor.png', cell: [10, 4] },
     { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'depot.png', cell: [23, 0] },
+    { src: '2D/roguelike-caves-dungeons/Spritesheet/roguelikeDungeon_transparent.png', name: 'rock.png', cell: [5, 0] },
     { src: '2D/roguelike-characters/Spritesheet/roguelikeChar_transparent.png', name: 'melee.png', cell: [0, 11] },
     { src: '2D/roguelike-characters/Spritesheet/roguelikeChar_transparent.png', name: 'ranged.png', cell: [0, 9] },
     { src: '2D/roguelike-characters/Spritesheet/roguelikeChar_transparent.png', name: 'support.png', cell: [1, 11] },

@@ -136,6 +136,60 @@
       "weight": 1,
       "description": "0 分：下落物不是四张不同方向键图，或只出现在底栏。1 分：下落物是四张不同方向键图，出现在判定区上方。底栏键帽不算落下的音符。",
       "agg": "max"
+    },
+    {
+      "id": "M7",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：只有一个命中数字，看不出判定分档。1 分：循环里能读到 Perfect、Great、Good、Miss 中至少两种，而且它们的颜色或形状彼此不同。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
+    },
+    {
+      "id": "M8",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：没有连击，或倍率一直是 x1。1 分：连击数字会增加，并且能看到 x2、x4 或 x8。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
+    },
+    {
+      "id": "D3",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：音符都是一样的短头，或血条从头到尾不变。1 分：能看到一条带着拖尾的长音符，并且漏掉之后血条变短。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
+    },
+    {
+      "id": "D4",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "description": "0 分：通关只剩一句 Chart clear。1 分：结算同时能读到 score、combo、带百分号的 accuracy、一个 grade 字母，以及 Perfect、Great、Good、Miss。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。",
+      "agg": "max"
+    },
+    {
+      "id": "V3",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：判定反馈糊成一种颜色，或只在文字里出现。1 分：Perfect 和 Great 用不同的颜色或形状分开。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。",
+      "agg": "mean"
+    },
+    {
+      "id": "A3",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "description": "0 分：下落音符钉在同一高度，连击的大小也没有变化。1 分：同一条下落音符在不同静帧里高度不同，或连击字号有变化。",
+      "agg": "max"
     }
   ]
 }
