@@ -42,11 +42,13 @@ func _ready() -> void:
 	bg.size = Vector2(1280, 720)
 	bg.color = Color("12081c")
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.z_index = -1
 	add_child(bg)
 	_label("Chart Rush", 80, 36, 1120, 72, 64)
 	_label("Start", 440, 150, 400, 100, 56)
 	_label("", 80, 270, 1120, 64, 42)
-	_label("", 40, 620, 1200, 64, 28)
+	_label("", 40, 600, 1200, 40, 24)
+	_label("", 40, 648, 1200, 36, 24)
 	for i in 4:
 		var tex := _texture(ARROWS[i])
 		var cap := Sprite2D.new()
@@ -58,7 +60,7 @@ func _ready() -> void:
 		add_child(cap)
 	set_process(true)
 
-func _label(text: String, x: float, y: float, w: float, h: float, size: int) -> void:
+func _label(text: String, x: float, y: float, w: float, h: float, size: int) -> Label:
 	var lab := Label.new()
 	lab.position = Vector2(x, y)
 	lab.size = Vector2(w, h)
@@ -69,6 +71,7 @@ func _label(text: String, x: float, y: float, w: float, h: float, size: int) -> 
 	lab.add_theme_color_override("font_color", Color("f8e7ff"))
 	add_child(lab)
 	_labels.append(lab)
+	return lab
 
 func _texture(name: String) -> Texture2D:
 	var path := "res://assets/%s" % name
@@ -233,7 +236,7 @@ func _letter(pct: int) -> String:
 	return "F"
 
 func _refresh() -> void:
-	if _labels.size() < 4:
+	if _labels.size() < 5:
 		return
 	if phase == "countdown":
 		_labels[2].text = str(int(ceil(float(countdown_ms) / 1000.0)))
@@ -247,9 +250,13 @@ func _refresh() -> void:
 	if phase == "fail" or phase == "clear":
 		var pct := _accuracy()
 		var head := "Chart miss" if phase == "fail" else "Chart clear"
-		banner = "%s  hits %d  score %d  combo %d  accuracy %d%%  grade %s  Perfect %d  Great %d  Good %d  Miss %d" % [head, hits, score, max_combo, pct, _letter(pct), perfects, greats, goods, misses]
+		banner = "%s  hits %d  score %d  combo %d  accuracy %d%%  grade %s" % [head, hits, score, max_combo, pct, _letter(pct)]
+		_labels[4].text = "Perfect %d  Great %d  Good %d  Miss %d" % [perfects, greats, goods, misses]
 	elif phase == "playing":
 		banner = "hits %d  combo %d  x%d" % [hits, combo, _multiplier(combo)]
+		_labels[4].text = ""
+	else:
+		_labels[4].text = ""
 	_labels[3].text = banner
 
 func _draw() -> void:
@@ -257,8 +264,8 @@ func _draw() -> void:
 		draw_rect(Rect2(160 + i * 220, 340, 120, 260), Color(1, 1, 1, 0.06), false, 2.0)
 	if phase == "ready":
 		return
-	draw_rect(Rect2(440, 248, 400, 16), Color("2a2030"))
-	draw_rect(Rect2(440, 248, 400.0 * float(hp) / 100.0, 16), Color("ff5a6a"))
+	draw_rect(Rect2(440, 118, 400, 22), Color("2a2030"))
+	draw_rect(Rect2(440, 118, 400.0 * float(hp) / 100.0, 22), Color("ff5a6a"))
 	var marks := ["Perfect", "Great", "Good", "Miss"]
 	for i in marks.size():
 		var col := Color(GRADE_COLOR[marks[i]])

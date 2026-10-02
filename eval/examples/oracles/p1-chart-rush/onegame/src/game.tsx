@@ -182,12 +182,15 @@ function App() {
     }
   }
   const pct = accuracy(store);
-  const banner =
-    store.phase === 'fail' || store.phase === 'clear'
-      ? `${store.phase === 'fail' ? 'Chart miss' : 'Chart clear'}  hits ${store.hits}  score ${store.score}  combo ${store.maxCombo}  accuracy ${pct}%  grade ${letter(pct)}  Perfect ${store.perfects}  Great ${store.greats}  Good ${store.goods}  Miss ${store.misses}`
-      : store.phase === 'playing'
-        ? `hits ${store.hits}  combo ${store.combo}  x${multiplier(store.combo)}`
-        : '';
+  const ended = store.phase === 'fail' || store.phase === 'clear';
+  const banner = ended
+    ? `${store.phase === 'fail' ? 'Chart miss' : 'Chart clear'}  hits ${store.hits}  score ${store.score}  combo ${store.maxCombo}  accuracy ${pct}%  grade ${letter(pct)}`
+    : store.phase === 'playing'
+      ? `hits ${store.hits}  combo ${store.combo}  x${multiplier(store.combo)}`
+      : '';
+  const detail = ended
+    ? `Perfect ${store.perfects}  Great ${store.greats}  Good ${store.goods}  Miss ${store.misses}`
+    : '';
   const mid =
     store.phase === 'countdown'
       ? String(Math.ceil(store.countdownMs / 1000))
@@ -244,7 +247,8 @@ function App() {
       {notes.map((note) => (
         <image key={`note-${note.i}`} x={176 + (note.i % 4) * 220} y={note.y - 24} width={88} height={88} source={note.src} />
       ))}
-      <text x={40} y={620} width={1200} height={64} text={banner} textColor="#f8e7ff" textSize={28} textAlign="center" />
+      <text x={40} y={600} width={1200} height={40} text={banner} textColor="#f8e7ff" textSize={28} textAlign="center" />
+      <text x={40} y={648} width={1200} height={36} text={detail} textColor="#f8e7ff" textSize={28} textAlign="center" />
     </scene>
   );
 }
