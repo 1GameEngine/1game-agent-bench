@@ -139,6 +139,15 @@ func _apply_trace_event(ev: Dictionary) -> String:
 	if kind == "click":
 		_click(float(ev.get("x", 0)), float(ev.get("y", 0)))
 		return ""
+	if kind == "mouse_down":
+		_pointer(float(ev.get("x", 0)), float(ev.get("y", 0)), true)
+		return ""
+	if kind == "mouse_up":
+		_pointer(float(ev.get("x", 0)), float(ev.get("y", 0)), false)
+		return ""
+	if kind == "mouse_move":
+		_motion(float(ev.get("x", 0)), float(ev.get("y", 0)))
+		return ""
 	if kind == "keydown":
 		_key(String(ev.get("code", "")), true)
 		return ""
@@ -195,6 +204,20 @@ func _process_tree(node: Node, dt: float) -> void:
 		node._process(dt)
 	for child in node.get_children():
 		_process_tree(child, dt)
+
+func _pointer(x: float, y: float, pressed: bool) -> void:
+	var e := InputEventMouseButton.new()
+	e.button_index = MOUSE_BUTTON_LEFT
+	e.pressed = pressed
+	e.position = Vector2(x, y)
+	e.global_position = Vector2(x, y)
+	_deliver(e)
+
+func _motion(x: float, y: float) -> void:
+	var e := InputEventMouseMotion.new()
+	e.position = Vector2(x, y)
+	e.global_position = Vector2(x, y)
+	_deliver(e)
 
 func _click(x: float, y: float) -> void:
 	var press := InputEventMouseButton.new()

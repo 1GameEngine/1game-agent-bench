@@ -21,8 +21,15 @@ const QUEUE = [
   { kind: 'scout', hp: 2, atk: 1, fly: false, wave: 3 },
 ];
 
+function openingQueue() {
+  return QUEUE.map((e, i) => ({ ...e, id: i }));
+}
 function fresh() {
   return {
+    screen: 'select',
+    map: '',
+    open: 1,
+    slot: 1,
     phase: 'ready',
     wave: 0,
     dp: 6,
@@ -33,8 +40,10 @@ function fresh() {
     shots: [],
     towers: [],
     enemies: [],
-    queue: QUEUE.map((e, i) => ({ ...e, id: i })),
-    seq: 0,
+    queue: openingQueue(),
+    drag: null,
+    anim: 0,
+    clock: 0,
   };
 }
 function dmgOf(t) {
@@ -48,11 +57,15 @@ function reject(s) {
 function clearNote(s) {
   if (s.note === 'Rejected') s.note = '';
 }
-function deploy(c, r) {
-  return (r === 1 || r === 3) && c >= 1 && c <= 6;
+function pathRow(s) {
+  return s.map === 'bend' ? 4 : 2;
 }
-function onPath(c, r) {
-  return r === 2 && c >= 0 && c < COLS;
+function deploy(s, c, r) {
+  const rows = s.map === 'bend' ? [2] : [1, 3];
+  return rows.includes(r) && c >= 1 && c <= 6;
+}
+function onPath(s, c, r) {
+  return r === pathRow(s) && c >= 0 && c < COLS;
 }
 function towerAt(s, c, r) {
   return s.towers.find((t) => t.c === c && t.r === r) ?? null;
@@ -68,18 +81,39 @@ function waveOf(s) {
   if (!ws.length) return s.phase === 'ready' ? 0 : 3;
   return Math.min(...ws);
 }
+function resetBattle(s) {
+  s.phase = 'ready';
+  s.wave = 0;
+  s.dp = 6;
+  s.base = 4;
+  s.selected = '';
+  s.picked = null;
+  s.note = '';
+  s.shots = [];
+  s.towers = [];
+  s.enemies = [];
+  s.queue = openingQueue();
+  s.drag = null;
+  s.clock = 0;
+}
+function enter(s, map) {
+  if (s.screen !== 'select') return;
+  if (map === 'bend' && s.open < 2) {
+    reject(s);
+    return;
+  }
+  if (map !== 'straight' && map !== 'bend') return;
+  s.screen = 'battle';
+  s.map = map;
+  resetBattle(s);
+}
 function begin(s) {
-  if (s.phase !== 'ready') return;
+  if (s.screen !== 'battle' || s.phase !== 'ready') return;
   s.phase = 'playing';
   s.wave = 1;
 }
-function select(s, kind) {
-  if (s.phase !== 'playing' || !COSTS[kind]) return;
-  s.selected = kind;
-  s.picked = null;
-}
 function place(s, c, r) {
-  if (s.phase !== 'playing') return;
+  if (s.screen !== 'battle' || s.phase !== 'playing') return;
   if (!s.selected) {
     const tower = towerAt(s, c, r);
     if (tower) s.picked = { c, r };
@@ -92,13 +126,13 @@ function place(s, c, r) {
     return;
   }
   if (kind === 'wall') {
-    if (!onPath(c, r) || towerAt(s, c, r) || groundOn(s, c, r)) {
+    if (!onPath(s, c, r) || towerAt(s, c, r) || groundOn(s, c, r)) {
       reject(s);
       return;
     }
     s.towers.push({ kind, c, r, hp: 6, upgraded: false });
   } else {
-    if (!deploy(c, r) || towerAt(s, c, r)) {
+    if (!deploy(s, c, r) || towerAt(s, c, r)) {
       reject(s);
       return;
     }
@@ -110,7 +144,7 @@ function place(s, c, r) {
   clearNote(s);
 }
 function upgrade(s) {
-  if (s.phase !== 'playing') return;
+  if (s.screen !== 'battle' || s.phase !== 'playing') return;
   const t = s.picked ? towerAt(s, s.picked.c, s.picked.r) : null;
   if (!t || t.upgraded || s.dp < 2) {
     reject(s);
@@ -123,15 +157,52 @@ function upgrade(s) {
   clearNote(s);
 }
 function retry(s) {
+  if (s.screen !== 'battle') return;
   if (s.phase !== 'clear' && s.phase !== 'fail') return;
-  const next = fresh();
-  for (const key of Object.keys(s)) delete s[key];
-  Object.assign(s, next);
+  const map = s.map;
+  const open = s.open;
+  const slot = s.slot;
+  resetBattle(s);
+  s.screen = 'battle';
+  s.map = map;
+  s.open = open;
+  s.slot = slot;
+}
+function maps(s) {
+  if (s.screen !== 'battle') return;
+  if (s.phase !== 'clear' && s.phase !== 'fail') return;
+  s.screen = 'select';
+  s.drag = null;
+  s.note = '';
+  s.shots = [];
+  s.phase = 'ready';
+}
+function saveGame(s) {
+  if (s.screen !== 'select') return;
+  s.slot = s.open;
+  s.note = 'Saved';
+}
+function wipe(s) {
+  if (s.screen !== 'select') return;
+  s.open = 1;
+  s.note = 'Wiped';
+}
+function loadGame(s) {
+  if (s.screen !== 'select') return;
+  s.open = s.slot;
+  s.note = 'Loaded';
+}
+function tick(s) {
+  s.anim += 1;
+  if (s.screen !== 'battle' || s.phase !== 'playing') return;
+  s.clock += 1;
+  if (s.clock % 30 === 0) s.dp = Math.min(10, s.dp + 1);
 }
 function step(s) {
-  if (s.phase !== 'playing') return;
+  if (s.screen !== 'battle' || s.phase !== 'playing') return;
   clearNote(s);
   s.shots = [];
+  const row = pathRow(s);
   const towers = s.towers.filter((t) => t.kind !== 'wall').sort((a, b) => a.c - b.c || a.r - b.r);
   for (const t of towers) {
     const hits = s.enemies
@@ -168,66 +239,140 @@ function step(s) {
   s.towers = s.towers.filter((t) => t.kind !== 'wall' || t.hp > 0);
   if (s.queue.length) {
     const next = s.queue[0];
-    const blocked = next.fly ? enemyOn(s, 0, 2, true) : (groundOn(s, 0, 2) || towerAt(s, 0, 2));
+    const blocked = next.fly ? enemyOn(s, 0, row, true) : groundOn(s, 0, row) || towerAt(s, 0, row);
     if (!blocked) {
       s.queue.shift();
-      s.enemies.push({ ...next, c: 0, r: 2 });
+      s.enemies.push({ ...next, c: 0, r: row });
     }
   }
   if (s.base <= 0) s.phase = 'fail';
-  else if (!s.queue.length && !s.enemies.length) s.phase = 'clear';
-  else s.dp = Math.min(10, s.dp + 1);
+  else if (!s.queue.length && !s.enemies.length) {
+    s.phase = 'clear';
+    if (s.map === 'straight') s.open = Math.max(s.open, 2);
+  }
   s.wave = waveOf(s);
 }
 function cellCenter(c, r) {
   return [OX + c * CELL + CELL / 2, OY + r * CELL + CELL / 2];
 }
+function inside(x, y, rect) {
+  return x >= rect[0] && x < rect[0] + rect[2] && y >= rect[1] && y < rect[1] + rect[3];
+}
+function cardAt(x, y) {
+  if (inside(x, y, [48, 160, 260, 56])) return 'gun';
+  if (inside(x, y, [48, 228, 260, 56])) return 'wall';
+  if (inside(x, y, [48, 296, 260, 56])) return 'cannon';
+  return '';
+}
 function click(s, x, y) {
-  if (x >= 900 && x < 1180 && y >= 620 && y < 690) {
+  if (s.screen === 'battle' && inside(x, y, [900, 620, 280, 70])) {
     retry(s);
     return;
   }
+  if (s.screen === 'battle' && inside(x, y, [1020, 400, 220, 56])) {
+    maps(s);
+    return;
+  }
   if (s.phase === 'clear' || s.phase === 'fail') return;
-  if (x >= 1020 && x < 1240 && y >= 160 && y < 216) {
+  if (s.screen === 'battle' && inside(x, y, [1020, 160, 220, 56])) {
     upgrade(s);
     return;
   }
-  if (x >= 440 && x < 840 && y >= 620 && y < 690) {
+  if (s.screen === 'battle' && inside(x, y, [440, 620, 400, 70])) {
     begin(s);
     return;
   }
-  if (x >= 60 && x < 300 && y >= 620 && y < 690) {
+  if (s.screen === 'battle' && inside(x, y, [60, 620, 240, 70])) {
     step(s);
     return;
   }
-  if (x >= 48 && x < 308 && y >= 160 && y < 216) {
-    select(s, 'gun');
+  if (s.screen === 'select' && inside(x, y, [80, 160, 520, 180])) {
+    enter(s, 'straight');
     return;
   }
-  if (x >= 48 && x < 308 && y >= 228 && y < 284) {
-    select(s, 'wall');
+  if (s.screen === 'select' && inside(x, y, [640, 160, 520, 180])) {
+    enter(s, 'bend');
     return;
   }
-  if (x >= 48 && x < 308 && y >= 296 && y < 352) {
-    select(s, 'cannon');
+  if (s.screen === 'select' && inside(x, y, [80, 420, 200, 56])) {
+    saveGame(s);
     return;
   }
+  if (s.screen === 'select' && inside(x, y, [300, 420, 200, 56])) {
+    wipe(s);
+    return;
+  }
+  if (s.screen === 'select' && inside(x, y, [520, 420, 200, 56])) {
+    loadGame(s);
+    return;
+  }
+  if (s.screen === 'battle' && s.phase === 'playing' && x >= OX && y >= OY) {
+    const c = Math.floor((x - OX) / CELL);
+    const r = Math.floor((y - OY) / CELL);
+    if (c >= 0 && r >= 0 && c < COLS && r < ROWS) {
+      const tower = towerAt(s, c, r);
+      if (tower) s.picked = { c, r };
+    }
+  }
+}
+function pointerDown(s, x, y) {
+  if (s.screen === 'battle' && s.phase === 'playing') {
+    const kind = cardAt(x, y);
+    if (kind) {
+      s.drag = { kind, x, y };
+      s.picked = null;
+    }
+  }
+}
+function pointerMove(s, x, y) {
+  if (!s.drag) return;
+  s.drag = { kind: s.drag.kind, x, y };
+}
+function pointerUp(s, x, y) {
+  if (!s.drag) {
+    click(s, x, y);
+    return;
+  }
+  const kind = s.drag.kind;
+  s.drag = null;
+  if (s.phase !== 'playing') return;
+  s.selected = kind;
   if (x >= OX && y >= OY) {
     const c = Math.floor((x - OX) / CELL);
     const r = Math.floor((y - OY) / CELL);
-    if (c >= 0 && r >= 0 && c < COLS && r < ROWS) place(s, c, r);
+    if (c >= 0 && r >= 0 && c < COLS && r < ROWS) {
+      place(s, c, r);
+      s.selected = '';
+      return;
+    }
   }
+  reject(s);
+  s.selected = '';
 }
 function press(s, code) {
-  if (s.phase === 'clear' || s.phase === 'fail') return;
+  if (s.screen !== 'battle' || s.phase === 'clear' || s.phase === 'fail') return;
   if (code === 'Enter') begin(s);
   else if (code === 'Space') step(s);
 }
+function apply(s, ev) {
+  if (ev.type === 'click') click(s, ev.x, ev.y);
+  else if (ev.type === 'mouse_down') pointerDown(s, ev.x, ev.y);
+  else if (ev.type === 'mouse_move') pointerMove(s, ev.x, ev.y);
+  else if (ev.type === 'mouse_up') pointerUp(s, ev.x, ev.y);
+  else if (ev.type === 'keydown') press(s, ev.code);
+}
 function replay(events) {
   const s = fresh();
+  const last = events.reduce((max, ev) => Math.max(max, ev.frame), 0);
+  const by = new Map();
   for (const ev of events) {
-    if (ev.type === 'click') click(s, ev.x, ev.y);
-    if (ev.type === 'keydown') press(s, ev.code);
+    const list = by.get(ev.frame) ?? [];
+    list.push(ev);
+    by.set(ev.frame, list);
+  }
+  for (let frame = 0; frame <= last; frame += 1) {
+    for (const ev of by.get(frame) ?? []) apply(s, ev);
+    tick(s);
   }
   return s;
 }
@@ -251,27 +396,48 @@ const START = [640, 655];
 const STEP = [180, 655];
 const UPGRADE = [1130, 188];
 const RETRY = [1040, 655];
+const STRAIGHT = [340, 250];
+const BEND = [900, 250];
+const SAVE = [180, 448];
+const WIPE = [400, 448];
+const LOAD = [620, 448];
+const MAPS = [1130, 428];
 
-test('tower defense: illegal tile and a poor card do not spend dp', () => {
+test('tower defense: a click does not place, a drag does', () => {
   const s = fresh();
+  enter(s, 'straight');
   begin(s);
-  select(s, 'gun');
-  place(s, 3, 2);
+  click(s, WALL[0], WALL[1]);
+  click(s, cellCenter(2, 2)[0], cellCenter(2, 2)[1]);
   assert.equal(s.towers.length, 0);
   assert.equal(s.dp, 6);
+  pointerDown(s, WALL[0], WALL[1]);
+  pointerMove(s, cellCenter(1, 1)[0], cellCenter(1, 1)[1]);
+  pointerUp(s, cellCenter(1, 1)[0], cellCenter(1, 1)[1]);
+  assert.equal(s.towers.length, 0);
   assert.equal(s.note, 'Rejected');
-  select(s, 'cannon');
-  place(s, 4, 1);
-  assert.equal(s.dp, 2);
-  select(s, 'cannon');
-  place(s, 5, 1);
+  assert.equal(s.dp, 6);
+  pointerDown(s, WALL[0], WALL[1]);
+  pointerUp(s, cellCenter(2, 2)[0], cellCenter(2, 2)[1]);
   assert.equal(s.towers.length, 1);
-  assert.equal(s.dp, 2);
-  assert.equal(s.phase, 'playing');
+  assert.equal(s.dp, 4);
+});
+
+test('tower defense: dp rises once a second without Step', () => {
+  const s = fresh();
+  enter(s, 'straight');
+  begin(s);
+  for (let i = 0; i < 29; i += 1) tick(s);
+  assert.equal(s.dp, 6);
+  tick(s);
+  assert.equal(s.dp, 7);
+  assert.equal(s.towers.length, 0);
 });
 
 test('tower defense: Space before start does nothing', () => {
   const s = fresh();
+  press(s, 'Space');
+  enter(s, 'straight');
   press(s, 'Space');
   assert.equal(s.phase, 'ready');
   assert.equal(s.dp, 6);
@@ -280,14 +446,13 @@ test('tower defense: Space before start does nothing', () => {
 
 test('tower defense: a wall stops scouts while a flyer passes it', () => {
   const s = fresh();
+  enter(s, 'straight');
   begin(s);
-  select(s, 'wall');
-  place(s, 1, 1);
-  assert.equal(s.towers.length, 0);
+  s.selected = 'wall';
   place(s, 2, 2);
   assert.equal(s.towers[0].kind, 'wall');
   let passed = null;
-  for (let i = 0; i < 12 && s.phase === 'playing'; i++) {
+  for (let i = 0; i < 12 && s.phase === 'playing'; i += 1) {
     step(s);
     const wall = s.towers.find((t) => t.kind === 'wall');
     const flyer = s.enemies.find((e) => e.fly && e.c > 2);
@@ -304,6 +469,7 @@ test('tower defense: a wall stops scouts while a flyer passes it', () => {
 
 test('tower defense: no towers leak the base', () => {
   const s = fresh();
+  enter(s, 'straight');
   begin(s);
   let n = 0;
   while (s.phase === 'playing' && n < 30) {
@@ -316,16 +482,21 @@ test('tower defense: no towers leak the base', () => {
   assert.ok(s.enemies.length >= 1);
 });
 
-test('tower defense: cannon, wall and a late gun clear with base intact', () => {
+test('tower defense: clearing Straight unlocks Bend, and load restores it', () => {
   const s = fresh();
+  enter(s, 'bend');
+  assert.equal(s.screen, 'select');
+  assert.equal(s.note, 'Rejected');
+  enter(s, 'straight');
   begin(s);
-  select(s, 'cannon');
+  s.selected = 'cannon';
   place(s, 4, 1);
-  select(s, 'wall');
+  s.selected = 'wall';
   place(s, 7, 2);
   step(s);
   step(s);
-  select(s, 'gun');
+  while (s.dp < 2) tick(s);
+  s.selected = 'gun';
   place(s, 6, 1);
   let n = 2;
   while (s.phase === 'playing' && n < 24) {
@@ -334,15 +505,22 @@ test('tower defense: cannon, wall and a late gun clear with base intact', () => 
   }
   assert.equal(s.phase, 'clear');
   assert.equal(s.base, 4);
-  assert.equal(s.wave, 3);
-  assert.deepEqual(s.towers.map((t) => t.kind).sort(), ['cannon', 'gun', 'wall']);
+  assert.equal(s.open, 2);
   assert.ok(s.shots.length > 0);
-  assert.ok(n <= 16);
-  retry(s);
+  maps(s);
+  assert.equal(s.screen, 'select');
+  saveGame(s);
+  assert.equal(s.note, 'Saved');
+  wipe(s);
+  assert.equal(s.open, 1);
+  assert.equal(s.note, 'Wiped');
+  loadGame(s);
+  assert.equal(s.open, 2);
+  assert.equal(s.note, 'Loaded');
+  enter(s, 'bend');
+  assert.equal(s.map, 'bend');
+  assert.equal(pathRow(s), 4);
   assert.equal(s.phase, 'ready');
-  assert.equal(s.wave, 0);
-  assert.equal(s.dp, 6);
-  assert.equal(s.base, 4);
   assert.equal(s.towers.length, 0);
 });
 
@@ -351,6 +529,7 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   assert.equal(b.task.sample_fps, 2);
   assert.equal(b.task.max_demo_seconds, 19);
   assert.deepEqual(b.task.input.keys, ['Enter', 'Space']);
+  assert.ok(b.task.input.events.includes('mouse_down'));
   assert.match(b.instruction, /Tower Defense/);
   assert.match(b.instruction, /Tower lost/);
   assert.match(b.instruction, /Tower clear/);
@@ -359,14 +538,24 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   assert.match(b.instruction, /Rejected/);
   assert.match(b.instruction, /Upgrade/);
   assert.match(b.instruction, /Retry/);
+  assert.match(b.instruction, /Straight/);
+  assert.match(b.instruction, /Bend/);
+  assert.match(b.instruction, /Save/);
+  assert.match(b.instruction, /Load/);
+  assert.match(b.instruction, /Wipe/);
+  assert.match(b.instruction, /拖/);
   assert.doesNotMatch(b.instruction, /\(2,2\)|\(4,1\)|\(6,1\)|\(7,2\)/);
   const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
-  assert.match(byId.M3.description, /Rejected/);
+  assert.match(byId.M3.description, /拖/);
   assert.match(byId.M7.description, /Retry/);
+  assert.match(byId.D2.description, /每秒|涨/);
   assert.match(byId.D4.description, /射击线/);
   assert.match(byId.D7.description, /升级/);
+  assert.match(byId.D8.description, /Bend/);
+  assert.match(byId.A5.description, /静帧/);
   assert.equal(byId.V2.agg, 'mean');
   assert.equal(byId.D1.agg, 'max');
+  assert.equal(byId.A5.agg, 'max');
   assert.match(byId.M1.description, /纯色块/);
   assert.match(byId.D1.description, /纯色块/);
   assert.match(byId.V1.description, /静帧平均/);
@@ -375,16 +564,17 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   const stepBtn = b.instruction.match(/Step 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
   const upgrade = b.instruction.match(/Upgrade 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
   const retryBtn = b.instruction.match(/Retry 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
-  assert.ok(start && stepBtn && upgrade && retryBtn);
-  const rects = [start, stepBtn, upgrade, retryBtn].map((m) => m.slice(1).map(Number));
+  const mapsBtn = b.instruction.match(/Maps 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
+  assert.ok(start && stepBtn && upgrade && retryBtn && mapsBtn);
+  const rects = [start, stepBtn, upgrade, retryBtn, mapsBtn].map((m) => m.slice(1).map(Number));
   const board = { x: OX, y: OY, w: COLS * CELL, h: ROWS * CELL };
-  const base = { x: OX + COLS * CELL, y: OY + 2 * CELL, w: CELL, h: CELL };
+  const bases = [2, 4].map((row) => ({ x: OX + COLS * CELL, y: OY + row * CELL, w: CELL, h: CELL }));
   function overlap(a, b) {
     return a[0] < b.x + b.w && a[0] + a[2] > b.x && a[1] < b.y + b.h && a[1] + a[3] > b.y;
   }
   for (const rect of rects) {
     assert.equal(overlap(rect, board), false);
-    assert.equal(overlap(rect, base), false);
+    for (const base of bases) assert.equal(overlap(rect, base), false);
   }
 });
 
@@ -402,11 +592,13 @@ test('tower defense reference traces follow the scripted fights', () => {
       byScenario[doc.scenario] = doc;
     }
     assert.equal(byScenario.intro.events.length, 0);
+    const before = replay(eventsUntil(byScenario.loop.events, UPGRADE).slice(0, -1));
     const upgraded = replay(eventsUntil(byScenario.loop.events, UPGRADE));
     const freshWall = upgraded.towers.find((t) => t.kind === 'wall');
     assert.equal(freshWall.upgraded, true);
     assert.equal(freshWall.hp, 10);
-    assert.equal(upgraded.dp, 2);
+    assert.equal(upgraded.dp, before.dp - 2);
+    assert.ok(replay(byScenario.loop.events.slice(0, 4)).dp > 6);
     const loop = replay(byScenario.loop.events);
     const wall = loop.towers.find((t) => t.kind === 'wall');
     assert.ok(wall && wall.upgraded && wall.hp > 0);
@@ -422,17 +614,27 @@ test('tower defense reference traces follow the scripted fights', () => {
     assert.equal(fail.wave, 0);
     assert.equal(fail.dp, 6);
     assert.equal(fail.base, 4);
-    const clearMid = replay(beforeRetry(byScenario.clear.events));
+    const clearMid = replay(eventsBefore(byScenario.clear.events, MAPS));
     assert.equal(clearMid.phase, 'clear');
     assert.equal(clearMid.base, 4);
+    assert.equal(clearMid.open, 2);
     assert.ok(clearMid.shots.length > 0);
     assert.deepEqual(clearMid.towers.map((t) => t.kind).sort(), ['cannon', 'gun', 'wall']);
+    const loaded = replay(eventsUntil(byScenario.clear.events, LOAD));
+    assert.equal(loaded.note, 'Loaded');
+    assert.equal(loaded.open, 2);
     const clear = replay(byScenario.clear.events);
+    assert.equal(clear.screen, 'battle');
+    assert.equal(clear.map, 'bend');
     assert.equal(clear.phase, 'ready');
-    assert.equal(clear.towers.length, 0);
+    assert.equal(pathRow(clear), 4);
   }
 });
 
+function eventsBefore(events, point) {
+  const index = events.findIndex((ev) => ev.type === 'click' && ev.x === point[0] && ev.y === point[1]);
+  return index < 0 ? events : events.slice(0, index);
+}
 function eventsUntil(events, point) {
   const index = events.findIndex((ev) => ev.type === 'click' && ev.x === point[0] && ev.y === point[1]);
   return index < 0 ? events : events.slice(0, index + 1);
@@ -442,67 +644,116 @@ function beforeRetry(events) {
   return index < 0 ? events : events.slice(0, index);
 }
 
+function createSim() {
+  const s = fresh();
+  let frame = -1;
+  const events = [];
+  function goto(target) {
+    while (frame < target - 1) {
+      frame += 1;
+      tick(s);
+    }
+    frame = target;
+  }
+  function act(at, type, extra) {
+    goto(at);
+    const ev = atFrame(frame, type, extra);
+    events.push(ev);
+    apply(s, ev);
+    tick(s);
+    return frame;
+  }
+  function waitUntil(pred) {
+    let guard = 0;
+    while (!pred() && guard < 400) {
+      frame += 1;
+      tick(s);
+      guard += 1;
+    }
+    return frame;
+  }
+  return { s, events, act, waitUntil, frame: () => frame };
+}
+
+function drag(sim, at, from, to) {
+  sim.act(at, 'mouse_down', { x: from[0], y: from[1] });
+  sim.act(at + 8, 'mouse_move', { x: to[0], y: to[1] });
+  return sim.act(at + 16, 'mouse_up', { x: to[0], y: to[1] });
+}
+
 export const demoEvents = {
   loop() {
-    const events = [
-      atFrame(10, 'click', { x: START[0], y: START[1] }),
-      atFrame(22, 'click', { x: WALL[0], y: WALL[1] }),
-      atFrame(34, 'click', { x: cellCenter(1, 1)[0], y: cellCenter(1, 1)[1] }),
-      atFrame(46, 'click', { x: cellCenter(2, 2)[0], y: cellCenter(2, 2)[1] }),
-      atFrame(58, 'click', { x: cellCenter(2, 2)[0], y: cellCenter(2, 2)[1] }),
-      atFrame(70, 'click', { x: UPGRADE[0], y: UPGRADE[1] }),
-    ];
-    let frame = 82;
-    const probe = fresh();
-    begin(probe);
-    select(probe, 'wall');
-    place(probe, 2, 2);
-    place(probe, 2, 2);
-    upgrade(probe);
-    while (probe.phase === 'playing' && frame < 400) {
-      events.push(atFrame(frame, 'click', { x: STEP[0], y: STEP[1] }));
-      step(probe);
-      const wall = probe.towers.find((t) => t.kind === 'wall');
-      const flyer = probe.enemies.find((e) => e.fly && wall && e.c > wall.c);
-      const stuck = probe.enemies.find((e) => !e.fly && wall && e.c < wall.c);
-      frame += 12;
+    const sim = createSim();
+    sim.act(10, 'click', { x: STRAIGHT[0], y: STRAIGHT[1] });
+    sim.act(22, 'click', { x: START[0], y: START[1] });
+    const ready = sim.waitUntil(() => sim.s.dp >= 7);
+    let frame = ready + 12;
+    frame = drag(sim, frame, WALL, cellCenter(1, 1));
+    frame += 14;
+    frame = drag(sim, frame, WALL, cellCenter(2, 2));
+    frame += 14;
+    frame = sim.act(frame, 'click', { x: cellCenter(2, 2)[0], y: cellCenter(2, 2)[1] });
+    frame += 14;
+    sim.act(frame, 'click', { x: UPGRADE[0], y: UPGRADE[1] });
+    frame = sim.frame() + 14;
+    while (sim.s.phase === 'playing' && frame < 520) {
+      sim.act(frame, 'click', { x: STEP[0], y: STEP[1] });
+      const wall = sim.s.towers.find((t) => t.kind === 'wall');
+      const flyer = sim.s.enemies.find((e) => e.fly && wall && e.c > wall.c);
+      const stuck = sim.s.enemies.find((e) => !e.fly && wall && e.c < wall.c);
+      frame = sim.frame() + 12;
       if (wall && wall.hp > 0 && flyer && stuck) break;
     }
-    return trace('loop', events, frame + 36);
+    return trace('loop', sim.events, Math.min(570, sim.frame() + 36));
   },
   fail() {
-    const events = [atFrame(10, 'click', { x: START[0], y: START[1] })];
-    let frame = 22;
-    const probe = fresh();
-    begin(probe);
-    while (probe.phase === 'playing') {
-      events.push(atFrame(frame, 'click', { x: STEP[0], y: STEP[1] }));
-      step(probe);
-      frame += 12;
+    const sim = createSim();
+    sim.act(10, 'click', { x: STRAIGHT[0], y: STRAIGHT[1] });
+    sim.act(22, 'click', { x: START[0], y: START[1] });
+    let frame = sim.frame() + 12;
+    while (sim.s.phase === 'playing' && frame < 520) {
+      sim.act(frame, 'click', { x: STEP[0], y: STEP[1] });
+      frame = sim.frame() + 12;
     }
-    events.push(atFrame(frame, 'click', { x: RETRY[0], y: RETRY[1] }));
-    return trace('fail', events, frame + 48);
+    const nextSample = Math.ceil((sim.frame() + 1) / 15) * 15;
+    sim.act(nextSample + 12, 'click', { x: RETRY[0], y: RETRY[1] });
+    return trace('fail', sim.events, Math.min(570, sim.frame() + 48));
   },
   clear() {
-    const events = [
-      atFrame(10, 'click', { x: START[0], y: START[1] }),
-      atFrame(22, 'click', { x: CANNON[0], y: CANNON[1] }),
-      atFrame(34, 'click', { x: cellCenter(4, 1)[0], y: cellCenter(4, 1)[1] }),
-      atFrame(46, 'click', { x: WALL[0], y: WALL[1] }),
-      atFrame(58, 'click', { x: cellCenter(7, 2)[0], y: cellCenter(7, 2)[1] }),
-      atFrame(70, 'click', { x: STEP[0], y: STEP[1] }),
-      atFrame(82, 'click', { x: STEP[0], y: STEP[1] }),
-      atFrame(94, 'click', { x: GUN[0], y: GUN[1] }),
-      atFrame(106, 'click', { x: cellCenter(6, 1)[0], y: cellCenter(6, 1)[1] }),
-    ];
-    let frame = 118;
-    const probe = replay(events);
-    while (probe.phase === 'playing') {
-      events.push(atFrame(frame, 'click', { x: STEP[0], y: STEP[1] }));
-      step(probe);
-      frame += 12;
+    const sim = createSim();
+    sim.act(10, 'click', { x: STRAIGHT[0], y: STRAIGHT[1] });
+    let frame = sim.act(22, 'click', { x: START[0], y: START[1] });
+    frame += 12;
+    frame = drag(sim, frame, CANNON, cellCenter(4, 1));
+    frame += 12;
+    frame = drag(sim, frame, WALL, cellCenter(7, 2));
+    frame += 12;
+    sim.act(frame, 'click', { x: STEP[0], y: STEP[1] });
+    frame = sim.frame() + 12;
+    sim.act(frame, 'click', { x: STEP[0], y: STEP[1] });
+    sim.waitUntil(() => sim.s.dp >= 2);
+    frame = drag(sim, sim.frame() + 8, GUN, cellCenter(6, 1));
+    frame = sim.frame() + 12;
+    while (sim.s.phase === 'playing' && frame < 540) {
+      sim.act(frame, 'click', { x: STEP[0], y: STEP[1] });
+      frame = sim.frame() + 12;
     }
-    events.push(atFrame(frame, 'click', { x: RETRY[0], y: RETRY[1] }));
-    return trace('clear', events, frame + 48);
+    frame = sim.act(frame, 'click', { x: MAPS[0], y: MAPS[1] });
+    frame = sim.act(frame + 16, 'click', { x: SAVE[0], y: SAVE[1] });
+    frame = sim.act(frame + 16, 'click', { x: WIPE[0], y: WIPE[1] });
+    frame = sim.act(frame + 16, 'click', { x: LOAD[0], y: LOAD[1] });
+    sim.act(frame + 20, 'click', { x: BEND[0], y: BEND[1] });
+    return trace('clear', sim.events, Math.min(570, sim.frame() + 36));
   },
 };
+
+if (process.env.WRITE_TOWER === '1') {
+  const intro = trace('intro', [], 45);
+  for (const engine of ['onegame', 'godot']) {
+    const dir = path.join(EVAL_DIR, 'examples', 'oracles', 'p1-tower-defense', engine, 'demo_outputs');
+    fs.writeFileSync(path.join(dir, '01_intro.json'), `${JSON.stringify(intro, null, 2)}\n`);
+    fs.writeFileSync(path.join(dir, '02_loop.json'), `${JSON.stringify(demoEvents.loop(), null, 2)}\n`);
+    fs.writeFileSync(path.join(dir, '03_fail.json'), `${JSON.stringify(demoEvents.fail(), null, 2)}\n`);
+    fs.writeFileSync(path.join(dir, '04_clear.json'), `${JSON.stringify(demoEvents.clear(), null, 2)}\n`);
+  }
+}

@@ -10,6 +10,10 @@ const RANGE := {"gun": 2, "cannon": 3}
 const TOWER_SPRITE := {"gun": "gun.png", "wall": "wall.png", "cannon": "cannon.png"}
 const ENEMY_SPRITE := {"scout": "scout.png", "brute": "brute.png", "flyer": "flyer.png"}
 
+var screen := "select"
+var map_id := ""
+var open := 1
+var slot := 1
 var phase := "ready"
 var wave := 0
 var dp := 6
@@ -21,31 +25,43 @@ var shots: Array = []
 var towers: Array = []
 var enemies: Array = []
 var queue: Array = []
+var drag = null
+var anim := 0
+var clock := 0
 var _labels: Array[Label] = []
 var _tex: Dictionary = {}
 
 func _ready() -> void:
+	set_process(false)
 	queue = _opening()
 	_label("Tower Defense", 80, 12, 1120, 52, 42)
 	_label("", 40, 68, 1200, 36, 28)
 	_label("", 80, 548, 1120, 56, 40)
-	_label("Step", 60, 634, 240, 42, 32)
-	_label("Start", 440, 634, 400, 42, 32)
+	_label("Straight", 80, 200, 520, 40, 36)
+	_label("Open", 80, 252, 520, 32, 28)
+	_label("Bend", 640, 200, 520, 40, 36)
+	_label("Locked", 640, 252, 520, 32, 28)
+	_label("Save", 80, 432, 200, 32, 24)
+	_label("Wipe", 300, 432, 200, 32, 24)
+	_label("Load", 520, 432, 200, 32, 24)
 	_label("gun  2", 48, 172, 260, 32, 24)
 	_label("wall  2", 48, 240, 260, 32, 24)
 	_label("cannon  4", 48, 308, 260, 32, 24)
 	_label("Upgrade  2", 1020, 172, 220, 32, 24)
+	_label("Maps", 1020, 412, 220, 32, 24)
+	_label("Step", 60, 634, 240, 42, 32)
+	_label("Start", 440, 634, 400, 42, 32)
 	_label("Retry", 900, 634, 280, 42, 32)
 	_refresh()
 	queue_redraw()
 
 func _opening() -> Array:
 	return [
-		{"id": 0, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 1, "c": 0, "r": 2},
-		{"id": 1, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 1, "c": 0, "r": 2},
-		{"id": 2, "kind": "flyer", "hp": 3, "atk": 0, "fly": true, "wave": 2, "c": 0, "r": 2},
-		{"id": 3, "kind": "brute", "hp": 6, "atk": 2, "fly": false, "wave": 3, "c": 0, "r": 2},
-		{"id": 4, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 3, "c": 0, "r": 2},
+		{"id": 0, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 1},
+		{"id": 1, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 1},
+		{"id": 2, "kind": "flyer", "hp": 3, "atk": 0, "fly": true, "wave": 2},
+		{"id": 3, "kind": "brute", "hp": 6, "atk": 2, "fly": false, "wave": 3},
+		{"id": 4, "kind": "scout", "hp": 2, "atk": 1, "fly": false, "wave": 3},
 	]
 
 func _label(text: String, x: float, y: float, w: float, h: float, size: int) -> void:
@@ -71,11 +87,16 @@ func _texture(name: String) -> Texture2D:
 	_tex[name] = tex
 	return tex
 
+func _path_row() -> int:
+	return 4 if map_id == "bend" else 2
+
 func _deploy(c: int, r: int) -> bool:
+	if map_id == "bend":
+		return r == 2 and c >= 1 and c <= 6
 	return (r == 1 or r == 3) and c >= 1 and c <= 6
 
 func _on_path(c: int, r: int) -> bool:
-	return r == 2 and c >= 0 and c < COLS
+	return r == _path_row() and c >= 0 and c < COLS
 
 func _tower_at(c: int, r: int):
 	for t in towers:
@@ -105,24 +126,12 @@ func _wave_of() -> int:
 		return 0 if phase == "ready" else 3
 	return best
 
-func _begin() -> void:
-	if phase != "ready":
-		return
-	phase = "playing"
-	wave = 1
-
 func _clear_note() -> void:
 	if note == "Rejected":
 		note = ""
 
 func _reject() -> void:
 	note = "Rejected"
-
-func _select(kind: String) -> void:
-	if phase != "playing" or not COSTS.has(kind):
-		return
-	selected = kind
-	picked = null
 
 func _dmg_of(t) -> int:
 	if String(t.kind) == "gun":
@@ -131,8 +140,41 @@ func _dmg_of(t) -> int:
 		return 5 if bool(t.upgraded) else 3
 	return 0
 
+func _reset_battle() -> void:
+	phase = "ready"
+	wave = 0
+	dp = 6
+	base = 4
+	selected = ""
+	picked = null
+	note = ""
+	shots = []
+	towers = []
+	enemies = []
+	queue = _opening()
+	drag = null
+	clock = 0
+
+func _enter(which: String) -> void:
+	if screen != "select":
+		return
+	if which == "bend" and open < 2:
+		_reject()
+		return
+	if which != "straight" and which != "bend":
+		return
+	screen = "battle"
+	map_id = which
+	_reset_battle()
+
+func _begin() -> void:
+	if screen != "battle" or phase != "ready":
+		return
+	phase = "playing"
+	wave = 1
+
 func _place(c: int, r: int) -> void:
-	if phase != "playing":
+	if screen != "battle" or phase != "playing":
 		return
 	if selected == "":
 		var existing = _tower_at(c, r)
@@ -160,7 +202,7 @@ func _place(c: int, r: int) -> void:
 	_clear_note()
 
 func _upgrade() -> void:
-	if phase != "playing":
+	if screen != "battle" or phase != "playing":
 		return
 	var t = null
 	if picked != null:
@@ -176,25 +218,54 @@ func _upgrade() -> void:
 	_clear_note()
 
 func _retry() -> void:
+	if screen != "battle":
+		return
 	if phase != "clear" and phase != "fail":
 		return
-	phase = "ready"
-	wave = 0
-	dp = 6
-	base = 4
-	selected = ""
-	picked = null
+	var kept_map := map_id
+	var kept_open := open
+	var kept_slot := slot
+	_reset_battle()
+	screen = "battle"
+	map_id = kept_map
+	open = kept_open
+	slot = kept_slot
+
+func _maps() -> void:
+	if screen != "battle":
+		return
+	if phase != "clear" and phase != "fail":
+		return
+	screen = "select"
+	drag = null
 	note = ""
 	shots = []
-	towers = []
-	enemies = []
-	queue = _opening()
+	phase = "ready"
+
+func _save_game() -> void:
+	if screen != "select":
+		return
+	slot = open
+	note = "Saved"
+
+func _wipe() -> void:
+	if screen != "select":
+		return
+	open = 1
+	note = "Wiped"
+
+func _load_game() -> void:
+	if screen != "select":
+		return
+	open = slot
+	note = "Loaded"
 
 func _step() -> void:
-	if phase != "playing":
+	if screen != "battle" or phase != "playing":
 		return
 	_clear_note()
 	shots = []
+	var row := _path_row()
 	var shooters: Array = []
 	for t in towers:
 		if t.kind != "wall":
@@ -255,51 +326,128 @@ func _step() -> void:
 	towers = standing
 	if queue.size() > 0:
 		var next = queue[0]
-		var blocked: bool = _enemy_on(0, 2, true) != null if bool(next.fly) else (_ground_on(0, 2) != null or _tower_at(0, 2) != null)
+		var blocked: bool = _enemy_on(0, row, true) != null if bool(next.fly) else (_ground_on(0, row) != null or _tower_at(0, row) != null)
 		if not blocked:
 			queue.pop_front()
 			next.c = 0
-			next.r = 2
+			next.r = row
 			enemies.append(next)
 	if base <= 0:
 		phase = "fail"
 	elif queue.is_empty() and enemies.is_empty():
 		phase = "clear"
-	else:
-		dp = mini(10, dp + 1)
+		if map_id == "straight":
+			open = maxi(open, 2)
 	wave = _wave_of()
 
-func _ended() -> bool:
-	return phase == "clear" or phase == "fail"
+func _process(_delta: float) -> void:
+	anim += 1
+	if screen == "battle" and phase == "playing":
+		clock += 1
+		if clock % 30 == 0:
+			dp = mini(10, dp + 1)
+	_refresh()
+	queue_redraw()
+
+func _inside(p: Vector2, x: float, y: float, w: float, h: float) -> bool:
+	return p.x >= x and p.x < x + w and p.y >= y and p.y < y + h
+
+func _card_at(p: Vector2) -> String:
+	if _inside(p, 48, 160, 260, 56):
+		return "gun"
+	if _inside(p, 48, 228, 260, 56):
+		return "wall"
+	if _inside(p, 48, 296, 260, 56):
+		return "cannon"
+	return ""
+
+func _click(p: Vector2) -> void:
+	if screen == "battle" and _inside(p, 900, 620, 280, 70):
+		_retry()
+		return
+	if screen == "battle" and _inside(p, 1020, 400, 220, 56):
+		_maps()
+		return
+	if phase == "clear" or phase == "fail":
+		return
+	if screen == "battle" and _inside(p, 1020, 160, 220, 56):
+		_upgrade()
+		return
+	if screen == "battle" and _inside(p, 440, 620, 400, 70):
+		_begin()
+		return
+	if screen == "battle" and _inside(p, 60, 620, 240, 70):
+		_step()
+		return
+	if screen == "select" and _inside(p, 80, 160, 520, 180):
+		_enter("straight")
+		return
+	if screen == "select" and _inside(p, 640, 160, 520, 180):
+		_enter("bend")
+		return
+	if screen == "select" and _inside(p, 80, 420, 200, 56):
+		_save_game()
+		return
+	if screen == "select" and _inside(p, 300, 420, 200, 56):
+		_wipe()
+		return
+	if screen == "select" and _inside(p, 520, 420, 200, 56):
+		_load_game()
+		return
+	if screen == "battle" and phase == "playing" and p.x >= OX and p.y >= OY:
+		var c := int((p.x - OX) / float(CELL))
+		var r := int((p.y - OY) / float(CELL))
+		if c >= 0 and r >= 0 and c < COLS and r < ROWS:
+			var tower = _tower_at(c, r)
+			if tower != null:
+				picked = {"c": c, "r": r}
+
+func _pointer_down(p: Vector2) -> void:
+	if screen == "battle" and phase == "playing":
+		var kind := _card_at(p)
+		if kind != "":
+			drag = {"kind": kind, "x": p.x, "y": p.y}
+			picked = null
+
+func _pointer_move(p: Vector2) -> void:
+	if drag == null:
+		return
+	drag = {"kind": String(drag.kind), "x": p.x, "y": p.y}
+
+func _pointer_up(p: Vector2) -> void:
+	if drag == null:
+		_click(p)
+		return
+	var kind := String(drag.kind)
+	drag = null
+	if phase != "playing":
+		return
+	selected = kind
+	if p.x >= OX and p.y >= OY:
+		var c := int((p.x - OX) / float(CELL))
+		var r := int((p.y - OY) / float(CELL))
+		if c >= 0 and r >= 0 and c < COLS and r < ROWS:
+			_place(c, r)
+			selected = ""
+			return
+	_reject()
+	selected = ""
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var p: Vector2 = event.position
-		if p.x >= 900 and p.x < 1180 and p.y >= 620 and p.y < 690:
-			_retry()
-		elif _ended():
-			pass
-		elif p.x >= 1020 and p.x < 1240 and p.y >= 160 and p.y < 216:
-			_upgrade()
-		elif p.x >= 440 and p.x < 840 and p.y >= 620 and p.y < 690:
-			_begin()
-		elif p.x >= 60 and p.x < 300 and p.y >= 620 and p.y < 690:
-			_step()
-		elif p.x >= 48 and p.x < 308 and p.y >= 160 and p.y < 216:
-			_select("gun")
-		elif p.x >= 48 and p.x < 308 and p.y >= 228 and p.y < 284:
-			_select("wall")
-		elif p.x >= 48 and p.x < 308 and p.y >= 296 and p.y < 352:
-			_select("cannon")
-		elif p.x >= OX and p.y >= OY:
-			var c := int((p.x - OX) / float(CELL))
-			var r := int((p.y - OY) / float(CELL))
-			if c >= 0 and r >= 0 and c < COLS and r < ROWS:
-				_place(c, r)
+		if event.pressed:
+			_pointer_down(p)
+		else:
+			_pointer_up(p)
 		_refresh()
 		queue_redraw()
-	if event is InputEventKey and event.pressed and not event.echo:
-		if _ended():
+	elif event is InputEventMouseMotion:
+		_pointer_move(event.position)
+		_refresh()
+		queue_redraw()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if screen != "battle" or phase == "clear" or phase == "fail":
 			return
 		var code := _code(event.keycode)
 		if code == "Enter":
@@ -319,30 +467,47 @@ func _code(key: Key) -> String:
 			return ""
 
 func _refresh() -> void:
-	if _labels.size() < 3:
+	if _labels.size() < 18:
 		return
-	_labels[1].text = "wave %d / 3    dp %d    base %d" % [wave, dp, base]
-	if phase == "fail":
+	var on_select := screen == "select"
+	if on_select:
+		_labels[1].text = "open %d / 2" % open
+	else:
+		_labels[1].text = "wave %d / 3    dp %d    base %d" % [wave, dp, base]
+	if screen == "battle" and phase == "fail":
 		_labels[2].text = "Tower lost"
-	elif phase == "clear":
+	elif screen == "battle" and phase == "clear":
 		_labels[2].text = "Tower clear"
 	else:
 		_labels[2].text = note
+	_labels[6].text = "Open" if open >= 2 else "Locked"
+	for i in range(3, 10):
+		_labels[i].visible = on_select
+	for i in range(10, 18):
+		_labels[i].visible = not on_select
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("1c1610"))
+	if screen == "select":
+		draw_rect(Rect2(80, 160, 520, 180), Color("8a5a2a"))
+		draw_rect(Rect2(640, 160, 520, 180), Color("8a5a2a") if open >= 2 else Color("3a3128"))
+		draw_rect(Rect2(80, 420, 200, 56), Color("3d4a38"))
+		draw_rect(Rect2(300, 420, 200, 56), Color("5c4030"))
+		draw_rect(Rect2(520, 420, 200, 56), Color("3d4a38"))
+		return
 	draw_rect(Rect2(60, 620, 240, 70), Color("5c4030"))
 	draw_rect(Rect2(440, 620, 400, 70), Color("8a5a2a"))
 	draw_rect(Rect2(900, 620, 280, 70), Color("3d4a38"))
 	draw_rect(Rect2(1020, 160, 220, 56), Color("5c4030"))
+	draw_rect(Rect2(1020, 400, 220, 56), Color("3d4a38"))
 	var card_y := [160, 228, 296]
 	var card_kind := ["gun", "wall", "cannon"]
 	for i in card_kind.size():
-		var col := Color("c47a2c") if selected == card_kind[i] else Color("5c4030")
-		draw_rect(Rect2(48, card_y[i], 260, 56), col)
+		draw_rect(Rect2(48, card_y[i], 260, 56), Color("5c4030"))
 	var path_tex := _texture("path.png")
 	var grass_tex := _texture("grass.png")
 	var base_tex := _texture("base.png")
+	var row := _path_row()
 	for r in ROWS:
 		for c in COLS:
 			var rect := Rect2(OX + c * CELL, OY + r * CELL, CELL, CELL)
@@ -356,19 +521,20 @@ func _draw() -> void:
 			else:
 				draw_rect(rect, Color("241c16"))
 	if base_tex:
-		draw_texture_rect(base_tex, Rect2(OX + COLS * CELL, OY + 2 * CELL, CELL, CELL), false)
+		draw_texture_rect(base_tex, Rect2(OX + COLS * CELL, OY + row * CELL, CELL, CELL), false)
 	var font := ThemeDB.fallback_font
 	for t in towers:
-		var rect := Rect2(OX + int(t.c) * CELL, OY + int(t.r) * CELL, CELL, CELL)
+		var cell := Rect2(OX + int(t.c) * CELL, OY + int(t.r) * CELL, CELL, CELL)
 		var tex := _texture(String(TOWER_SPRITE[t.kind]))
 		if tex:
-			draw_texture_rect(tex, Rect2(rect.position.x + 12, rect.position.y + 20, 48, 48), false)
+			draw_texture_rect(tex, Rect2(cell.position.x + 12, cell.position.y + 20, 48, 48), false)
 		var plus := "+" if bool(t.upgraded) else ""
 		var caption := (str(int(t.hp)) if t.kind == "wall" else String(t.kind)) + plus
-		draw_string(font, rect.position + Vector2(8, 14), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f6e7c1"))
+		draw_string(font, cell.position + Vector2(8, 14), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f6e7c1"))
+	var bob := 0 if anim % 10 < 5 else 8
 	for e in enemies:
 		var ox := 28 if bool(e.fly) else 4
-		var rect := Rect2(OX + int(e.c) * CELL + ox, OY + int(e.r) * CELL + 4, 36, 36)
+		var rect := Rect2(OX + int(e.c) * CELL + ox, OY + int(e.r) * CELL + 4 + bob, 36, 36)
 		var tex := _texture(String(ENEMY_SPRITE[e.kind]))
 		if tex:
 			draw_texture_rect(tex, rect, false)
@@ -379,3 +545,11 @@ func _draw() -> void:
 		var x2 := OX + int(shot.tc) * CELL + CELL / 2.0
 		var y2 := OY + int(shot.tr) * CELL + CELL / 2.0
 		draw_line(Vector2(x1, y1), Vector2(x2, y2), Color("ffe14a"), 4.0)
+		var along := float(anim % 7) / 6.0
+		var dx := x1 + (x2 - x1) * along
+		var dy := y1 + (y2 - y1) * along
+		draw_rect(Rect2(dx - 6, dy - 6, 12, 12), Color("ffe14a"))
+	if drag != null:
+		var ghost := _texture(String(TOWER_SPRITE[String(drag.kind)]))
+		if ghost:
+			draw_texture_rect(ghost, Rect2(float(drag.x) - 24, float(drag.y) - 24, 48, 48), false)

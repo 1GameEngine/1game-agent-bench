@@ -16,5 +16,5 @@ replay_fps: 30
 sample_fps: 2
 max_demo_seconds: 19
 input:
-  events: [keydown, keyup, click]
+  events: [keydown, keyup, click, mouse_down, mouse_move, mouse_up]
   keys: [Enter, Space]
