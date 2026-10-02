@@ -1,7 +1,7 @@
 export const PROCESS_P0_TASKS = ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play'];
 export const P0_TASKS = [];
 
-export const P1_TASKS = ['p1-chart-rush', 'p1-depot-skirmish'];
+export const P1_TASKS = ['p1-chart-rush', 'p1-depot-skirmish', 'p1-tower-defense'];
 
 export const SUITE_TASKS = [...P1_TASKS];
 

@@ -1,0 +1,71 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "loop",
+  "duration_frames": 166,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 10,
+      "type": "click",
+      "x": 640,
+      "y": 655
+    },
+    {
+      "frame": 22,
+      "type": "click",
+      "x": 178,
+      "y": 256
+    },
+    {
+      "frame": 34,
+      "type": "click",
+      "x": 460,
+      "y": 256
+    },
+    {
+      "frame": 46,
+      "type": "click",
+      "x": 532,
+      "y": 328
+    },
+    {
+      "frame": 58,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 70,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 82,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 94,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 106,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 118,
+      "type": "click",
+      "x": 180,
+      "y": 655
+    }
+  ]
+}

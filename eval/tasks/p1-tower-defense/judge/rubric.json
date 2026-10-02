@@ -1,0 +1,176 @@
+{
+  "score_formula": "G * (15*M + 35*D + 15*V + 35*A)",
+  "requirements": [
+    {
+      "id": "M1",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：没有标题 Tower Defense，或 wave 不是 0 / 3，或 dp 不是 6，或 base 不是 4，或路径上已经有敌人。1 分：未开始停在 Start 和 Step，标题 Tower Defense 可读，路径是空的，wave 0 / 3、dp 6、base 4 都能读到。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "M2",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：仍停在未开始，或棋盘不见了。1 分：循环已经离开未开始，wave 至少是 1 / 3，路径还在。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "M3",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：墙出现在部署格上，或点了非法格子就扣了 dp。1 分：先点到部署格时没有放下墙、dp 仍是 6，之后墙才出现在路径第 2 列。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "M4",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：flyer 被墙挡住，或地面敌人和 flyer 一起穿墙。1 分：墙还在的时候，flyer 已经到了墙的右边，同时还有地面敌人留在墙的左边。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "M5",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：读不到 Tower lost，或同时能读到 Tower clear，或 base 不是 0。1 分：失败画面能读到 Tower lost，读不到 Tower clear，base 是 0。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "M6",
+      "dim": "M",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：读不到 Tower clear，或 base 不是 4，或开局空地图直接变成通关。1 分：通关画面能读到 Tower clear，读不到 Tower lost，路径上没有敌人，base 仍是 4，并且场上留有防御。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D1",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：通关过程里分不出 scout、brute、flyer 三种敌人，或分不出 gun、wall、cannon 三种防御。1 分：这段轨迹里先后能看出这三种敌人图和这三种防御图。同一种换色，最高 0.5。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D2",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：dp 从 6 直接变掉，看不出哪一次点击被拒绝。1 分：非法点击之后 dp 仍是 6，墙放下之后 dp 变成 4。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D3",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：地面敌人穿过墙，或 flyer 停在墙左边不再前进。1 分：能看出地面敌人停下来打墙，flyer 继续向右穿过这面墙。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D4",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：敌人只是走到终点消失，生命数字从不下降。1 分：通关过程里至少一只敌人的生命数字下降，并且下降发生在它漏进基地之前。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D5",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：失败时只剩一句文案，或路径上已经一个敌人都没有，或场上还有防御塔。1 分：失败画面仍能看到路径、base 0、Tower lost，以及至少一只敌人，场上没有 gun、wall、cannon。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "D6",
+      "dim": "D",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：wave 停在 1 / 3，或 base 在通关前已经少过。1 分：通关时 wave 是 3 / 3，base 仍是 4，三波都已结束。机制或种类成立，但只用纯色块、默认控件、线框，或只靠换色和文字区分，最高 0.5。1 分要求正式素材，不同种类必须是不同的图。"
+    },
+    {
+      "id": "V1",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "agg": "mean",
+      "description": "0 分：Start 或 Step 挡住棋盘，或路径、部署格、基地分不清。1 分：两个按钮都在画面下方且不遮住棋盘，路径、部署格和基地是三张不同的图。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。"
+    },
+    {
+      "id": "V2",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "mean",
+      "description": "0 分：wave、dp、base 读不清，或字压住墙和敌人无法辨认。1 分：对局里 wave N / 3、dp 和 base 都能读，文字不把墙和敌人挡住。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。"
+    },
+    {
+      "id": "V3",
+      "dim": "V",
+      "scope": "scenario",
+      "applies": ["fail"],
+      "weight": 1,
+      "agg": "mean",
+      "description": "0 分：失败时路径、base 0、Tower lost 三者缺一，或字叠在一起读不成句。1 分：失败画面上路径、base 0 和 Tower lost 同时可读。按本场景抽到的静帧平均，空画面或读不出的帧按 0 计入，不要只看最清楚的一张。"
+    },
+    {
+      "id": "A1",
+      "dim": "A",
+      "scope": "persistent",
+      "applies": ["intro", "loop", "fail", "clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：灰色默认调试屏，或失败段读不到 Tower lost，或通关段读不到 Tower clear。1 分：地牢像素风格统一，且失败段、通关段各自带上对应文案。"
+    },
+    {
+      "id": "A2",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["loop"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：墙、scout、flyer 是纯色方块，或 scout 和 flyer 长得一样。1 分：墙是一张地砖图，scout 和 flyer 是两张不同的角色图。"
+    },
+    {
+      "id": "A3",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["clear"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：gun、wall、cannon 长得一样，或路径和部署格是同一张图。1 分：三种防御是三张不同的图，路径、部署格和基地也是三张不同的地砖。"
+    },
+    {
+      "id": "A4",
+      "dim": "A",
+      "scope": "scenario",
+      "applies": ["intro"],
+      "weight": 1,
+      "agg": "max",
+      "description": "0 分：标题、按钮、地砖各是一套未完成的线框或默认灰块。1 分：标题、按钮和地砖属于同一套像素画面。"
+    }
+  ]
+}

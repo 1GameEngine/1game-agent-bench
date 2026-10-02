@@ -1,0 +1,20 @@
+id: p1-tower-defense
+tier: P1
+entry: src/game.tsx
+scenarios:
+  required: [intro, loop, fail, clear]
+  allow_empty: [intro]
+scene:
+  count: 1
+  width: 1280
+  height: 720
+rng: forbidden
+physics: forbidden
+judge: rubric_replay
+traces: submitted
+replay_fps: 30
+sample_fps: 2
+max_demo_seconds: 19
+input:
+  events: [keydown, keyup, click]
+  keys: [Enter, Space]
