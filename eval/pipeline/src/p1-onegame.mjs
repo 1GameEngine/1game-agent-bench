@@ -96,6 +96,14 @@ export function traceEventArgv(recordRel, ev) {
     const coord = `${Math.round(Number(ev.x))},${Math.round(Number(ev.y))}`;
     return ['1gameplay', 'step', recordRel, '--click', coord];
   }
+  const pointer = { mouse_down: 'pointer.down', mouse_move: 'pointer.move', mouse_up: 'pointer.up' };
+  if (pointer[ev.type]) {
+    const event = JSON.stringify({
+      type: pointer[ev.type],
+      data: { id: 1, x: Math.round(Number(ev.x)), y: Math.round(Number(ev.y)) },
+    });
+    return ['1gameplay', 'step', recordRel, '--ms', '0', '--event', event];
+  }
   const event = JSON.stringify({ type: ev.type, data: { code: ev.code } });
   return ['1gameplay', 'step', recordRel, '--ms', '0', '--event', event];
 }
