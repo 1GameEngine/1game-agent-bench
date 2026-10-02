@@ -1,7 +1,7 @@
 {
   "schema": "eval.trace/1",
   "scenario": "clear",
-  "duration_frames": 238,
+  "duration_frames": 250,
   "viewport": {
     "w": 1280,
     "h": 720
@@ -101,6 +101,12 @@
       "frame": 190,
       "type": "click",
       "x": 180,
+      "y": 655
+    },
+    {
+      "frame": 202,
+      "type": "click",
+      "x": 1040,
       "y": 655
     }
   ]

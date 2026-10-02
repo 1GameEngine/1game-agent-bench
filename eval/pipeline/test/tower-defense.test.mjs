@@ -13,7 +13,6 @@ const OY = 148;
 const CELL = 72;
 const COSTS = { gun: 2, wall: 2, cannon: 4 };
 const RANGE = { gun: 2, cannon: 3 };
-const DMG = { gun: 1, cannon: 3 };
 const QUEUE = [
   { kind: 'scout', hp: 2, atk: 1, fly: false, wave: 1 },
   { kind: 'scout', hp: 2, atk: 1, fly: false, wave: 1 },
@@ -29,11 +28,25 @@ function fresh() {
     dp: 6,
     base: 4,
     selected: '',
+    picked: null,
+    note: '',
+    shots: [],
     towers: [],
     enemies: [],
     queue: QUEUE.map((e, i) => ({ ...e, id: i })),
     seq: 0,
   };
+}
+function dmgOf(t) {
+  if (t.kind === 'gun') return t.upgraded ? 2 : 1;
+  if (t.kind === 'cannon') return t.upgraded ? 5 : 3;
+  return 0;
+}
+function reject(s) {
+  s.note = 'Rejected';
+}
+function clearNote(s) {
+  if (s.note === 'Rejected') s.note = '';
 }
 function deploy(c, r) {
   return (r === 1 || r === 3) && c >= 1 && c <= 6;
@@ -63,30 +76,71 @@ function begin(s) {
 function select(s, kind) {
   if (s.phase !== 'playing' || !COSTS[kind]) return;
   s.selected = kind;
+  s.picked = null;
 }
 function place(s, c, r) {
-  if (s.phase !== 'playing' || !s.selected) return;
+  if (s.phase !== 'playing') return;
+  if (!s.selected) {
+    const tower = towerAt(s, c, r);
+    if (tower) s.picked = { c, r };
+    return;
+  }
   const kind = s.selected;
   const cost = COSTS[kind];
-  if (s.dp < cost) return;
+  if (s.dp < cost) {
+    reject(s);
+    return;
+  }
   if (kind === 'wall') {
-    if (!onPath(c, r) || towerAt(s, c, r) || groundOn(s, c, r)) return;
-    s.towers.push({ kind, c, r, hp: 6 });
+    if (!onPath(c, r) || towerAt(s, c, r) || groundOn(s, c, r)) {
+      reject(s);
+      return;
+    }
+    s.towers.push({ kind, c, r, hp: 6, upgraded: false });
   } else {
-    if (!deploy(c, r) || towerAt(s, c, r)) return;
-    s.towers.push({ kind, c, r, hp: 1 });
+    if (!deploy(c, r) || towerAt(s, c, r)) {
+      reject(s);
+      return;
+    }
+    s.towers.push({ kind, c, r, hp: 1, upgraded: false });
   }
   s.dp -= cost;
   s.selected = '';
+  s.picked = null;
+  clearNote(s);
+}
+function upgrade(s) {
+  if (s.phase !== 'playing') return;
+  const t = s.picked ? towerAt(s, s.picked.c, s.picked.r) : null;
+  if (!t || t.upgraded || s.dp < 2) {
+    reject(s);
+    return;
+  }
+  s.dp -= 2;
+  t.upgraded = true;
+  if (t.kind === 'wall') t.hp += 4;
+  s.picked = null;
+  clearNote(s);
+}
+function retry(s) {
+  if (s.phase !== 'clear' && s.phase !== 'fail') return;
+  const next = fresh();
+  for (const key of Object.keys(s)) delete s[key];
+  Object.assign(s, next);
 }
 function step(s) {
   if (s.phase !== 'playing') return;
+  clearNote(s);
+  s.shots = [];
   const towers = s.towers.filter((t) => t.kind !== 'wall').sort((a, b) => a.c - b.c || a.r - b.r);
   for (const t of towers) {
     const hits = s.enemies
       .filter((e) => Math.abs(e.c - t.c) + Math.abs(e.r - t.r) <= RANGE[t.kind])
       .sort((a, b) => b.c - a.c || a.r - b.r || Number(a.fly) - Number(b.fly));
-    if (hits[0]) hits[0].hp -= DMG[t.kind];
+    if (hits[0]) {
+      hits[0].hp -= dmgOf(t);
+      s.shots.push({ fc: t.c, fr: t.r, tc: hits[0].c, tr: hits[0].r });
+    }
   }
   s.enemies = s.enemies.filter((e) => e.hp > 0);
   const order = [...s.enemies].sort((a, b) => b.c - a.c || a.r - b.r || Number(a.fly) - Number(b.fly));
@@ -129,7 +183,15 @@ function cellCenter(c, r) {
   return [OX + c * CELL + CELL / 2, OY + r * CELL + CELL / 2];
 }
 function click(s, x, y) {
+  if (x >= 900 && x < 1180 && y >= 620 && y < 690) {
+    retry(s);
+    return;
+  }
   if (s.phase === 'clear' || s.phase === 'fail') return;
+  if (x >= 1020 && x < 1240 && y >= 160 && y < 216) {
+    upgrade(s);
+    return;
+  }
   if (x >= 440 && x < 840 && y >= 620 && y < 690) {
     begin(s);
     return;
@@ -187,6 +249,8 @@ const WALL = [178, 256];
 const CANNON = [178, 324];
 const START = [640, 655];
 const STEP = [180, 655];
+const UPGRADE = [1130, 188];
+const RETRY = [1040, 655];
 
 test('tower defense: illegal tile and a poor card do not spend dp', () => {
   const s = fresh();
@@ -195,6 +259,7 @@ test('tower defense: illegal tile and a poor card do not spend dp', () => {
   place(s, 3, 2);
   assert.equal(s.towers.length, 0);
   assert.equal(s.dp, 6);
+  assert.equal(s.note, 'Rejected');
   select(s, 'cannon');
   place(s, 4, 1);
   assert.equal(s.dp, 2);
@@ -271,7 +336,14 @@ test('tower defense: cannon, wall and a late gun clear with base intact', () => 
   assert.equal(s.base, 4);
   assert.equal(s.wave, 3);
   assert.deepEqual(s.towers.map((t) => t.kind).sort(), ['cannon', 'gun', 'wall']);
+  assert.ok(s.shots.length > 0);
   assert.ok(n <= 16);
+  retry(s);
+  assert.equal(s.phase, 'ready');
+  assert.equal(s.wave, 0);
+  assert.equal(s.dp, 6);
+  assert.equal(s.base, 4);
+  assert.equal(s.towers.length, 0);
 });
 
 test('tower defense task: spec text and hidden rubric agree', () => {
@@ -284,7 +356,15 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   assert.match(b.instruction, /Tower clear/);
   assert.match(b.instruction, /flyer/);
   assert.match(b.instruction, /19 秒/);
+  assert.match(b.instruction, /Rejected/);
+  assert.match(b.instruction, /Upgrade/);
+  assert.match(b.instruction, /Retry/);
+  assert.doesNotMatch(b.instruction, /\(2,2\)|\(4,1\)|\(6,1\)|\(7,2\)/);
   const byId = Object.fromEntries(b.rubric.requirements.map((r) => [r.id, r]));
+  assert.match(byId.M3.description, /Rejected/);
+  assert.match(byId.M7.description, /Retry/);
+  assert.match(byId.D4.description, /射击线/);
+  assert.match(byId.D7.description, /升级/);
   assert.equal(byId.V2.agg, 'mean');
   assert.equal(byId.D1.agg, 'max');
   assert.match(byId.M1.description, /纯色块/);
@@ -293,15 +373,19 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   assert.match(byId.D1.description, /flyer/);
   const start = b.instruction.match(/Start 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
   const stepBtn = b.instruction.match(/Step 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
-  assert.ok(start && stepBtn);
-  const sRect = start.slice(1).map(Number);
-  const tRect = stepBtn.slice(1).map(Number);
+  const upgrade = b.instruction.match(/Upgrade 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
+  const retryBtn = b.instruction.match(/Retry 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);
+  assert.ok(start && stepBtn && upgrade && retryBtn);
+  const rects = [start, stepBtn, upgrade, retryBtn].map((m) => m.slice(1).map(Number));
   const board = { x: OX, y: OY, w: COLS * CELL, h: ROWS * CELL };
+  const base = { x: OX + COLS * CELL, y: OY + 2 * CELL, w: CELL, h: CELL };
   function overlap(a, b) {
     return a[0] < b.x + b.w && a[0] + a[2] > b.x && a[1] < b.y + b.h && a[1] + a[3] > b.y;
   }
-  assert.equal(overlap(sRect, board), false);
-  assert.equal(overlap(tRect, board), false);
+  for (const rect of rects) {
+    assert.equal(overlap(rect, board), false);
+    assert.equal(overlap(rect, base), false);
+  }
 });
 
 test('tower defense reference traces follow the scripted fights', () => {
@@ -318,22 +402,45 @@ test('tower defense reference traces follow the scripted fights', () => {
       byScenario[doc.scenario] = doc;
     }
     assert.equal(byScenario.intro.events.length, 0);
+    const upgraded = replay(eventsUntil(byScenario.loop.events, UPGRADE));
+    const freshWall = upgraded.towers.find((t) => t.kind === 'wall');
+    assert.equal(freshWall.upgraded, true);
+    assert.equal(freshWall.hp, 10);
+    assert.equal(upgraded.dp, 2);
     const loop = replay(byScenario.loop.events);
     const wall = loop.towers.find((t) => t.kind === 'wall');
-    assert.ok(wall && wall.hp > 0);
+    assert.ok(wall && wall.upgraded && wall.hp > 0);
     assert.ok(loop.enemies.some((e) => e.fly && e.c > wall.c));
     assert.ok(loop.enemies.some((e) => !e.fly && e.c < wall.c));
     assert.equal(loop.base, 4);
+    const failMid = replay(beforeRetry(byScenario.fail.events));
+    assert.equal(failMid.phase, 'fail');
+    assert.equal(failMid.base, 0);
+    assert.equal(failMid.towers.length, 0);
     const fail = replay(byScenario.fail.events);
-    assert.equal(fail.phase, 'fail');
-    assert.equal(fail.base, 0);
-    assert.equal(fail.towers.length, 0);
+    assert.equal(fail.phase, 'ready');
+    assert.equal(fail.wave, 0);
+    assert.equal(fail.dp, 6);
+    assert.equal(fail.base, 4);
+    const clearMid = replay(beforeRetry(byScenario.clear.events));
+    assert.equal(clearMid.phase, 'clear');
+    assert.equal(clearMid.base, 4);
+    assert.ok(clearMid.shots.length > 0);
+    assert.deepEqual(clearMid.towers.map((t) => t.kind).sort(), ['cannon', 'gun', 'wall']);
     const clear = replay(byScenario.clear.events);
-    assert.equal(clear.phase, 'clear');
-    assert.equal(clear.base, 4);
-    assert.deepEqual(clear.towers.map((t) => t.kind).sort(), ['cannon', 'gun', 'wall']);
+    assert.equal(clear.phase, 'ready');
+    assert.equal(clear.towers.length, 0);
   }
 });
+
+function eventsUntil(events, point) {
+  const index = events.findIndex((ev) => ev.type === 'click' && ev.x === point[0] && ev.y === point[1]);
+  return index < 0 ? events : events.slice(0, index + 1);
+}
+function beforeRetry(events) {
+  const index = events.findIndex((ev) => ev.type === 'click' && ev.x === RETRY[0] && ev.y === RETRY[1]);
+  return index < 0 ? events : events.slice(0, index);
+}
 
 export const demoEvents = {
   loop() {
@@ -342,12 +449,16 @@ export const demoEvents = {
       atFrame(22, 'click', { x: WALL[0], y: WALL[1] }),
       atFrame(34, 'click', { x: cellCenter(1, 1)[0], y: cellCenter(1, 1)[1] }),
       atFrame(46, 'click', { x: cellCenter(2, 2)[0], y: cellCenter(2, 2)[1] }),
+      atFrame(58, 'click', { x: cellCenter(2, 2)[0], y: cellCenter(2, 2)[1] }),
+      atFrame(70, 'click', { x: UPGRADE[0], y: UPGRADE[1] }),
     ];
-    let frame = 58;
+    let frame = 82;
     const probe = fresh();
     begin(probe);
     select(probe, 'wall');
     place(probe, 2, 2);
+    place(probe, 2, 2);
+    upgrade(probe);
     while (probe.phase === 'playing' && frame < 400) {
       events.push(atFrame(frame, 'click', { x: STEP[0], y: STEP[1] }));
       step(probe);
@@ -369,7 +480,8 @@ export const demoEvents = {
       step(probe);
       frame += 12;
     }
-    return trace('fail', events, frame + 36);
+    events.push(atFrame(frame, 'click', { x: RETRY[0], y: RETRY[1] }));
+    return trace('fail', events, frame + 48);
   },
   clear() {
     const events = [
@@ -390,6 +502,7 @@ export const demoEvents = {
       step(probe);
       frame += 12;
     }
-    return trace('clear', events, frame + 36);
+    events.push(atFrame(frame, 'click', { x: RETRY[0], y: RETRY[1] }));
+    return trace('clear', events, frame + 48);
   },
 };

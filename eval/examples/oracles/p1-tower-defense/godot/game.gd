@@ -7,7 +7,6 @@ const OY := 148
 const CELL := 72
 const COSTS := {"gun": 2, "wall": 2, "cannon": 4}
 const RANGE := {"gun": 2, "cannon": 3}
-const DMG := {"gun": 1, "cannon": 3}
 const TOWER_SPRITE := {"gun": "gun.png", "wall": "wall.png", "cannon": "cannon.png"}
 const ENEMY_SPRITE := {"scout": "scout.png", "brute": "brute.png", "flyer": "flyer.png"}
 
@@ -16,6 +15,9 @@ var wave := 0
 var dp := 6
 var base := 4
 var selected := ""
+var picked = null
+var note := ""
+var shots: Array = []
 var towers: Array = []
 var enemies: Array = []
 var queue: Array = []
@@ -32,6 +34,8 @@ func _ready() -> void:
 	_label("gun  2", 48, 172, 260, 32, 24)
 	_label("wall  2", 48, 240, 260, 32, 24)
 	_label("cannon  4", 48, 308, 260, 32, 24)
+	_label("Upgrade  2", 1020, 172, 220, 32, 24)
+	_label("Retry", 900, 634, 280, 42, 32)
 	_refresh()
 	queue_redraw()
 
@@ -107,32 +111,90 @@ func _begin() -> void:
 	phase = "playing"
 	wave = 1
 
+func _clear_note() -> void:
+	if note == "Rejected":
+		note = ""
+
+func _reject() -> void:
+	note = "Rejected"
+
 func _select(kind: String) -> void:
 	if phase != "playing" or not COSTS.has(kind):
 		return
 	selected = kind
+	picked = null
+
+func _dmg_of(t) -> int:
+	if String(t.kind) == "gun":
+		return 2 if bool(t.upgraded) else 1
+	if String(t.kind) == "cannon":
+		return 5 if bool(t.upgraded) else 3
+	return 0
 
 func _place(c: int, r: int) -> void:
-	if phase != "playing" or selected == "":
+	if phase != "playing":
+		return
+	if selected == "":
+		var existing = _tower_at(c, r)
+		if existing != null:
+			picked = {"c": c, "r": r}
 		return
 	var kind := selected
 	var cost := int(COSTS[kind])
 	if dp < cost:
+		_reject()
 		return
 	if kind == "wall":
 		if not _on_path(c, r) or _tower_at(c, r) != null or _ground_on(c, r) != null:
+			_reject()
 			return
-		towers.append({"kind": kind, "c": c, "r": r, "hp": 6})
+		towers.append({"kind": kind, "c": c, "r": r, "hp": 6, "upgraded": false})
 	else:
 		if not _deploy(c, r) or _tower_at(c, r) != null:
+			_reject()
 			return
-		towers.append({"kind": kind, "c": c, "r": r, "hp": 1})
+		towers.append({"kind": kind, "c": c, "r": r, "hp": 1, "upgraded": false})
 	dp -= cost
 	selected = ""
+	picked = null
+	_clear_note()
+
+func _upgrade() -> void:
+	if phase != "playing":
+		return
+	var t = null
+	if picked != null:
+		t = _tower_at(int(picked.c), int(picked.r))
+	if t == null or bool(t.upgraded) or dp < 2:
+		_reject()
+		return
+	dp -= 2
+	t.upgraded = true
+	if String(t.kind) == "wall":
+		t.hp = int(t.hp) + 4
+	picked = null
+	_clear_note()
+
+func _retry() -> void:
+	if phase != "clear" and phase != "fail":
+		return
+	phase = "ready"
+	wave = 0
+	dp = 6
+	base = 4
+	selected = ""
+	picked = null
+	note = ""
+	shots = []
+	towers = []
+	enemies = []
+	queue = _opening()
 
 func _step() -> void:
 	if phase != "playing":
 		return
+	_clear_note()
+	shots = []
 	var shooters: Array = []
 	for t in towers:
 		if t.kind != "wall":
@@ -151,7 +213,8 @@ func _step() -> void:
 			return (0 if bool(a.fly) else 1) > (0 if bool(b.fly) else 1)
 		)
 		if hits.size() > 0:
-			hits[0].hp = int(hits[0].hp) - int(DMG[t.kind])
+			hits[0].hp = int(hits[0].hp) - _dmg_of(t)
+			shots.append({"fc": int(t.c), "fr": int(t.r), "tc": int(hits[0].c), "tr": int(hits[0].r)})
 	var alive: Array = []
 	for e in enemies:
 		if int(e.hp) > 0:
@@ -211,10 +274,14 @@ func _ended() -> bool:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _ended():
-			return
 		var p: Vector2 = event.position
-		if p.x >= 440 and p.x < 840 and p.y >= 620 and p.y < 690:
+		if p.x >= 900 and p.x < 1180 and p.y >= 620 and p.y < 690:
+			_retry()
+		elif _ended():
+			pass
+		elif p.x >= 1020 and p.x < 1240 and p.y >= 160 and p.y < 216:
+			_upgrade()
+		elif p.x >= 440 and p.x < 840 and p.y >= 620 and p.y < 690:
 			_begin()
 		elif p.x >= 60 and p.x < 300 and p.y >= 620 and p.y < 690:
 			_step()
@@ -260,12 +327,14 @@ func _refresh() -> void:
 	elif phase == "clear":
 		_labels[2].text = "Tower clear"
 	else:
-		_labels[2].text = ""
+		_labels[2].text = note
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("1c1610"))
 	draw_rect(Rect2(60, 620, 240, 70), Color("5c4030"))
 	draw_rect(Rect2(440, 620, 400, 70), Color("8a5a2a"))
+	draw_rect(Rect2(900, 620, 280, 70), Color("3d4a38"))
+	draw_rect(Rect2(1020, 160, 220, 56), Color("5c4030"))
 	var card_y := [160, 228, 296]
 	var card_kind := ["gun", "wall", "cannon"]
 	for i in card_kind.size():
@@ -294,7 +363,8 @@ func _draw() -> void:
 		var tex := _texture(String(TOWER_SPRITE[t.kind]))
 		if tex:
 			draw_texture_rect(tex, Rect2(rect.position.x + 12, rect.position.y + 20, 48, 48), false)
-		var caption := str(int(t.hp)) if t.kind == "wall" else String(t.kind)
+		var plus := "+" if bool(t.upgraded) else ""
+		var caption := (str(int(t.hp)) if t.kind == "wall" else String(t.kind)) + plus
 		draw_string(font, rect.position + Vector2(8, 14), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f6e7c1"))
 	for e in enemies:
 		var ox := 28 if bool(e.fly) else 4
@@ -303,3 +373,9 @@ func _draw() -> void:
 		if tex:
 			draw_texture_rect(tex, rect, false)
 		draw_string(font, rect.position + Vector2(0, 48), "%s %d" % [e.kind, int(e.hp)], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffe08a"))
+	for shot in shots:
+		var x1 := OX + int(shot.fc) * CELL + CELL / 2.0
+		var y1 := OY + int(shot.fr) * CELL + CELL / 2.0
+		var x2 := OX + int(shot.tc) * CELL + CELL / 2.0
+		var y2 := OY + int(shot.tr) * CELL + CELL / 2.0
+		draw_line(Vector2(x1, y1), Vector2(x2, y2), Color("ffe14a"), 4.0)
