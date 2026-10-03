@@ -22,8 +22,8 @@ engines:
 tasks: [p0-click-score, p0-hud-start, p0-grid-marks, p0-countdown-play]
 compare_tasks:
   - p1-chart-rush
-  - p1-slide-puzzle
   - p1-depot-skirmish
+  - p1-tower-defense
 scoring:
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden

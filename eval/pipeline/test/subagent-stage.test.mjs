@@ -14,6 +14,16 @@ import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/pr
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
+function looksItem(item, frames, score) {
+  const evidence = [frames[0].id];
+  if (item.dim === 'V' || item.agg === 'mean') {
+    const scored = {};
+    for (const frame of frames) scored[frame.id] = score;
+    return { score, frames: scored, evidence };
+  }
+  return { score, evidence };
+}
+
 function trace(scenario, events) {
   return {
     schema: 'eval.trace/1',
@@ -166,7 +176,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       }
       assert.deepEqual(
         spec.rubric_items.map((item) => item.id).sort(),
-        ['A1', 'A2', 'D1', 'D2', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'V1', 'V2'],
+        ['A1', 'A2', 'A3', 'D1', 'D2', 'D3', 'D4', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'V1', 'V2', 'V3'],
       );
       assert.doesNotMatch(JSON.stringify(spec.rubric_items), /phase|cursor|clockMs|remainMs/);
       assert.doesNotMatch(JSON.stringify(spec.stills), spec.engine === 'onegame' ? /godot/ : /onegame/);
@@ -174,7 +184,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       for (const [sc, frames] of Object.entries(spec.stills)) {
         scenarios[sc] = {};
         for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-          scenarios[sc][item.id] = { score: item.id === 'V2' || item.id === 'A2' ? 0 : 1, evidence: [frames[0].id] };
+          scenarios[sc][item.id] = looksItem(item, frames, item.id === 'V2' || item.id === 'A2' ? 0 : 1);
         }
       }
       return JSON.stringify({ scenarios });
@@ -188,9 +198,10 @@ test('main agent scores frame rubric without cross-item caps', async () => {
   assert.equal(scored.ogRow.looks_source, 'subagent');
   assert.equal(scored.gdRow.looks_source, 'subagent');
   assert.equal(scored.ogRow.M, 1);
-  assert.equal(scored.ogRow.V, 0.5);
-  assert.equal(scored.ogRow.product_100, 75);
-  assert.equal(scored.gdRow.product_100, 75);
+  assert.equal(scored.ogRow.V, 0.667);
+  assert.equal(scored.ogRow.A, 0.667);
+  assert.equal(scored.ogRow.product_100, 83.4);
+  assert.equal(scored.gdRow.product_100, 83.4);
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(path.dirname(staged.onegame.outPath), 'builder-onegame.json'), 'utf8')).source,
     'subagent',
@@ -249,7 +260,7 @@ test('oracle gate scores reference projects through the looks subagent', async (
         for (const [sc, frames] of Object.entries(spec.stills)) {
           scenarios[sc] = {};
           for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-            scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+            scenarios[sc][item.id] = looksItem(item, frames, 1);
           }
         }
         return JSON.stringify({ scenarios });
@@ -397,7 +408,7 @@ function finishReplayAndLooks(spec) {
   for (const [sc, frames] of Object.entries(spec.stills)) {
     scenarios[sc] = {};
     for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
-      scenarios[sc][item.id] = { score: 1, evidence: [frames[0].id] };
+      scenarios[sc][item.id] = looksItem(item, frames, 1);
     }
   }
   return JSON.stringify({ scenarios });

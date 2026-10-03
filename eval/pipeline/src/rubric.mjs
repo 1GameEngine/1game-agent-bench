@@ -1,5 +1,7 @@
-import { quantizeLooks } from './looks-rubric.mjs';
+import { quantizeLooks, reqAgg } from './looks-rubric.mjs';
 import { BANNED_LOOKS_WORDS } from './looks-rubric.mjs';
+
+export { reqAgg };
 
 export const RUBRIC_DIMS = ['M', 'D', 'V', 'A'];
 
@@ -71,6 +73,7 @@ export function validateRubric(rubric, opts = {}) {
     else dims.add(dim);
     if (req.id && dim && req.id[0] !== dim) issues.push(`id-prefix ${req.id}`);
     if (req.scope !== 'scenario' && req.scope !== 'persistent') issues.push(`scope ${req.id}`);
+    if (req.agg != null && req.agg !== 'max' && req.agg !== 'mean') issues.push(`agg ${req.id}`);
     if (!req.description) issues.push(`desc ${req.id}`);
     const description = String(req.description ?? '');
     if (/phase|cursor|clockMs|remainMs/.test(description)) issues.push(`hidden-field ${req.id}`);
@@ -133,7 +136,7 @@ export function aggregateObserved(byScenario, rubric, requiredScenarios = []) {
   for (const req of rubric?.requirements ?? []) {
     const applies = reqApplies(req) ?? required;
     let v = 0;
-    if (reqScope(req) === 'persistent') {
+    if (reqScope(req) === 'persistent' || reqAgg(req) === 'mean') {
       const all = applies.map((sc) => (observed[sc] ? quantizeLooks(observed[sc]?.[req.id]) : 0));
       v = persistentItemScore(all);
     } else {

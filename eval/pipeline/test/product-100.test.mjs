@@ -18,7 +18,7 @@ test('suite winner is product_100', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(SUITE_TASKS.length, 3);
-  assert.deepEqual(SUITE_TASKS, ['p1-chart-rush', 'p1-slide-puzzle', 'p1-depot-skirmish']);
+  assert.deepEqual(SUITE_TASKS, ['p1-chart-rush', 'p1-depot-skirmish', 'p1-tower-defense']);
   assert.equal(P0_TASKS.length, 0);
 });
 

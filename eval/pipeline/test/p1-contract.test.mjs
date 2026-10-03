@@ -15,7 +15,7 @@ test('P1 compare_tasks are headline games with hidden rubric and traces', () => 
   assert.equal(suite.headline_track, 'product_100');
   assert.equal(suite.p0_in_headline, false);
   assert.deepEqual(suite.compare_tasks, P1_TASKS);
-  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-slide-puzzle', 'p1-depot-skirmish']);
+  assert.deepEqual(P1_TASKS, ['p1-chart-rush', 'p1-depot-skirmish', 'p1-tower-defense']);
   assert.equal(suite.replay.fps, 30);
   assert.equal(suite.replay.traces, 'submitted');
   for (const id of P1_TASKS) {
@@ -58,6 +58,10 @@ test('chart rush looks isolate falling notes from receptor caps', () => {
   assert.doesNotMatch(JSON.stringify(b.rubric), /phase|cursor|clockMs|remainMs/);
   assert.match(byId.V2.description, /下落/);
   assert.match(byId.A2.description, /底栏/);
+  assert.match(byId.D2.description, /方向键图/);
+  assert.match(byId.M1.description, /纯色块/);
+  assert.equal(byId.V2.agg, 'mean');
+  assert.equal(byId.D1.agg, 'max');
   assert.match(b.instruction, /只有底栏没有下落物/);
 });
 
@@ -68,6 +72,9 @@ test('P1 builder prompts share body bytes', () => {
   assert.ok(og.startsWith(body));
   assert.ok(gd.startsWith(body));
   assert.notEqual(og, gd);
+  assert.match(body, /提交前自己调试/);
+  assert.match(body, /duration_frames/);
+  assert.doesNotMatch(body, /1Game|Godot|1gameplay|CharacterBody/);
 });
 
 test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {

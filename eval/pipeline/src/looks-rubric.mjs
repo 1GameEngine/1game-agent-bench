@@ -93,6 +93,33 @@ export function quantizeLooks(x) {
   return 0;
 }
 
+export function reqAgg(req) {
+  if (req?.agg === 'mean' || req?.agg === 'max') return req.agg;
+  const dim = String(req?.dim || req?.id || '')[0];
+  if (dim === 'V' && (req?.scope === 'scenario' || req?.scope === 'persistent')) return 'mean';
+  return 'max';
+}
+
+export function quantizedFrameMean(frames) {
+  if (!frames || typeof frames !== 'object' || Array.isArray(frames)) return null;
+  const vals = Object.values(frames).map((n) => Number(n));
+  if (!vals.length || vals.some((n) => n !== 0 && n !== 0.5 && n !== 1)) return null;
+  return quantizeLooks(vals.reduce((a, b) => a + b, 0) / vals.length);
+}
+
+export function visualFramesMatch(raw, stillIds) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !stillIds?.size) return false;
+  const frames = raw.frames;
+  if (!frames || typeof frames !== 'object' || Array.isArray(frames)) return false;
+  const keys = Object.keys(frames);
+  if (keys.length !== stillIds.size) return false;
+  for (const id of stillIds) {
+    if (!Object.prototype.hasOwnProperty.call(frames, id)) return false;
+  }
+  const mean = quantizedFrameMean(frames);
+  return mean != null && mean === quantizeLooks(raw.score);
+}
+
 function roundDim(x) {
   return Math.round(x * 1000) / 1000;
 }
@@ -119,11 +146,16 @@ export function parseLooksVerdict(text, rubric, stillIds) {
 }
 
 export function normalizeLooksScores(scores, rubric, stillIds) {
-  const ids = rubric?.requirements?.length ? rubric.requirements.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
+  const reqs = rubric?.requirements?.length ? rubric.requirements : LOOKS_ITEMS;
   const evidenceIds = stillIds && rubric?.requirements?.length ? stillIds : null;
   const out = {};
-  for (const id of ids) {
-    out[id] = readLooksItem(scores?.[id], evidenceIds);
+  for (const req of reqs) {
+    const id = req.id;
+    if (evidenceIds && reqAgg(req) === 'mean') {
+      out[id] = visualFramesMatch(scores?.[id], evidenceIds) ? quantizeLooks(scores[id].score) : 0;
+    } else {
+      out[id] = readLooksItem(scores?.[id], evidenceIds);
+    }
   }
   return out;
 }
@@ -138,6 +170,7 @@ export function looksEvidenceComplete(scores, rubric, stillIds) {
         ? raw.evidence.map(String)
         : [];
     if (!evidence.some((id) => stillIds.has(id))) return false;
+    if (reqAgg(req) === 'mean' && !visualFramesMatch(raw, stillIds)) return false;
   }
   return true;
 }

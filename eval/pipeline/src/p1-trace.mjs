@@ -21,7 +21,7 @@ export const TRACE_KEYS = [
   'KeyD',
 ];
 
-export const TRACE_EVENT_TYPES = ['keydown', 'keyup', 'click'];
+export const TRACE_EVENT_TYPES = ['keydown', 'keyup', 'click', 'mouse_down', 'mouse_move', 'mouse_up'];
 
 export function tracePolicy(task) {
   return {
@@ -76,11 +76,11 @@ export function auditTrace(trace, policy = null) {
       } else if (!held.has(ev.code)) issues.push(`keyup without keydown ${ev.code}`);
       else held.delete(ev.code);
     }
-    if (ev.type === 'click') {
+    if (ev.type === 'click' || ev.type === 'mouse_down' || ev.type === 'mouse_move' || ev.type === 'mouse_up') {
       const x = Number(ev.x);
       const y = Number(ev.y);
       if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1280 || y < 0 || y > 720) {
-        issues.push(`click ${x},${y}`);
+        issues.push(`${ev.type} ${x},${y}`);
       }
     }
     for (const banned of ['until', 'uid', 'locator', 'wait_wall', 'screenshot', 'bash', 'hover', 'drag']) {

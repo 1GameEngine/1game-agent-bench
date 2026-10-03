@@ -36,25 +36,25 @@
       "g0_ok": 1
     },
     {
-      "id": "p1-slide-puzzle",
+      "id": "p1-depot-skirmish",
       "engine": "onegame",
       "primary": "TRACE_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-slide-puzzle",
+      "id": "p1-depot-skirmish",
       "engine": "godot",
       "primary": "TRACE_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-depot-skirmish",
+      "id": "p1-tower-defense",
       "engine": "onegame",
       "primary": "TRACE_OK",
       "g0_ok": 1
     },
     {
-      "id": "p1-depot-skirmish",
+      "id": "p1-tower-defense",
       "engine": "godot",
       "primary": "TRACE_OK",
       "g0_ok": 1

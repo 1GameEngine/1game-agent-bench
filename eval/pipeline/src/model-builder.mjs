@@ -35,6 +35,7 @@ export function buildBuilderPrompt({ engine, instruction, task }) {
   const names = traceFilePlan(task)
     .map((item) => `${path.basename(item.rel)} 的 scenario 是 ${item.scenario}`)
     .join('，');
+  const eventList = (task?.input?.events ?? ['keydown', 'keyup', 'click']).join('、');
   return `${appendix}
 
 ## 本题题面（唯一玩法来源）
@@ -55,7 +56,7 @@ ${instruction.trim()}
 必须包含：
 ${files}
 
-traces 使用 schema eval.trace/1，viewport 1280×720。${names}。事件只有题面允许的 keydown、keyup、click。
+traces 使用 schema eval.trace/1。duration_frames 是整数。viewport 是 {"w":1280,"h":720}。每条事件带整数 frame。${names}。事件类型只有 ${eventList}。keydown 和 keyup 用 code。click、mouse_down、mouse_move、mouse_up 用 x 和 y。格式和自查步骤以「提交前自己调试」为准。
 1Game 只改 src/game.tsx 和 demo_outputs，入口从 @1game/engine-bundle/runtime/worker 导入并绑定 store。方向键图用静态 import 引用 assets 里的 png。
 Godot 主场景是 game.tscn，脚本 game.gd，窗口 1280×720。方向键图用 res://assets/ 下的 png。不要写探测脚本，不要用 CharacterBody2D 或 RigidBody 决定对错。
 `;
