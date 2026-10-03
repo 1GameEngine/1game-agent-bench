@@ -72,6 +72,9 @@ test('P1 builder prompts share body bytes', () => {
   assert.ok(og.startsWith(body));
   assert.ok(gd.startsWith(body));
   assert.notEqual(og, gd);
+  assert.match(body, /提交前自己调试/);
+  assert.match(body, /duration_frames/);
+  assert.doesNotMatch(body, /1Game|Godot|1gameplay|CharacterBody/);
 });
 
 test('COMPARE_SCALAR forbids overall and uses attempts denominator', () => {
