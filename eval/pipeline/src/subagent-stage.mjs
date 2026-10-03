@@ -226,6 +226,7 @@ function builderSpec({ engine, taskId, workspace, instruction, task, repair }) {
 
 ## 构建 / 启动校验失败
 上一份提交没有通过出码校验（${repair.primary}）。按下面的错误修改当前工作区，不要读评测仓，不要重写无关文件。
+改完后按「提交前自己调试」把轨迹和题面再走一遍。错误文本可能只保留日志末尾，点到的每个文件都要改完。
 ${detail}
 `;
   }

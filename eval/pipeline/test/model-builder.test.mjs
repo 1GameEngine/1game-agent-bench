@@ -44,6 +44,8 @@ test('builder prompt is the task text plus the engine appendix', () => {
   assert.match(gd, /当前主场景根节点脚本/);
   assert.notEqual(og, gd);
   for (const prompt of [og, gd]) {
+    assert.match(prompt, /提交前自己调试/);
+    assert.match(prompt, /「提交前自己调试」为准/);
     assert.doesNotMatch(prompt, /probe\.json/);
     assert.doesNotMatch(prompt, /last_gte/);
     assert.doesNotMatch(prompt, /"id": "M1"/);

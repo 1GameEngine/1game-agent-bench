@@ -176,7 +176,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       }
       assert.deepEqual(
         spec.rubric_items.map((item) => item.id).sort(),
-        ['A1', 'A2', 'D1', 'D2', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'V1', 'V2'],
+        ['A1', 'A2', 'A3', 'D1', 'D2', 'D3', 'D4', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'V1', 'V2', 'V3'],
       );
       assert.doesNotMatch(JSON.stringify(spec.rubric_items), /phase|cursor|clockMs|remainMs/);
       assert.doesNotMatch(JSON.stringify(spec.stills), spec.engine === 'onegame' ? /godot/ : /onegame/);
@@ -198,9 +198,10 @@ test('main agent scores frame rubric without cross-item caps', async () => {
   assert.equal(scored.ogRow.looks_source, 'subagent');
   assert.equal(scored.gdRow.looks_source, 'subagent');
   assert.equal(scored.ogRow.M, 1);
-  assert.equal(scored.ogRow.V, 0.5);
-  assert.equal(scored.ogRow.product_100, 75);
-  assert.equal(scored.gdRow.product_100, 75);
+  assert.equal(scored.ogRow.V, 0.667);
+  assert.equal(scored.ogRow.A, 0.667);
+  assert.equal(scored.ogRow.product_100, 83.4);
+  assert.equal(scored.gdRow.product_100, 83.4);
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(path.dirname(staged.onegame.outPath), 'builder-onegame.json'), 'utf8')).source,
     'subagent',
