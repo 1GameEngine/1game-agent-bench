@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { orchestrateEngines, orchestrateOracle, assertReplayDocument, defaultRunSubagent, acceptLooksText, defaultPrepare } from '../src/subagent-stage.mjs';
+import { cloudAgentSubagentEnabled, cloudTaskDir } from '../src/cloud-agent-subagent.mjs';
 import { runStageReplay } from '../src/stage-replay.mjs';
 import { traceEventArgv } from '../src/p1-onegame.mjs';
 import { checkGodotBoot } from '../src/p1-godot.mjs';
@@ -82,9 +83,67 @@ function replayDoc(spec, stills) {
   };
 }
 
+test('cloud agent is the default subagent outside the test runner', () => {
+  assert.equal(cloudAgentSubagentEnabled({ CURSOR_AGENT: '1' }), true);
+  assert.equal(cloudAgentSubagentEnabled({}), false);
+  assert.equal(cloudAgentSubagentEnabled({ CURSOR_AGENT: '1', NODE_TEST_CONTEXT: 'child' }), false);
+  assert.equal(cloudAgentSubagentEnabled({ EVAL_CLOUD_AGENT_SUBAGENT: '0', CURSOR_AGENT: '1' }), false);
+  assert.equal(cloudAgentSubagentEnabled({ EVAL_CLOUD_AGENT_SUBAGENT: '1', NODE_TEST_CONTEXT: 'child' }), true);
+});
+
+test('cloud agent subagent fulfills a builder without EVAL_SUBAGENT_CMD', async () => {
+  const prevCmd = process.env.EVAL_SUBAGENT_CMD;
+  const prevFlag = process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+  const prevDir = process.env.EVAL_CLOUD_TASK_DIR;
+  const prevTimeout = process.env.EVAL_SUBAGENT_TIMEOUT_MS;
+  delete process.env.EVAL_SUBAGENT_CMD;
+  process.env.EVAL_CLOUD_AGENT_SUBAGENT = '1';
+  process.env.EVAL_SUBAGENT_TIMEOUT_MS = '3000';
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cloud-task-'));
+  process.env.EVAL_CLOUD_TASK_DIR = dir;
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'cloud-ws-'));
+  try {
+    const pending = defaultRunSubagent({
+      role: 'builder',
+      engine: 'onegame',
+      taskId: 'p1-chart-rush',
+      workspace,
+      prompt: '写一个游戏',
+    });
+    let reqPath = '';
+    for (let i = 0; i < 20 && !reqPath; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      reqPath = fs.readdirSync(dir).find((name) => name.endsWith('.request.json')) ?? '';
+    }
+    assert.ok(reqPath);
+    const req = JSON.parse(fs.readFileSync(path.join(dir, reqPath), 'utf8'));
+    assert.equal(req.handoff.subagent_type, 'generalPurpose');
+    assert.match(req.handoff.prompt, /写一个游戏/);
+    assert.doesNotMatch(req.handoff.prompt, /rubric\.json/);
+    fs.mkdirSync(path.join(workspace, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(workspace, 'src', 'game.tsx'), 'export const game = 1;\n');
+    const id = reqPath.replace(/\.request\.json$/, '');
+    fs.writeFileSync(path.join(dir, `${id}.response.json`), `${JSON.stringify({ stdout: '', exitCode: 0 })}\n`);
+    assert.equal(await pending, '');
+    assert.equal(fs.existsSync(path.join(workspace, 'src', 'game.tsx')), true);
+    assert.equal(cloudTaskDir(), dir);
+  } finally {
+    if (prevCmd === undefined) delete process.env.EVAL_SUBAGENT_CMD;
+    else process.env.EVAL_SUBAGENT_CMD = prevCmd;
+    if (prevFlag === undefined) delete process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+    else process.env.EVAL_CLOUD_AGENT_SUBAGENT = prevFlag;
+    if (prevDir === undefined) delete process.env.EVAL_CLOUD_TASK_DIR;
+    else process.env.EVAL_CLOUD_TASK_DIR = prevDir;
+    if (prevTimeout === undefined) delete process.env.EVAL_SUBAGENT_TIMEOUT_MS;
+    else process.env.EVAL_SUBAGENT_TIMEOUT_MS = prevTimeout;
+  }
+});
+
 test('unset subagent command stops before any game file is written', async () => {
   const prev = process.env.EVAL_SUBAGENT_CMD;
+  const prevFlag = process.env.EVAL_CLOUD_AGENT_SUBAGENT;
   delete process.env.EVAL_SUBAGENT_CMD;
+  process.env.EVAL_CLOUD_AGENT_SUBAGENT = '0';
   const workspaces = [];
   await assert.rejects(
     () =>
@@ -108,6 +167,8 @@ test('unset subagent command stops before any game file is written', async () =>
   }
   if (prev === undefined) delete process.env.EVAL_SUBAGENT_CMD;
   else process.env.EVAL_SUBAGENT_CMD = prev;
+  if (prevFlag === undefined) delete process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+  else process.env.EVAL_CLOUD_AGENT_SUBAGENT = prevFlag;
 });
 
 test('builder and looks specs hide the probe, and a forged replay is rejected', async () => {

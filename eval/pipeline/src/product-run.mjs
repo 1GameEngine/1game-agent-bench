@@ -15,14 +15,18 @@ import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
 import { aggregateObserved } from './rubric.mjs';
 import { orchestrateEngines, orchestrateOracle } from './subagent-stage.mjs';
+import { cloudAgentSubagentEnabled } from './cloud-agent-subagent.mjs';
 import { ORACLE_FLOOR } from './product-100.mjs';
 
 export function assertProductSubagent() {
   if (process.env.EVAL_LOOKS_ALLOW_WORKER === '1' || process.env.EVAL_LOOKS_BACKEND === 'heuristic') {
     throw new EvalError('SUBAGENT_REQUIRED', '百分制只接受 looks subagent。worker 和 heuristic 不能出分。');
   }
-  if (!process.env.EVAL_SUBAGENT_CMD) {
-    throw new EvalError('SUBAGENT_REQUIRED', '出码、重放、观感都必须由 subagent 执行。设置 EVAL_SUBAGENT_CMD。');
+  if (!process.env.EVAL_SUBAGENT_CMD && !cloudAgentSubagentEnabled()) {
+    throw new EvalError(
+      'SUBAGENT_REQUIRED',
+      '出码和观感由当前 Cloud Agent 的 subagent 执行。Cloud Agent（CURSOR_AGENT=1）不需要 EVAL_SUBAGENT_CMD。',
+    );
   }
 }
 

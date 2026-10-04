@@ -16,6 +16,7 @@ import { oracleGodot } from './paths.mjs';
 import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
+import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
@@ -45,12 +46,13 @@ export function defaultPrepare({ engine, taskId, runId, instruction }) {
   };
 }
 
-export function defaultRunSubagent(spec) {
+export async function defaultRunSubagent(spec) {
   const cmd = process.env.EVAL_SUBAGENT_CMD;
   if (!cmd) {
+    if (cloudAgentSubagentEnabled()) return runCloudAgentSubagent(spec);
     throw new EvalError(
       'SUBAGENT_REQUIRED',
-      '出码、重放、观感都必须由 subagent 执行。设置 EVAL_SUBAGENT_CMD（stdin 为阶段 JSON）。未配置时不算分，主进程不写游戏、不重放、不看图。',
+      '出码和观感由当前 Cloud Agent 的 subagent 执行。Cloud Agent（CURSOR_AGENT=1）不需要 EVAL_SUBAGENT_CMD。当前进程不是 Cloud Agent，主进程不写游戏、不重放、不看图。',
     );
   }
   let args = [];
