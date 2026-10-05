@@ -359,32 +359,32 @@ export async function orchestrateEngines({
     prepped[engine] = prepare({ engine, taskId, runId, instruction: bundle.instruction });
   }
   const built = {};
-  await Promise.all(
-    ['onegame', 'godot'].map(async (engine) => {
-      const prep = prepped[engine];
-      const token = randomBytes(16).toString('hex');
-      if (!skipBuilder) {
-        const builtOnce = await buildUntilBoot({
-          engine,
-          taskId,
-          prep,
-          instruction: bundle.instruction,
-          task: bundle.task,
-          runSubagent,
-          bootCheck,
-          attempts: builderBootAttempts(),
-        });
-        const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
-        fs.mkdirSync(path.dirname(stampPath), { recursive: true });
-        fs.writeFileSync(
-          stampPath,
-          `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null }, null, 2)}\n`,
-        );
-      }
-      await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
-      built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
-    }),
-  );
+  // Sequential per engine: sync stage-replay blocks the event loop; parallel builder+replay
+  // would stall the other engine's cloud-agent wait on .response.json.
+  for (const engine of ['onegame', 'godot']) {
+    const prep = prepped[engine];
+    const token = randomBytes(16).toString('hex');
+    if (!skipBuilder) {
+      const builtOnce = await buildUntilBoot({
+        engine,
+        taskId,
+        prep,
+        instruction: bundle.instruction,
+        task: bundle.task,
+        runSubagent,
+        bootCheck,
+        attempts: builderBootAttempts(),
+      });
+      const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
+      fs.mkdirSync(path.dirname(stampPath), { recursive: true });
+      fs.writeFileSync(
+        stampPath,
+        `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null }, null, 2)}\n`,
+      );
+    }
+    await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
+    built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
+  }
   const planned = planPair(built, bundle.rubric, bundle.task.sample_fps);
   await Promise.all(
     planned.run.map(async (engine) => {
