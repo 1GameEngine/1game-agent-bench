@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,19 +28,6 @@ export function taskDir(taskId) {
   return path.join(EVAL_DIR, 'tasks', taskId);
 }
 
-export function oracleGame(taskId) {
-  const p1 = path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'onegame', 'src', 'game.tsx');
-  if (fs.existsSync(p1)) return p1;
-  return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'src', 'game.tsx');
-}
-
 export function oracleGodot(taskId) {
   return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'godot');
-}
-
-export function oracleTraces(taskId, engine) {
-  if (engine === 'godot') {
-    return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'godot', 'demo_outputs');
-  }
-  return path.join(EVAL_DIR, 'examples', 'oracles', taskId, 'onegame', 'demo_outputs');
 }

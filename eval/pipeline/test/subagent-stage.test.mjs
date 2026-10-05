@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { orchestrateEngines, orchestrateOracle, assertReplayDocument, defaultRunSubagent, acceptLooksText, defaultPrepare } from '../src/subagent-stage.mjs';
+import { orchestrateEngines, assertReplayDocument, defaultRunSubagent, acceptLooksText, defaultPrepare } from '../src/subagent-stage.mjs';
 import { cloudAgentSubagentEnabled, cloudTaskDir } from '../src/cloud-agent-subagent.mjs';
 import { runStageReplay } from '../src/stage-replay.mjs';
 import { traceEventArgv } from '../src/p1-onegame.mjs';

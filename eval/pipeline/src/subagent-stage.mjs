@@ -12,7 +12,6 @@ import { checkGodotBoot } from './p1-godot.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
-import { oracleGodot } from './paths.mjs';
 import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
@@ -308,29 +307,8 @@ function planPair(built, rubric, sampleFps) {
   return { pair: 'G_ASYMMETRIC', run: [live], plans };
 }
 
-export function defaultPrepareOracle({ engine, taskId, runId, instruction }) {
-  if (engine === 'godot') {
-    const workspace = path.join(WORK_DIR, `${runId}-oracle-gd`);
-    fs.rmSync(workspace, { recursive: true, force: true });
-    fs.cpSync(oracleGodot(taskId), workspace, { recursive: true });
-    fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
-    return {
-      workspace,
-      replayRunId: `${runId}-gd`,
-      outPath: path.join(WORK_DIR, `${runId}-gd`, 'REPLAY.json'),
-    };
-  }
-  const boot = bootstrap({
-    taskId,
-    runId: `${runId}-og`,
-    instruction,
-    oracle: true,
-  });
-  return {
-    workspace: boot.gameDir,
-    replayRunId: `${runId}-og`,
-    outPath: path.join(WORK_DIR, `${runId}-og`, 'REPLAY.json'),
-  };
+export function defaultPrepareOracle() {
+  throw new EvalError('NO_REFERENCE', '本仓不提供参考作。oracle gate 不再重放内置成品，headline 必须由 builder 按题面重写。');
 }
 
 async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts }) {

@@ -4,7 +4,7 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 1. Builder 工作区根 = `work/<runId>/game`，**不要**把 `eval/` add 进同一个 Cursor workspace。
 2. Judge 是评测仓里的 **另一个 Node 进程**。Headline 的 M、D、V、A 都由 looks subagent 看重放静帧对照隐藏量表，不是 screenshot 当金标，也不读内部字段。
-3. 不要把 rubric / 官方 traces 当作 Builder 可见答案塞进 `game/`（oracle 验收除外）。
+3. 不要把 rubric 或任何成品当作 Builder 可见答案塞进 `game/`。本仓不带参考作。
 4. 禁止 `1game-skill activate --global`。
 5. 下一题新 `runId`，禁止跨任务复用未校验 pin 的 `node_modules`。
 6. 不要求 Docker/user namespace（可选加固，非 P0 验收项）。

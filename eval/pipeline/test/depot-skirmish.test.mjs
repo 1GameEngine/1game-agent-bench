@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { loadP1Task } from '../src/p1-load.mjs';
-import { EVAL_DIR } from '../src/paths.mjs';
 
 const COLS = 8;
 const ROWS = 6;
@@ -403,40 +400,3 @@ test('depot skirmish: Start, End and the board do not overlap', () => {
   }
 });
 
-test('depot skirmish reference traces follow the scripted fights', () => {
-  const scripts = {
-    intro: [],
-    loop: LOOP,
-    fail: [...FAIL, 'retry'],
-    clear: [...CLEAR, 'ridge'],
-  };
-  for (const engine of ['onegame', 'godot']) {
-    const dir = path.join(EVAL_DIR, 'examples', 'oracles', 'p1-depot-skirmish', engine, 'demo_outputs');
-    for (const name of fs.readdirSync(dir)) {
-      const trace = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
-      const script = scripts[trace.scenario];
-      assert.ok(script, name);
-      assert.equal(trace.events.length, script.length, `${engine}/${name}`);
-      const s = fresh();
-      for (const ev of trace.events) {
-        if (ev.type === 'click') click(s, ev.x, ev.y);
-        else if (ev.type === 'keydown') key(s, ev.code);
-      }
-      if (trace.scenario === 'intro') assert.equal(s.phase, 'ready');
-      if (trace.scenario === 'loop') {
-        assert.equal(s.turn, 2);
-        assert.equal(byId(s, 'brute').hp, 0);
-      }
-      if (trace.scenario === 'fail') {
-        assert.equal(s.phase, 'ready');
-        assert.equal(s.turn, 0);
-        assert.equal(s.map, 'yard');
-      }
-      if (trace.scenario === 'clear') {
-        assert.equal(s.phase, 'ready');
-        assert.equal(s.map, 'ridge');
-        assert.deepEqual([byId(s, 'shot').c, byId(s, 'shot').r], [5, 2]);
-      }
-    }
-  }
-});

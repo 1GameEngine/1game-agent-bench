@@ -1,12 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { WORK_DIR, oracleGodot } from './paths.mjs';
-import { bootstrap } from './bootstrap.mjs';
 import { loadTaskBundle } from './load.mjs';
-import { replayJudgeHygiene } from './replay.mjs';
 import { loadP0GodotTask } from './p0-godot.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
-import { primaryOf } from './verdict.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
@@ -30,35 +27,8 @@ export function assertProductSubagent() {
   }
 }
 
-export async function mechP0Onegame(taskId, runId) {
-  const bundle = loadTaskBundle(taskId);
-  const stillsDir = path.join(WORK_DIR, runId, 'stills');
-  const boot = bootstrap({
-    taskId,
-    runId,
-    instruction: bundle.instruction,
-    oracle: true,
-  });
-  const result = replayJudgeHygiene({
-    gameDir: boot.gameDir,
-    bundle,
-    stillsDir,
-  });
-  const G =
-    result.create_ok === 1 &&
-    result.argv_ok === 1 &&
-    result.hygiene_ok === 1 &&
-    !result.bindstore_empty;
-  return {
-    bundle,
-    G,
-    sliceScores: result.sliceScores,
-    stills: result.stills,
-    primary: primaryOf(result),
-    g0_ok: result.create_ok === 1 && !result.bindstore_empty ? 1 : 0,
-    mechanical: result,
-    jobDir: path.join(WORK_DIR, runId, 'looks'),
-  };
+export async function mechP0Onegame() {
+  throw new EvalError('NO_REFERENCE', '本仓不提供参考作。P0 不再重放内置成品。');
 }
 
 export async function mechP0Godot(taskId, runId) {
