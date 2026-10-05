@@ -206,7 +206,8 @@ test('builder and looks specs hide the probe, and a forged replay is rejected', 
   );
   assert.deepEqual(calls.filter((c) => c.endsWith(':looks')), []);
   assert.ok(calls.includes('onegame:builder'));
-  assert.ok(calls.includes('godot:replay'));
+  assert.ok(calls.includes('onegame:replay'));
+  // Sequential per-engine orchestration stops before godot:replay when onegame replay is untrusted.
 });
 
 test('main agent scores frame rubric without cross-item caps', async () => {

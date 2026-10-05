@@ -1,0 +1,28 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "loop",
+  "duration_frames": 420,
+  "viewport": { "w": 1280, "h": 720 },
+  "events": [
+    { "frame": 12, "type": "click", "x": 340, "y": 250 },
+    { "frame": 24, "type": "click", "x": 640, "y": 655 },
+    { "frame": 36, "type": "mouse_down", "x": 178, "y": 256 },
+    { "frame": 38, "type": "mouse_move", "x": 460, "y": 256 },
+    { "frame": 40, "type": "mouse_up", "x": 460, "y": 256 },
+    { "frame": 52, "type": "mouse_down", "x": 178, "y": 256 },
+    { "frame": 54, "type": "mouse_up", "x": 532, "y": 328 },
+    { "frame": 66, "type": "click", "x": 532, "y": 328 },
+    { "frame": 72, "type": "click", "x": 1130, "y": 188 },
+    { "frame": 84, "type": "click", "x": 180, "y": 655 },
+    { "frame": 96, "type": "click", "x": 180, "y": 655 },
+    { "frame": 108, "type": "click", "x": 180, "y": 655 },
+    { "frame": 120, "type": "click", "x": 180, "y": 655 },
+    { "frame": 132, "type": "click", "x": 180, "y": 655 },
+    { "frame": 144, "type": "click", "x": 180, "y": 655 },
+    { "frame": 156, "type": "click", "x": 180, "y": 655 },
+    { "frame": 168, "type": "click", "x": 180, "y": 655 },
+    { "frame": 180, "type": "click", "x": 180, "y": 655 },
+    { "frame": 192, "type": "click", "x": 180, "y": 655 },
+    { "frame": 204, "type": "click", "x": 180, "y": 655 }
+  ]
+}
