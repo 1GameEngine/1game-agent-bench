@@ -62,6 +62,42 @@ Godot 主场景是 game.tscn，脚本 game.gd，窗口 1280×720。方向键图�
 `;
 }
 
+const DEBUG_PROMPT_BANNED = ['1Game', '1game', 'Godot', 'godot', 'EvalProbe', '1gameplay', 'CharacterBody', 'napi-canvas', 'Xvfb', 'rubric'];
+
+export function buildDebugPrompt({ instruction, task }) {
+  const allowEmpty = new Set(task?.scenarios?.allow_empty ?? []);
+  const cases = traceFilePlan(task)
+    .map((item) => {
+      const stop = allowEmpty.has(item.scenario)
+        ? '可以没有事件，结束时停在开始。'
+        : '必须有事件，结束时需求里的这一局面已经发生。';
+      return `- \`${item.rel}\`：scenario 是 ${item.scenario}。${stop}`;
+    })
+    .join('\n');
+  const text = `你是调试。当前工作目录里已经有一份游戏，以及 demo_outputs 下的测试用例。这一轮只改这份提交，让游戏需求在每条测试用例结束时成立。
+
+不要读评测仓，不要读隐藏量表，不要实现探测接口。下面的步骤和引擎无关：不要靠某一种启动命令，用写进游戏里的规则，把每条测试用例从初始状态逐步走完。
+
+## 游戏需求
+
+${String(instruction ?? '').trim()}
+
+## 测试用例
+
+每条轨迹是一条测试用例。轨迹里没有的点击和按键不会发生。
+${cases}
+
+1. 对照游戏需求列清单。每种可见文案、每种输入、每种胜负条件，都要能在当前提交里找到。文案与需求逐字一致。
+2. 按 frame 从小到大喂入该条测试用例的事件。走完后，文件名里的 scenario 必须已经发生。intro 停在开始，loop 停在对局中途，fail 停在失败，clear 停在过关。失败文案和过关文案不能同时出现。
+3. 用手算血量、回合、连击、胜负。失败不能写成过关，过关不能停在半截。对不上需求时，改游戏规则，或改这条测试用例的事件和时长。
+4. 测试用例保持 eval.trace/1。duration_frames 是不小于 1 的整数，并且不超过需求给出的时长上限乘 30。viewport 是 {"w":1280,"h":720}。events 按 frame 非递减。keydown 和 keyup 写成 {"frame":整数,"type":"keydown"或"keyup","code":需求允许的键}。click 写成 {"frame":整数,"type":"click","x":数字,"y":数字}。同一按键在 keyup 之前不能再 keydown。
+5. 改完把每条测试用例再走一遍。最终消息留空，或只包含一个 JSON。
+`;
+  const hit = DEBUG_PROMPT_BANNED.filter((word) => text.includes(word));
+  if (hit.length) throw new EvalError('EVAL_INTERNAL', `debug prompt names an engine or rubric: ${hit.join(',')}`);
+  return text;
+}
+
 function safeRel(rel) {
   if (typeof rel !== 'string' || !rel || path.isAbsolute(rel) || rel.split(/[\\/]/).includes('..')) {
     throw new EvalError('BUILDER_INVALID', `builder path rejected: ${rel}`);

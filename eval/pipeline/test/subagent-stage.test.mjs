@@ -194,6 +194,12 @@ test('builder and looks specs hide the probe, and a forged replay is rejected', 
             writeSubmission(spec.workspace, spec.engine);
             return '';
           }
+          if (spec.role === 'debug') {
+            assert.match(spec.prompt, /游戏需求/);
+            assert.match(spec.prompt, /测试用例/);
+            assert.doesNotMatch(spec.prompt, /1Game|Godot|1gameplay|CharacterBody|EvalProbe|rubric/);
+            return '';
+          }
           if (spec.role === 'replay') {
             assert.match(spec.replay.argv.join(' '), /stage-replay/);
             fs.writeFileSync(spec.replay.out, `${JSON.stringify({ via: 'hand', token: spec.replay.token })}\n`);
@@ -225,6 +231,12 @@ test('main agent scores frame rubric without cross-item caps', async () => {
         writeSubmission(spec.workspace, spec.engine);
         return '';
       }
+      if (spec.role === 'debug') {
+        assert.match(spec.prompt, /游戏需求/);
+        assert.match(spec.prompt, /测试用例/);
+        assert.doesNotMatch(spec.prompt, /1Game|Godot|1gameplay|CharacterBody|EvalProbe|rubric/);
+        return '';
+      }
       if (spec.role === 'replay') {
         const stills = ['intro', 'loop', 'fail', 'clear'].map((scenario) => {
           const id = `${scenario}_f0`;
@@ -253,7 +265,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
   });
   for (const engine of ['onegame', 'godot']) {
     const roles = calls.filter((c) => c.startsWith(`${engine}:`)).map((c) => c.split(':')[1]);
-    assert.deepEqual(roles, ['builder', 'replay', 'looks']);
+    assert.deepEqual(roles, ['builder', 'debug', 'replay', 'looks']);
   }
   const scored = scoreStagedPair('p1-chart-rush', staged);
   assert.equal(scored.ogRow.looks_source, 'subagent');
@@ -415,6 +427,7 @@ test('one live engine with too many stills does not get a looks score', async ()
         writeSubmission(spec.workspace, spec.engine);
         return '';
       }
+      if (spec.role === 'debug') return '';
       if (spec.role === 'replay') {
         if (spec.engine === 'godot') {
           fs.writeFileSync(
@@ -455,6 +468,7 @@ test('product and compare entrypoints do not replay or build inline', () => {
 });
 
 function finishReplayAndLooks(spec) {
+  if (spec.role === 'debug') return '';
   if (spec.role === 'replay') {
     const stills = ['intro', 'loop', 'fail', 'clear'].map((scenario) => {
       const id = `${scenario}_f0`;
@@ -509,6 +523,60 @@ test('build failure is returned to the builder before replay', async () => {
   assert.match(og[1].prompt, /构建 \/ 启动校验失败/);
   assert.doesNotMatch(og[1].prompt, /rubric\.json/);
   assert.equal(prompts.filter((spec) => spec.engine === 'godot').length, 1);
+});
+
+test('a debug edit that drops a required file stops before replay', async () => {
+  const calls = [];
+  await assert.rejects(
+    () =>
+      orchestrateEngines({
+        taskId: 'p1-chart-rush',
+        runId: 'debug-audit',
+        prepare: ({ engine }) => {
+          const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `debug-${engine}-`));
+          return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+        },
+        bootCheck: bootOk,
+        runSubagent: async (spec) => {
+          calls.push(`${spec.engine}:${spec.role}`);
+          if (spec.role === 'builder') {
+            writeSubmission(spec.workspace, spec.engine);
+            return '';
+          }
+          if (spec.role === 'debug') {
+            fs.rmSync(path.join(spec.workspace, spec.engine === 'onegame' ? 'src/game.tsx' : 'game.gd'), { force: true });
+            return '';
+          }
+          throw new Error('replay must not run after a broken debug edit');
+        },
+      }),
+    (err) => err.primary === 'BUILDER_INVALID',
+  );
+  assert.ok(calls.includes('onegame:debug'));
+  assert.deepEqual(calls.filter((item) => item.endsWith(':replay')), []);
+});
+
+test('a boot that never passes skips the debug round', async () => {
+  const calls = [];
+  await orchestrateEngines({
+    taskId: 'p1-chart-rush',
+    runId: 'no-debug',
+    prepare: ({ engine }) => {
+      const workspace = fs.mkdtempSync(path.join(os.tmpdir(), `nodebug-${engine}-`));
+      return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+    },
+    bootCheck: async () => ({ ok: false, primary: 'BOOT_FAIL', notes: ['still broken'] }),
+    runSubagent: async (spec) => {
+      calls.push(`${spec.engine}:${spec.role}`);
+      if (spec.role === 'builder') {
+        writeSubmission(spec.workspace, spec.engine);
+        return '';
+      }
+      return finishReplayAndLooks(spec);
+    },
+  });
+  assert.deepEqual(calls.filter((item) => item.endsWith(':debug')), []);
+  assert.ok(calls.includes('onegame:replay'));
 });
 
 test('submission audit failure is returned to the builder', async () => {
