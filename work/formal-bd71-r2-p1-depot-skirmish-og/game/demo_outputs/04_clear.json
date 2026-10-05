@@ -1,0 +1,21 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "clear",
+  "duration_frames": 560,
+  "viewport": { "w": 1280, "h": 720 },
+  "events": [
+    { "frame": 10, "type": "click", "x": 640, "y": 655 },
+    { "frame": 40, "type": "click", "x": 608, "y": 408 },
+    { "frame": 70, "type": "click", "x": 608, "y": 280 },
+    { "frame": 100, "type": "click", "x": 480, "y": 408 },
+    { "frame": 130, "type": "click", "x": 480, "y": 344 },
+    { "frame": 160, "type": "click", "x": 180, "y": 655 },
+    { "frame": 210, "type": "click", "x": 480, "y": 344 },
+    { "frame": 240, "type": "click", "x": 480, "y": 280 },
+    { "frame": 270, "type": "click", "x": 608, "y": 408 },
+    { "frame": 300, "type": "click", "x": 608, "y": 344 },
+    { "frame": 330, "type": "click", "x": 180, "y": 655 },
+    { "frame": 380, "type": "click", "x": 608, "y": 344 },
+    { "frame": 410, "type": "click", "x": 736, "y": 344 }
+  ]
+}

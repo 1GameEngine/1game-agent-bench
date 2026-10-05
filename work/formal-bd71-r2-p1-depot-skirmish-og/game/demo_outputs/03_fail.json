@@ -1,0 +1,17 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "fail",
+  "duration_frames": 520,
+  "viewport": { "w": 1280, "h": 720 },
+  "events": [
+    { "frame": 15, "type": "click", "x": 640, "y": 655 },
+    { "frame": 70, "type": "click", "x": 180, "y": 655 },
+    { "frame": 125, "type": "click", "x": 180, "y": 655 },
+    { "frame": 180, "type": "click", "x": 180, "y": 655 },
+    { "frame": 235, "type": "click", "x": 180, "y": 655 },
+    { "frame": 290, "type": "click", "x": 180, "y": 655 },
+    { "frame": 345, "type": "click", "x": 180, "y": 655 },
+    { "frame": 400, "type": "click", "x": 180, "y": 655 },
+    { "frame": 455, "type": "click", "x": 180, "y": 655 }
+  ]
+}
