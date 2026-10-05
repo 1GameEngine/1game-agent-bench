@@ -39,28 +39,15 @@ export function runTask({ taskId, runId, oracle = false, builderLog }) {
   return { id: taskId, ...result };
 }
 
-export function runOracles(suiteRunId = `oracle-${Date.now()}`) {
-  loadSuite();
-  const rows = [];
-  for (const taskId of ['p0-click-score', 'p0-hud-start', 'p0-grid-marks', 'p0-countdown-play']) {
-    const row = runTask({ taskId, runId: `${suiteRunId}-${taskId}`, oracle: true });
-    rows.push(row);
-    process.stderr.write(
-      `oracle ${taskId}: create=${row.create_ok} replay=${row.replay_ok} store=${row.store_match} argv=${row.argv_ok} hygiene=${row.hygiene_ok}\n`,
-    );
-    if (row.notes?.length) process.stderr.write(`  notes: ${row.notes.join(' | ')}\n`);
-  }
-  const report = buildReport({ runId: suiteRunId, taskRows: rows });
-  fs.mkdirSync(path.join(WORK_DIR, suiteRunId), { recursive: true });
-  const out = path.join(WORK_DIR, suiteRunId, 'P0_report.json');
-  writeReport(out, report);
-  return { report, out };
+export function runOracles() {
+  throw new EvalError('NO_REFERENCE', '本仓不提供参考作。P0 不再重放内置成品。');
 }
 
 export function auditBadTickFixture() {
-  const badPlan = JSON.parse(
-    fs.readFileSync(path.join(EVAL_DIR, 'examples', 'negatives', 'bad-tick-dt', 'playplan.json'), 'utf8'),
-  );
+  const badPlan = {
+    schema: 'eval.playplan/1',
+    steps: [{ id: 'bad-dt', argv: ['1gameplay', 'step', 'out/eval.1gamerecord', '--ms', '3008'] }],
+  };
   const geom = loadYaml(path.join(EVAL_DIR, 'tasks', 'p0-countdown-play', 'geometry.yaml'));
   return auditPlayplanStep(badPlan.steps[0].argv, {
     rules: loadArgvRules(),
@@ -85,14 +72,42 @@ export function runNegatives(suiteRunId) {
 
   const runId = `${suiteRunId}-nobind`;
   bootstrap({ taskId, runId, instruction: bundle.instruction, oracle: false });
-  fs.copyFileSync(
-    path.join(EVAL_DIR, 'examples', 'negatives', 'no-bindstore', 'src', 'game.tsx'),
+  fs.writeFileSync(
     path.join(gameDir(runId), 'src', 'game.tsx'),
+    `import { createGameStore, renderGame } from '@1game/engine-bundle/runtime/worker';
+
+const { store, commitChange } = createGameStore({
+  phase: 'ready',
+  score: 0,
+});
+
+function App() {
+  return (
+    <scene name="main" width={1280} height={720} backgroundColor="#0f1224">
+      <node
+        x={0}
+        y={0}
+        width={1280}
+        height={720}
+        clickable
+        onClick={() => {
+          commitChange('click', (draft) => {
+            draft.score += 1;
+          });
+        }}
+      />
+      <text x={48} y={32} width={1184} height={96} text={String(store.score)} textColor="#fff" textSize={64} />
+    </scene>
+  );
+}
+
+renderGame(() => <App />, {});
+`,
   );
   const nobind = replayJudgeHygiene({ gameDir: gameDir(runId), bundle });
 
   const hygRun = `${suiteRunId}-hygiene`;
-  bootstrap({ taskId, runId: hygRun, instruction: bundle.instruction, oracle: true });
+  bootstrap({ taskId, runId: hygRun, instruction: bundle.instruction, oracle: false });
   fs.appendFileSync(path.join(gameDir(hygRun), '.cursor', 'skills', '1game', 'SKILL.md'), '\n<!-- eval tamper -->\n');
   const hyg = replayJudgeHygiene({ gameDir: gameDir(hygRun), bundle });
 

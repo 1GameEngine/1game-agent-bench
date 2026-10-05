@@ -4,7 +4,7 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 1. Builder 工作区根 = `work/<runId>/game`，**不要**把 `eval/` add 进同一个 Cursor workspace。
 2. Judge 是评测仓里的 **另一个 Node 进程**。Headline 的 M、D、V、A 都由 looks subagent 看重放静帧对照隐藏量表，不是 screenshot 当金标，也不读内部字段。
-3. 不要把 rubric / 官方 traces 当作 Builder 可见答案塞进 `game/`（oracle 验收除外）。
+3. 不要把 rubric 或任何成品当作 Builder 可见答案塞进 `game/`。本仓不带参考作。
 4. 禁止 `1game-skill activate --global`。
 5. 下一题新 `runId`，禁止跨任务复用未校验 pin 的 `node_modules`。
 6. 不要求 Docker/user namespace（可选加固，非 P0 验收项）。
@@ -19,6 +19,6 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
-M、D、V、A 都由每个引擎的 looks subagent 按该题 `sample_fps` 抽帧打出（每段最多 40 张）。裁决必须逐条带静帧 id；没有证据则该题百分制留空。单场景条目取最高，贯穿条目对缺场景按 0 取平均。**百分制只在 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。题目不带 `probe.json`。`EVAL_LOOKS_ALLOW_WORKER=1` 和 `EVAL_LOOKS_BACKEND=heuristic` 不能写出百分制。未设置 `EVAL_SUBAGENT_CMD` → `SUBAGENT_REQUIRED`。
+M、D、V、A 都由每个引擎的 looks subagent 按该题 `sample_fps` 抽帧打出（每段最多 40 张）。裁决必须逐条带静帧 id；没有证据则该题百分制留空。单场景条目取最高，贯穿条目对缺场景按 0 取平均。**百分制只在 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。题目不带 `probe.json`。`EVAL_LOOKS_ALLOW_WORKER=1` 和 `EVAL_LOOKS_BACKEND=heuristic` 不能写出百分制。Cloud Agent（`CURSOR_AGENT=1`）默认把 builder / looks 交给当前 subagent，不需要 `EVAL_SUBAGENT_CMD`。既不是 Cloud Agent、也没有 `EVAL_SUBAGENT_CMD` → `SUBAGENT_REQUIRED`。
 
 两引擎都 `G=1` 时，抽帧必须成对且均为 **1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

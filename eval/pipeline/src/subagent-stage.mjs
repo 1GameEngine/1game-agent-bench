@@ -12,10 +12,10 @@ import { checkGodotBoot } from './p1-godot.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
-import { oracleGodot } from './paths.mjs';
 import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
+import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
@@ -45,12 +45,13 @@ export function defaultPrepare({ engine, taskId, runId, instruction }) {
   };
 }
 
-export function defaultRunSubagent(spec) {
+export async function defaultRunSubagent(spec) {
   const cmd = process.env.EVAL_SUBAGENT_CMD;
   if (!cmd) {
+    if (cloudAgentSubagentEnabled()) return runCloudAgentSubagent(spec);
     throw new EvalError(
       'SUBAGENT_REQUIRED',
-      '出码、重放、观感都必须由 subagent 执行。设置 EVAL_SUBAGENT_CMD（stdin 为阶段 JSON）。未配置时不算分，主进程不写游戏、不重放、不看图。',
+      '出码和观感由当前 Cloud Agent 的 subagent 执行。Cloud Agent（CURSOR_AGENT=1）不需要 EVAL_SUBAGENT_CMD。当前进程不是 Cloud Agent，主进程不写游戏、不重放、不看图。',
     );
   }
   let args = [];
@@ -306,29 +307,8 @@ function planPair(built, rubric, sampleFps) {
   return { pair: 'G_ASYMMETRIC', run: [live], plans };
 }
 
-export function defaultPrepareOracle({ engine, taskId, runId, instruction }) {
-  if (engine === 'godot') {
-    const workspace = path.join(WORK_DIR, `${runId}-oracle-gd`);
-    fs.rmSync(workspace, { recursive: true, force: true });
-    fs.cpSync(oracleGodot(taskId), workspace, { recursive: true });
-    fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
-    return {
-      workspace,
-      replayRunId: `${runId}-gd`,
-      outPath: path.join(WORK_DIR, `${runId}-gd`, 'REPLAY.json'),
-    };
-  }
-  const boot = bootstrap({
-    taskId,
-    runId: `${runId}-og`,
-    instruction,
-    oracle: true,
-  });
-  return {
-    workspace: boot.gameDir,
-    replayRunId: `${runId}-og`,
-    outPath: path.join(WORK_DIR, `${runId}-og`, 'REPLAY.json'),
-  };
+export function defaultPrepareOracle() {
+  throw new EvalError('NO_REFERENCE', '本仓不提供参考作。oracle gate 不再重放内置成品，headline 必须由 builder 按题面重写。');
 }
 
 async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts }) {

@@ -1,12 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { WORK_DIR, oracleGodot } from './paths.mjs';
-import { bootstrap } from './bootstrap.mjs';
 import { loadTaskBundle } from './load.mjs';
-import { replayJudgeHygiene } from './replay.mjs';
 import { loadP0GodotTask } from './p0-godot.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
-import { primaryOf } from './verdict.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
@@ -15,46 +12,23 @@ import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
 import { writeScoreboard } from './scoreboard.mjs';
 import { aggregateObserved } from './rubric.mjs';
 import { orchestrateEngines, orchestrateOracle } from './subagent-stage.mjs';
+import { cloudAgentSubagentEnabled } from './cloud-agent-subagent.mjs';
 import { ORACLE_FLOOR } from './product-100.mjs';
 
 export function assertProductSubagent() {
   if (process.env.EVAL_LOOKS_ALLOW_WORKER === '1' || process.env.EVAL_LOOKS_BACKEND === 'heuristic') {
     throw new EvalError('SUBAGENT_REQUIRED', '百分制只接受 looks subagent。worker 和 heuristic 不能出分。');
   }
-  if (!process.env.EVAL_SUBAGENT_CMD) {
-    throw new EvalError('SUBAGENT_REQUIRED', '出码、重放、观感都必须由 subagent 执行。设置 EVAL_SUBAGENT_CMD。');
+  if (!process.env.EVAL_SUBAGENT_CMD && !cloudAgentSubagentEnabled()) {
+    throw new EvalError(
+      'SUBAGENT_REQUIRED',
+      '出码和观感由当前 Cloud Agent 的 subagent 执行。Cloud Agent（CURSOR_AGENT=1）不需要 EVAL_SUBAGENT_CMD。',
+    );
   }
 }
 
-export async function mechP0Onegame(taskId, runId) {
-  const bundle = loadTaskBundle(taskId);
-  const stillsDir = path.join(WORK_DIR, runId, 'stills');
-  const boot = bootstrap({
-    taskId,
-    runId,
-    instruction: bundle.instruction,
-    oracle: true,
-  });
-  const result = replayJudgeHygiene({
-    gameDir: boot.gameDir,
-    bundle,
-    stillsDir,
-  });
-  const G =
-    result.create_ok === 1 &&
-    result.argv_ok === 1 &&
-    result.hygiene_ok === 1 &&
-    !result.bindstore_empty;
-  return {
-    bundle,
-    G,
-    sliceScores: result.sliceScores,
-    stills: result.stills,
-    primary: primaryOf(result),
-    g0_ok: result.create_ok === 1 && !result.bindstore_empty ? 1 : 0,
-    mechanical: result,
-    jobDir: path.join(WORK_DIR, runId, 'looks'),
-  };
+export async function mechP0Onegame() {
+  throw new EvalError('NO_REFERENCE', '本仓不提供参考作。P0 不再重放内置成品。');
 }
 
 export async function mechP0Godot(taskId, runId) {
