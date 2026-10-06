@@ -89,9 +89,10 @@ ${cases}
 
 1. 对照游戏需求列清单。每种可见文案、每种输入、每种胜负条件，都要能在当前提交里找到。文案与需求逐字一致。
 2. 按 frame 从小到大喂入该条测试用例的事件。走完后，文件名里的 scenario 必须已经发生。intro 停在开始，loop 停在对局中途，fail 停在失败，clear 停在过关。失败文案和过关文案不能同时出现。
-3. 用手算血量、回合、连击、胜负。失败不能写成过关，过关不能停在半截。对不上需求时，改游戏规则，或改这条测试用例的事件和时长。
-4. 测试用例保持 eval.trace/1。duration_frames 是不小于 1 的整数，并且不超过需求给出的时长上限乘 30。viewport 是 {"w":1280,"h":720}。events 按 frame 非递减。keydown 和 keyup 写成 {"frame":整数,"type":"keydown"或"keyup","code":需求允许的键}。click 写成 {"frame":整数,"type":"click","x":数字,"y":数字}。同一按键在 keyup 之前不能再 keydown。
-5. 改完把每条测试用例再走一遍。最终消息留空，或只包含一个 JSON。
+3. 整段 duration_frames 里的每一帧都画出当时的画面。移动、攻击、倒下用一份这一帧内不再改短的列表来画，去掉已经结束的过程时跳过空位。失败或通关文案出现之后，后面的帧保持这句文案，过程在这句文案出现前画完。
+4. 用手算血量、回合、连击、胜负。失败不能写成过关，过关不能停在半截。对不上需求时，改游戏规则，或改这条测试用例的事件和时长。
+5. 测试用例保持 eval.trace/1。duration_frames 是不小于 1 的整数，并且不超过需求给出的时长上限乘 30。viewport 是 {"w":1280,"h":720}。events 按 frame 非递减。keydown 和 keyup 写成 {"frame":整数,"type":"keydown"或"keyup","code":需求允许的键}。click 写成 {"frame":整数,"type":"click","x":数字,"y":数字}。同一按键在 keyup 之前不能再 keydown。
+6. 改完把每条测试用例按第 2 步和第 3 步再走一遍。最终消息留空，或只包含一个 JSON。
 `;
   const hit = DEBUG_PROMPT_BANNED.filter((word) => text.includes(word));
   if (hit.length) throw new EvalError('EVAL_INTERNAL', `debug prompt names an engine or rubric: ${hit.join(',')}`);

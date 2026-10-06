@@ -46,6 +46,7 @@ test('builder prompt is the task text plus the engine appendix', () => {
   for (const prompt of [og, gd]) {
     assert.match(prompt, /提交前自己调试/);
     assert.match(prompt, /「提交前自己调试」为准/);
+    assert.match(prompt, /每一帧都画出当时的画面/);
     assert.doesNotMatch(prompt, /probe\.json/);
     assert.doesNotMatch(prompt, /last_gte/);
     assert.doesNotMatch(prompt, /"id": "M1"/);
@@ -61,6 +62,8 @@ test('debug prompt only names requirements and trace cases', () => {
   assert.match(prompt, /可以没有事件/);
   assert.match(prompt, /demo_outputs\/04_clear\.json/);
   assert.match(prompt, /必须有事件/);
+  assert.match(prompt, /每一帧都画出当时的画面/);
+  assert.match(prompt, /这一帧内不再改短的列表/);
   assert.doesNotMatch(prompt, /1Game|Godot|1gameplay|CharacterBody|EvalProbe|rubric|probe\.json/);
   assert.doesNotMatch(prompt, /构建 \/ 启动校验失败/);
 });
