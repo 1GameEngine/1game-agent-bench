@@ -1,0 +1,192 @@
+{
+ "schema": "eval.trace/1",
+ "scenario": "clear",
+ "fps": 30,
+ "viewport": {
+  "width": 1280,
+  "height": 720
+ },
+ "frames": 405,
+ "events": [
+  {
+   "frame": 10,
+   "type": "click",
+   "x": 340,
+   "y": 250
+  },
+  {
+   "frame": 23,
+   "type": "keydown",
+   "code": "Enter"
+  },
+  {
+   "frame": 25,
+   "type": "keyup",
+   "code": "Enter"
+  },
+  {
+   "frame": 34,
+   "type": "click",
+   "x": 178,
+   "y": 324,
+   "toX": 604,
+   "toY": 256
+  },
+  {
+   "frame": 42,
+   "type": "click",
+   "x": 178,
+   "y": 188,
+   "toX": 604,
+   "toY": 400
+  },
+  {
+   "frame": 90,
+   "type": "click",
+   "x": 178,
+   "y": 256,
+   "toX": 748,
+   "toY": 328
+  },
+  {
+   "frame": 104,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 106,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 118,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 120,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 132,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 134,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 146,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 148,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 160,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 162,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 174,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 176,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 188,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 190,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 202,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 204,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 216,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 218,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 230,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 232,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 244,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 246,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 278,
+   "type": "click",
+   "x": 1130,
+   "y": 428
+  },
+  {
+   "frame": 305,
+   "type": "click",
+   "x": 180,
+   "y": 448
+  },
+  {
+   "frame": 322,
+   "type": "click",
+   "x": 400,
+   "y": 448
+  },
+  {
+   "frame": 339,
+   "type": "click",
+   "x": 620,
+   "y": 448
+  },
+  {
+   "frame": 362,
+   "type": "click",
+   "x": 900,
+   "y": 250
+  }
+ ]
+}

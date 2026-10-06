@@ -1,0 +1,34 @@
+{
+ "schema": "eval.trace/1",
+ "scenario": "intro",
+ "fps": 30,
+ "viewport": {
+  "width": 1280,
+  "height": 720
+ },
+ "frames": 321,
+ "events": [
+  {
+   "frame": 30,
+   "type": "click",
+   "x": 900,
+   "y": 250
+  },
+  {
+   "frame": 73,
+   "type": "click",
+   "x": 340,
+   "y": 250
+  },
+  {
+   "frame": 106,
+   "type": "keydown",
+   "code": "Enter"
+  },
+  {
+   "frame": 108,
+   "type": "keyup",
+   "code": "Enter"
+  }
+ ]
+}

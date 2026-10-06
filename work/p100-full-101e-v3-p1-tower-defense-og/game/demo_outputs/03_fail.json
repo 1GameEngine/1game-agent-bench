@@ -1,0 +1,154 @@
+{
+ "schema": "eval.trace/1",
+ "scenario": "fail",
+ "fps": 30,
+ "viewport": {
+  "width": 1280,
+  "height": 720
+ },
+ "frames": 345,
+ "events": [
+  {
+   "frame": 20,
+   "type": "click",
+   "x": 340,
+   "y": 250
+  },
+  {
+   "frame": 43,
+   "type": "keydown",
+   "code": "Enter"
+  },
+  {
+   "frame": 45,
+   "type": "keyup",
+   "code": "Enter"
+  },
+  {
+   "frame": 68,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 70,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 86,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 88,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 102,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 104,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 120,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 122,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 136,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 138,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 154,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 156,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 170,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 172,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 188,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 190,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 204,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 206,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 222,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 224,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 238,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 240,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 256,
+   "type": "keydown",
+   "code": "Space"
+  },
+  {
+   "frame": 258,
+   "type": "keyup",
+   "code": "Space"
+  },
+  {
+   "frame": 302,
+   "type": "click",
+   "x": 1040,
+   "y": 655
+  }
+ ]
+}
