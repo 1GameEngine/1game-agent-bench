@@ -1,0 +1,9 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "fail",
+  "duration_frames": 240,
+  "viewport": { "w": 1280, "h": 720 },
+  "events": [
+    { "frame": 0, "type": "click", "x": 640, "y": 244 }
+  ]
+}
