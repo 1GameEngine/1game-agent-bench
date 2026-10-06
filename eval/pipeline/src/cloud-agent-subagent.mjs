@@ -37,6 +37,7 @@ ${spec.prompt}
 
 回报约定：
 - builder：把提交写进工作目录。最终消息留空，或只包含一个 JSON。
+- debug：按游戏需求和测试用例改当前工作目录。最终消息留空，或只包含一个 JSON。
 - looks：最终消息只包含 prompt 要求的 JSON 对象，不要加解释。
 - replay：不会走到这里。`;
   return {
@@ -113,6 +114,6 @@ function runReplayArgv(spec) {
 
 export async function runCloudAgentSubagent(spec) {
   if (spec.role === 'replay') return runReplayArgv(spec);
-  if (spec.role === 'builder' || spec.role === 'looks') return waitCloudModel(spec);
+  if (spec.role === 'builder' || spec.role === 'debug' || spec.role === 'looks') return waitCloudModel(spec);
   throw new EvalError('SUBAGENT_INVALID', `unknown role ${spec.role}`);
 }

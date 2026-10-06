@@ -60,6 +60,7 @@ test('P1 builder prompts share body bytes', () => {
   assert.notEqual(og, gd);
   assert.match(body, /提交前自己调试/);
   assert.match(body, /duration_frames/);
+  assert.match(body, /每一帧都画出当时的画面/);
   assert.doesNotMatch(body, /1Game|Godot|1gameplay|CharacterBody/);
 });
 

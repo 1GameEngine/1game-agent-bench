@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { loadP1Task, P1_TASKS } from '../src/p1-load.mjs';
-import { buildBuilderPrompt, filesFromModelText, runModelBuilder } from '../src/model-builder.mjs';
+import { buildBuilderPrompt, buildDebugPrompt, filesFromModelText, runModelBuilder } from '../src/model-builder.mjs';
 
 function trace(scenario, events) {
   return JSON.stringify({
@@ -46,10 +46,26 @@ test('builder prompt is the task text plus the engine appendix', () => {
   for (const prompt of [og, gd]) {
     assert.match(prompt, /提交前自己调试/);
     assert.match(prompt, /「提交前自己调试」为准/);
+    assert.match(prompt, /每一帧都画出当时的画面/);
     assert.doesNotMatch(prompt, /probe\.json/);
     assert.doesNotMatch(prompt, /last_gte/);
     assert.doesNotMatch(prompt, /"id": "M1"/);
   }
+});
+
+test('debug prompt only names requirements and trace cases', () => {
+  const task = loadP1Task('p1-depot-skirmish');
+  const prompt = buildDebugPrompt({ instruction: task.instruction, task: task.task });
+  assert.match(prompt, /游戏需求/);
+  assert.match(prompt, /测试用例/);
+  assert.match(prompt, /demo_outputs\/01_intro\.json/);
+  assert.match(prompt, /可以没有事件/);
+  assert.match(prompt, /demo_outputs\/04_clear\.json/);
+  assert.match(prompt, /必须有事件/);
+  assert.match(prompt, /每一帧都画出当时的画面/);
+  assert.match(prompt, /这一帧内不再改短的列表/);
+  assert.doesNotMatch(prompt, /1Game|Godot|1gameplay|CharacterBody|EvalProbe|rubric|probe\.json/);
+  assert.doesNotMatch(prompt, /构建 \/ 启动校验失败/);
 });
 
 test('each model call writes that reply and refuses a missing model', async () => {

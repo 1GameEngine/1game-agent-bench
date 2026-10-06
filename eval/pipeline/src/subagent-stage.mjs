@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { WORK_DIR } from './paths.mjs';
 import { bootstrap } from './bootstrap.mjs';
 import { loadP1Task } from './p1-load.mjs';
-import { auditModelSubmission, buildBuilderPrompt } from './model-builder.mjs';
+import { auditModelSubmission, buildBuilderPrompt, buildDebugPrompt } from './model-builder.mjs';
 import { checkOnegameBoot } from './p1-onegame.mjs';
 import { checkGodotBoot } from './p1-godot.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
@@ -241,6 +241,16 @@ ${detail}
   };
 }
 
+function debugSpec({ engine, taskId, workspace, instruction, task }) {
+  return {
+    role: 'debug',
+    engine,
+    taskId,
+    workspace,
+    prompt: buildDebugPrompt({ instruction, task }),
+  };
+}
+
 function replaySpec({ engine, taskId, prep, token }) {
   const argv = replayArgv({
     engine,
@@ -374,11 +384,26 @@ export async function orchestrateEngines({
           bootCheck,
           attempts: builderBootAttempts(),
         });
+        let debugRan = false;
+        if (builtOnce.boot?.ok) {
+          await runRole(
+            runSubagent,
+            debugSpec({
+              engine,
+              taskId,
+              workspace: prep.workspace,
+              instruction: bundle.instruction,
+              task: bundle.task,
+            }),
+          );
+          auditModelSubmission(prep.workspace, engine, taskId);
+          debugRan = true;
+        }
         const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
         fs.mkdirSync(path.dirname(stampPath), { recursive: true });
         fs.writeFileSync(
           stampPath,
-          `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null }, null, 2)}\n`,
+          `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null, debug: debugRan }, null, 2)}\n`,
         );
       }
       await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
