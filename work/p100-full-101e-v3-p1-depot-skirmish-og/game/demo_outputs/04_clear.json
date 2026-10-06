@@ -1,0 +1,115 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "clear",
+  "duration_frames": 520,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 10,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 12,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 40,
+      "type": "click",
+      "x": 608,
+      "y": 408
+    },
+    {
+      "frame": 58,
+      "type": "click",
+      "x": 608,
+      "y": 280
+    },
+    {
+      "frame": 86,
+      "type": "click",
+      "x": 480,
+      "y": 408
+    },
+    {
+      "frame": 104,
+      "type": "click",
+      "x": 544,
+      "y": 344
+    },
+    {
+      "frame": 126,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 128,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 215,
+      "type": "click",
+      "x": 544,
+      "y": 344
+    },
+    {
+      "frame": 233,
+      "type": "click",
+      "x": 544,
+      "y": 280
+    },
+    {
+      "frame": 261,
+      "type": "click",
+      "x": 608,
+      "y": 408
+    },
+    {
+      "frame": 279,
+      "type": "click",
+      "x": 608,
+      "y": 344
+    },
+    {
+      "frame": 307,
+      "type": "click",
+      "x": 736,
+      "y": 408
+    },
+    {
+      "frame": 325,
+      "type": "click",
+      "x": 608,
+      "y": 408
+    },
+    {
+      "frame": 420,
+      "type": "click",
+      "x": 608,
+      "y": 408
+    },
+    {
+      "frame": 438,
+      "type": "click",
+      "x": 608,
+      "y": 344
+    },
+    {
+      "frame": 462,
+      "type": "click",
+      "x": 608,
+      "y": 344
+    },
+    {
+      "frame": 480,
+      "type": "click",
+      "x": 672,
+      "y": 344
+    }
+  ]
+}

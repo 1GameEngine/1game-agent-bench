@@ -1,0 +1,101 @@
+{
+  "schema": "eval.trace/1",
+  "scenario": "fail",
+  "duration_frames": 378,
+  "viewport": {
+    "w": 1280,
+    "h": 720
+  },
+  "events": [
+    {
+      "frame": 10,
+      "type": "keydown",
+      "code": "Enter"
+    },
+    {
+      "frame": 12,
+      "type": "keyup",
+      "code": "Enter"
+    },
+    {
+      "frame": 40,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 42,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 74,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 76,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 108,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 110,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 142,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 144,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 176,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 178,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 210,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 212,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 244,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 246,
+      "type": "keyup",
+      "code": "Space"
+    },
+    {
+      "frame": 278,
+      "type": "keydown",
+      "code": "Space"
+    },
+    {
+      "frame": 280,
+      "type": "keyup",
+      "code": "Space"
+    }
+  ]
+}
