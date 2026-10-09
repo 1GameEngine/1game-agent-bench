@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RECORD_REL } from './paths.mjs';
 import { parseCliJson, readStoreState } from './util.mjs';
-import { execFileOk } from './exec.mjs';
+import { runOnegameCli } from './onegame-cli.mjs';
 import { stepOp, clickCoord } from './p1-closed.mjs';
 import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { captureOnegameStill } from './capture.mjs';
@@ -11,7 +11,7 @@ import { allowedClickCenters } from './argv-audit.mjs';
 import { FRAME_MS, duplicateScenarioNames, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet } from './p1-trace.mjs';
 
 function gp(cwd, argv) {
-  return execFileOk('pnpm', ['exec', ...argv], { cwd, timeoutMs: 180_000 });
+  return runOnegameCli(cwd, argv);
 }
 
 export function checkOnegameBoot(gameDir) {

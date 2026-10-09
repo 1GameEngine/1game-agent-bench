@@ -18,7 +18,7 @@ Godot 安装见 [`INSTALL-godot.md`](INSTALL-godot.md)。Builder 提示：[`buil
 
 ## 读者与隔离
 
-- 实现方看不到 `1game-engine` 源码；只使用公开 npm train **`1.21.0`**。
+- 实现方看不到 `1game-engine` 源码；只使用公开 npm train **`1.23.0`**。
 - Builder 的 Cursor **只打开** `work/<runId>/game`，不要把本 `eval/` 仓加进同一 workspace。
 - Judge 是本仓另一个 Node 进程。
 - 不要把 rubric 复制进 Builder 工作区当答案。本仓不附带成品。
@@ -32,7 +32,7 @@ Linux 同用户同 VM **不是密封**。残余风险见 `PROCESS.md`。不要�
 |---|---|
 | Node | ≥ 20 |
 | 包管理器 | **只允许 pnpm 9+**（装依赖不要混用 npm） |
-| 公开 train | `1.21.0` 精确字符串，无 `^` |
+| 公开 train | `1.23.0` 精确字符串，无 `^` |
 | 必须同版本 | `@1game/cli` `@1game/engine-bundle` `@1game/cli-1gameplay` `@1game/skill` |
 | 游戏入口 | `src/game.tsx` |
 | 场景 | 恰好 1 个 `<scene>`，1280×720 |
@@ -56,11 +56,11 @@ mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 # 此时不得有 instruction.md / .git / package.json
 
-npx -y @1game/cli@1.21.0 init .
+npx -y @1game/cli@1.23.0 init .
 pnpm install
 pnpm exec 1game-skill activate --cursor --force
 
-# pin 闸：package.json 中下列必须恰好 "1.21.0"
+# pin 闸：package.json 中下列必须恰好 "1.23.0"
 # @1game/cli  @1game/engine-bundle  @1game/cli-1gameplay  @1game/skill
 
 # 然后复制 instruction.md（仅题面）
@@ -70,7 +70,9 @@ pnpm exec 1game-skill activate --cursor --force
 **禁止**为通过检查而 `mv .cursor`。init **不会** `git init`。  
 正确顺序：空目录 → `init` → `pnpm install` → `activate --cursor --force` → **再写入** `instruction.md`。
 
-npm train `1.21.0` 在缺少 `options.bindStore` 时 **create 直接失败**。流水线把该错误映射为 `BINDSTORE_EMPTY`（与「create 后 `store:state` 非对象」同一 primary）。
+npm train `1.23.0` 在缺少 `options.bindStore` 时 **create 直接失败**。流水线把该错误映射为 `BINDSTORE_EMPTY`（与「create 后 `store:state` 非对象」同一 primary）。
+
+升级到 `1.23.0` 后须在新工作区重新 create 归档；旧版本归档不能与新版本回放壳混用。带输入事件的 step 默认执行渲染绑定检查，发现 `CHECK_RENDER_MISMATCH` 时退出码为 7，适配器按重放失败处理；不要关闭检查来通过评测。流水线使用单分支归档和 `--at last`，不依赖多分支的路径序号。
 
 激活默认全部 `1game-*`。不要 `--skill` 子集。不要第二次 `init`。instruction **覆盖** skill Quick Start。
 
@@ -92,6 +94,16 @@ node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
 ```
 
 不要打开本仓当 Builder 工作区。本仓不提供可抄的成品。
+
+### 阶段预算与运行记录
+
+Builder、debug、looks 默认各 600000 ms（10 分钟）；replay 默认 1800000 ms（30 分钟）。可分别设置 `EVAL_BUILDER_TIMEOUT_MS`、`EVAL_DEBUG_TIMEOUT_MS`、`EVAL_REPLAY_TIMEOUT_MS`、`EVAL_LOOKS_TIMEOUT_MS`。阶段配置优先于旧的统一配置 `EVAL_SUBAGENT_TIMEOUT_MS`，然后才使用默认值；配置必须是正整数毫秒，最大 2147483647。阶段超时会报告 `BUILDER_TIMEOUT` / `DEBUG_TIMEOUT` / `REPLAY_TIMEOUT` / `LOOKS_TIMEOUT`。
+
+依赖仍只用 pnpm 安装。1Game 校验、步进、查询和截图直接以当前 Node 启动游戏工作区 `node_modules/@1game/cli-1gameplay` 声明的 CLI，先确认包名和版本 `1.23.0`。不搜索全局或上级目录中的 CLI。输入参数、33 ms 步进、抽帧频率、1280×720 截图和原有 argv 审计保持一致。
+
+`run-product-100` 在启动时生成 `PRODUCT_100.json`、`COMPARE_SCALAR.json`、`RUN_STATE.json` 和成绩页，`status` 为 `RUNNING`；每题结束后原子更新这些文件，并保存 `tasks/<taskId>/RESULT.json`。结束时状态为 `COMPLETE`；发生阶段异常时记录 `FAILED`，命令退出码为 1。单侧阶段异常被隔离，另一侧和后续题继续执行。各引擎输出目录保存真实裁决 `LOOKS.json` 和阶段错误 `STAGE_ERROR.json`；`REPLAY.json` 仍只由 `stage-replay` 写出。
+
+未执行、超时或未通过重放可信性检查的项，`G` 和题分为 `null`，不按游戏的 `G=0` 计零分。可信重放证明的启动失败或无成功轨迹仍遵循既有 G=0 规则。任一题证据未齐或结果不可比时，两侧套件平均分均留空，不宣布胜者。文件是同一次执行的进度记录，不提供补跑、自动重试或续评入口。`run-p1-compare` 同样逐题保存过程报告并隔离阶段异常。
 
 ## 计分
 

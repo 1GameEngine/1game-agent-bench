@@ -79,7 +79,7 @@ export function buildProduct100({ runId, rows }) {
     for (const engine of ['onegame', 'godot']) {
       const row =
         rows.find((r) => r.id === taskId && r.engine === engine) ??
-        zeroRow(taskId, engine, 'ENGINE_TASK_UNSUPPORTED');
+        pendingRow(taskId, engine);
       byEngine[engine].push(row);
     }
   }
@@ -94,6 +94,10 @@ export function buildProduct100({ runId, rows }) {
     };
   }
   const { comparable, reasons } = suiteComparableFromRows(rows);
+  if (!comparable) {
+    engines.onegame.product_100 = null;
+    engines.godot.product_100 = null;
+  }
   const looks_phase = classifyLooksPhase(comparable, reasons);
   const fmt = (x) => (typeof x === 'number' ? x.toFixed(1) : '未出分');
   const og = fmt(engines.onegame.product_100);
@@ -113,7 +117,7 @@ export function buildProduct100({ runId, rows }) {
           ? '观感不成对，百分制不可比。静帧或 looks job 两边不一致，不得宣布胜者。'
           : looks_phase === 'evidence'
             ? '观感证据不全，百分制不可比。裁决没有对上本 job 的静帧 id，不得宣布胜者。'
-            : '产物分不可比（静帧或 looks Judge 未成对）。';
+            : '评测未完成或产物分不可比，不得宣布胜者。';
     winner_sentence = `${head}1Game = ${og}，Godot = ${gd}。${sample}`;
   } else {
     winner_engine = winnerOf(engines.onegame.product_100, engines.godot.product_100);
@@ -188,8 +192,12 @@ export function classifyLooksPhase(comparable, reasons) {
 function suiteComparableFromRows(rows) {
   const reasons = [];
   for (const id of SUITE_TASKS) {
-    const og = rows.find((r) => r.id === id && r.engine === 'onegame') ?? zeroRow(id, 'onegame', 'ENGINE_TASK_UNSUPPORTED');
-    const gd = rows.find((r) => r.id === id && r.engine === 'godot') ?? zeroRow(id, 'godot', 'ENGINE_TASK_UNSUPPORTED');
+    const og = rows.find((r) => r.id === id && r.engine === 'onegame') ?? pendingRow(id, 'onegame');
+    const gd = rows.find((r) => r.id === id && r.engine === 'godot') ?? pendingRow(id, 'godot');
+    if (og.G == null || gd.G == null || og.stage_error || gd.stage_error) {
+      reasons.push({ id, reason: [og, gd].filter((r) => r.G == null || r.stage_error).map((r) => `${r.engine}:${r.primary}`).join('/') });
+      continue;
+    }
     if (!og.G && !gd.G) continue;
     if (Boolean(og.G) !== Boolean(gd.G)) {
       const live = og.G ? og : gd;
@@ -222,6 +230,15 @@ function suiteComparableFromRows(rows) {
     }
   }
   return { comparable: reasons.length === 0, reasons };
+}
+
+export function pendingRow(id, engine, primary = 'PENDING', stage_error) {
+  return {
+    id, engine, primary, G: null, g0_ok: null,
+    M: null, D: null, V: null, A: null, product_100: null,
+    looks_status: primary, looks_source: 'none',
+    ...(stage_error ? { stage_error } : {}),
+  };
 }
 
 export function zeroRow(id, engine, primary) {

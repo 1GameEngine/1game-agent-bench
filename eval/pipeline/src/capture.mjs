@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { RECORD_REL } from './paths.mjs';
 import { parseCliJson } from './util.mjs';
-import { auditReplayArgv, pnpmExecArgv } from './argv-audit.mjs';
-import { execFileOk } from './exec.mjs';
+import { auditReplayArgv } from './argv-audit.mjs';
+import { runOnegameCli } from './onegame-cli.mjs';
 import { toJudgeStill, sha256, STILL_W, STILL_H } from './png-nn.mjs';
 
 export function captureArgv(outPng) {
@@ -34,7 +34,7 @@ export function captureOnegameStill({ gameDir, outPng, rules, allowedClicks }) {
   if (!audit.ok) {
     return { ok: false, status: 'ARGV_VIOLATION', issues: audit.issues };
   }
-  const proc = execFileOk('pnpm', pnpmExecArgv(argv), { cwd: gameDir, timeoutMs: 180_000 });
+  const proc = runOnegameCli(gameDir, argv);
   if (proc.status !== 0 || !fs.existsSync(outPng)) {
     return { ok: false, status: 'CAPTURE_FAIL', issues: [(proc.stderr || proc.stdout).slice(0, 300)] };
   }

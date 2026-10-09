@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { DIMENSIONS, P0_NOTICE, PIN } from './paths.mjs';
 import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
 import { primaryOf, taskPassed } from './verdict.mjs';
@@ -40,5 +41,12 @@ export function buildReport({ runId, taskRows }) {
 
 export function writeReport(file, report) {
   assertNoForbiddenScoreKeys(report);
-  fs.writeFileSync(file, `${JSON.stringify(report, null, 2)}\n`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    fs.writeFileSync(tmp, `${JSON.stringify(report, null, 2)}\n`);
+    fs.renameSync(tmp, file);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 }

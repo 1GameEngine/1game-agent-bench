@@ -4,8 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { WORK_DIR } from './paths.mjs';
 import { EvalError } from './util.mjs';
-
-const DEFAULT_TIMEOUT_MS = 600_000;
+import { stageTimeoutMs, stageProcessError } from './stage-timeout.mjs';
 
 export function cloudTaskDir() {
   return process.env.EVAL_CLOUD_TASK_DIR || path.join(WORK_DIR, '.cloud-agent-tasks');
@@ -53,6 +52,7 @@ function delay(ms) {
 }
 
 async function waitCloudModel(spec) {
+  const timeoutMs = stageTimeoutMs(spec.role);
   const dir = cloudTaskDir();
   fs.mkdirSync(dir, { recursive: true });
   const id = `${Date.now()}-${process.pid}-${randomBytes(4).toString('hex')}`;
@@ -61,7 +61,6 @@ async function waitCloudModel(spec) {
   const payload = { id, spec, handoff: cloudTaskHandoff(spec) };
   fs.writeFileSync(reqPath, `${JSON.stringify(payload, null, 2)}\n`);
   process.stderr.write(`cloud-agent subagent ${spec.role} ${spec.engine} ${spec.taskId} -> ${reqPath}\n`);
-  const timeoutMs = Number(process.env.EVAL_SUBAGENT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (fs.existsSync(resPath)) {
@@ -85,7 +84,7 @@ async function waitCloudModel(spec) {
     await delay(200);
   }
   throw new EvalError(
-    'SUBAGENT_INVALID',
+    `${spec.role.toUpperCase()}_TIMEOUT`,
     `当前 Cloud Agent 没有在 ${timeoutMs}ms 内完成 ${spec.role} ${spec.engine}。请求还在 ${reqPath}`,
   );
 }
@@ -95,20 +94,14 @@ function runReplayArgv(spec) {
   if (!Array.isArray(argv) || argv.length === 0) {
     throw new EvalError('SUBAGENT_INVALID', 'replay spec 缺少 argv');
   }
-  const timeoutMs = Number(process.env.EVAL_SUBAGENT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const timeoutMs = stageTimeoutMs(spec.role);
   const result = spawnSync(argv[0], argv.slice(1), {
     encoding: 'utf8',
     env: process.env,
     timeout: timeoutMs,
     maxBuffer: 20 * 1024 * 1024,
   });
-  if (result.error) throw new EvalError('SUBAGENT_INVALID', result.error.message);
-  if (result.status !== 0) {
-    throw new EvalError(
-      'SUBAGENT_INVALID',
-      `subagent replay ${spec.engine} exited ${result.status}\n${result.stderr || result.stdout}`.slice(0, 2000),
-    );
-  }
+  if (result.error || result.status !== 0) throw stageProcessError(spec, result);
   return result.stdout ?? '';
 }
 

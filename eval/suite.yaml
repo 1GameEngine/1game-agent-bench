@@ -13,7 +13,7 @@ physics: forbidden
 rng: forbidden
 engines:
   onegame:
-    npm_train: "1.21.0"
+    npm_train: "1.23.0"
     paint: napi-canvas
   godot:
     version: "4.4.1"

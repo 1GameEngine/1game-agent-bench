@@ -5,7 +5,7 @@ import { loadTaskBundle } from './load.mjs';
 import { loadP0GodotTask } from './p0-godot.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
-import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow } from './product-100.mjs';
+import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow, pendingRow } from './product-100.mjs';
 import { buildReport, writeReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
@@ -147,7 +147,7 @@ export function scoreStagedPair(taskId, staged) {
     gdVis = staged.godot.replay.G
       ? visualsFromLooks(staged.godot.looks, bundle.rubric, required)
       : emptyVis('SKIP', 'none');
-    if (staged.onegame.replay.G && staged.godot.replay.G) {
+    if (staged.onegame.replay.G && staged.godot.replay.G && !staged.onegame.looks?.failure && !staged.godot.looks?.failure) {
       if (
         ogVis.looks_status !== gdVis.looks_status ||
         ogVis.looks_source !== gdVis.looks_source ||
@@ -159,14 +159,19 @@ export function scoreStagedPair(taskId, staged) {
       }
     }
   }
+  const ogRow = rowFromReplay(taskId, 'onegame', staged.onegame.replay, ogVis);
+  const gdRow = rowFromReplay(taskId, 'godot', staged.godot.replay, gdVis);
+  if (staged.onegame.looks?.failure) ogRow.stage_error = staged.onegame.looks.failure;
+  if (staged.godot.looks?.failure) gdRow.stage_error = staged.godot.looks.failure;
   return {
-    ogRow: rowFromReplay(taskId, 'onegame', staged.onegame.replay, ogVis),
-    gdRow: rowFromReplay(taskId, 'godot', staged.godot.replay, gdVis),
+    ogRow,
+    gdRow,
     pair: staged.pair,
   };
 }
 
 function rowFromReplay(taskId, engine, replay, vis) {
+  if (replay.failure) return pendingRow(taskId, engine, replay.primary, replay.failure);
   return scoreAttempt({
     id: taskId,
     engine,
@@ -212,6 +217,7 @@ function rowFromMech(taskId, engine, mech, vis) {
 function serializeReplay(replay) {
   return serializeMech({
     G: replay.G,
+    failure: replay.failure,
     stills: replay.stills,
     primary: replay.primary,
     g0_ok: replay.g0_ok,
@@ -227,7 +233,8 @@ function serializeReplay(replay) {
 
 function serializeMech(mech) {
   return {
-    G: Boolean(mech.G),
+    G: mech.G == null ? null : Boolean(mech.G),
+    failure: mech.failure,
     stills: (mech.stills ?? []).map((s) => ({
       id: s.id,
       dump_ok: s.dump_ok ?? 0,
@@ -267,18 +274,23 @@ async function pairAndRows(taskId, og, gd) {
   };
 }
 
-function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs }) {
+function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, status = 'COMPLETE', failures = [], workDir = WORK_DIR }) {
   const report = buildProduct100({ runId: suiteRunId, rows });
+  report.status = status;
+  report.failures = failures;
+  report.completed_task_count = new Set(rows.map((row) => row.id)).size;
   assertNoForbiddenScoreKeys(report);
-  const dir = path.join(WORK_DIR, suiteRunId);
+  const dir = path.join(workDir, suiteRunId);
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, 'PRODUCT_100.json');
   writeReport(out, report);
   const p0 = buildReport({ runId: suiteRunId, taskRows: p0taskRows });
   writeReport(path.join(dir, 'P0_report.json'), p0);
   const cmp = buildCompareScalar({ runId: suiteRunId, attempts: p1attempts });
+  cmp.status = status;
   writeReport(path.join(dir, 'COMPARE_SCALAR.json'), cmp);
   const html = writeScoreboard({ dir, report, rows, packs });
+  writeReport(path.join(dir, 'RUN_STATE.json'), { runId: suiteRunId, status, completed_task_count: report.completed_task_count, failures });
   return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
 }
 
@@ -296,50 +308,66 @@ export async function runOracleGate({ taskId, runId = `oracle-${taskId}`, runSub
   return { scored, rows, floor: ORACLE_FLOOR };
 }
 
-export async function runProduct100(suiteRunId = `p100-${Date.now()}`) {
+export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchestrate = orchestrateEngines, workDir = WORK_DIR } = {}) {
   assertProductSubagent();
   const rows = [];
   const p0taskRows = [];
   const p1attempts = [];
   const packs = [];
+  const failures = [];
+  let currentTask;
+  const checkpoint = (status) => writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, failures, status, workDir });
+  checkpoint('RUNNING');
+  try {
+    for (const taskId of P0_TASKS) {
+      process.stderr.write(`product P0 pair ${taskId}\n`);
+      const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
+      const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
+      const paired = await pairAndRows(taskId, og, gd);
+      rows.push(paired.ogRow, paired.gdRow);
+      p0taskRows.push({ id: taskId, ...og.mechanical });
+      packs.push({
+        id: taskId,
+        bundle: {
+          instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
+          geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
+          rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
+          probe: og.bundle?.probe ?? gd.bundle?.probe,
+        },
+        og: serializeMech(og),
+        gd: serializeMech(gd),
+      });
+    }
 
-  for (const taskId of P0_TASKS) {
-    process.stderr.write(`product P0 pair ${taskId}\n`);
-    const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
-    const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
-    const paired = await pairAndRows(taskId, og, gd);
-    rows.push(paired.ogRow, paired.gdRow);
-    p0taskRows.push({ id: taskId, ...og.mechanical });
-    packs.push({
-      id: taskId,
-      bundle: {
-        instruction: og.bundle?.instruction ?? gd.bundle?.instruction,
-        geometry: og.bundle?.geometry ?? gd.bundle?.geometry,
-        rubric: og.bundle?.rubric ?? gd.bundle?.rubric,
-        probe: og.bundle?.probe ?? gd.bundle?.probe,
-      },
-      og: serializeMech(og),
-      gd: serializeMech(gd),
-    });
+    for (const taskId of P1_TASKS) {
+      currentTask = taskId;
+      process.stderr.write(`product P1 pair ${taskId}\n`);
+      const staged = await orchestrate({ taskId, runId: `${suiteRunId}-${taskId}`, isolateFailures: true });
+      const paired = scoreStagedPair(taskId, staged);
+      rows.push(paired.ogRow, paired.gdRow);
+      p1attempts.push(staged.onegame.replay.attempt, staged.godot.replay.attempt);
+      failures.push(...(staged.failures ?? []));
+      packs.push({
+        id: taskId,
+        bundle: {
+          instruction: staged.bundle.instruction,
+          geometry: staged.bundle.geometry,
+          rubric: staged.bundle.rubric,
+        },
+        og: serializeReplay(staged.onegame.replay),
+        gd: serializeReplay(staged.godot.replay),
+      });
+      writeReport(path.join(workDir, suiteRunId, 'tasks', taskId, 'RESULT.json'), {
+        taskId, pair: staged.pair, rows: [paired.ogRow, paired.gdRow], failures: staged.failures ?? [],
+        og: serializeReplay(staged.onegame.replay), gd: serializeReplay(staged.godot.replay),
+        looks: { onegame: staged.onegame.looks, godot: staged.godot.looks },
+      });
+      checkpoint('RUNNING');
+    }
+    return checkpoint(failures.length ? 'FAILED' : 'COMPLETE');
+  } catch (err) {
+    failures.push({ taskId: currentTask, stage: 'suite', primary: err.primary || 'EVAL_INTERNAL', message: String(err.message || err) });
+    checkpoint('FAILED');
+    throw err;
   }
-
-  for (const taskId of P1_TASKS) {
-    process.stderr.write(`product P1 pair ${taskId}\n`);
-    const staged = await orchestrateEngines({ taskId, runId: `${suiteRunId}-${taskId}` });
-    const paired = scoreStagedPair(taskId, staged);
-    rows.push(paired.ogRow, paired.gdRow);
-    p1attempts.push(staged.onegame.replay.attempt, staged.godot.replay.attempt);
-    packs.push({
-      id: taskId,
-      bundle: {
-        instruction: staged.bundle.instruction,
-        geometry: staged.bundle.geometry,
-        rubric: staged.bundle.rubric,
-      },
-      og: serializeReplay(staged.onegame.replay),
-      gd: serializeReplay(staged.godot.replay),
-    });
-  }
-
-  return writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs });
 }

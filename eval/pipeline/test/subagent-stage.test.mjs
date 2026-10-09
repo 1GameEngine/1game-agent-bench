@@ -11,7 +11,8 @@ import { runStageReplay } from '../src/stage-replay.mjs';
 import { traceEventArgv } from '../src/p1-onegame.mjs';
 import { checkGodotBoot } from '../src/p1-godot.mjs';
 import { auditModelSubmission } from '../src/model-builder.mjs';
-import { assertProductSubagent, runOracleGate, scoreStagedPair } from '../src/product-run.mjs';
+import { assertProductSubagent, runOracleGate, scoreStagedPair, runProduct100 } from '../src/product-run.mjs';
+import { EvalError } from '../src/util.mjs';
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
@@ -488,6 +489,118 @@ function finishReplayAndLooks(spec) {
   }
   return JSON.stringify({ scenarios });
 }
+
+test('suite retains partner score and earlier checkpoints after replay timeout', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-isolation-'));
+  const previous = process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+  process.env.EVAL_CLOUD_AGENT_SUBAGENT = '1';
+  const calls = [];
+  try {
+    const result = await runProduct100('isolated', {
+      workDir: dir,
+      orchestrate: async (options) => {
+        if (options.taskId !== 'p1-chart-rush') {
+          const checkpoint = JSON.parse(fs.readFileSync(path.join(dir, 'isolated/PRODUCT_100.json'), 'utf8'));
+          assert.equal(checkpoint.status, 'RUNNING');
+          assert.equal(checkpoint.tasks.find((r) => r.id === 'p1-chart-rush' && r.engine === 'godot').product_100, 100);
+          assert.ok(fs.existsSync(path.join(dir, 'isolated/tasks/p1-chart-rush/RESULT.json')));
+        }
+        return orchestrateEngines({
+          ...options,
+          prepare: ({ engine, taskId }) => {
+            const workspace = path.join(dir, taskId, engine);
+            fs.mkdirSync(workspace, { recursive: true });
+            return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+          },
+          bootCheck: bootOk,
+          runSubagent: async (spec) => {
+            calls.push(`${spec.taskId}:${spec.engine}:${spec.role}`);
+            if (spec.role === 'builder') { writeSubmission(spec.workspace, spec.engine); return ''; }
+            if (spec.taskId === 'p1-chart-rush' && spec.engine === 'onegame' && spec.role === 'replay') {
+              throw new EvalError('REPLAY_TIMEOUT', 'injected deadline');
+            }
+            return finishReplayAndLooks(spec);
+          },
+        });
+      },
+    });
+    assert.equal(result.report.status, 'FAILED');
+    assert.equal(result.report.tasks.length, 6);
+    assert.equal(result.report.completed_task_count, 3);
+    const timedOut = result.report.tasks.find((r) => r.primary === 'REPLAY_TIMEOUT');
+    assert.equal(timedOut.G, null);
+    assert.equal(timedOut.product_100, null);
+    assert.equal(result.report.tasks.filter((r) => r.product_100 === 100).length, 5);
+    assert.equal(result.report.winner, false);
+    assert.deepEqual(result.report.product_100, { onegame: null, godot: null });
+    assert.equal(result.compare.headline, '5/6');
+    assert.ok(calls.includes('p1-chart-rush:godot:looks'));
+    assert.ok(calls.includes('p1-tower-defense:onegame:looks'));
+    assert.ok(!calls.includes('p1-chart-rush:onegame:looks'));
+    assert.equal(fs.existsSync(path.join(dir, 'p1-chart-rush/onegame/REPLAY.json')), false);
+    assert.ok(fs.existsSync(path.join(dir, 'p1-chart-rush/onegame/STAGE_ERROR.json')));
+    assert.ok(fs.existsSync(path.join(dir, 'p1-chart-rush/godot/LOOKS.json')));
+    assert.ok(fs.existsSync(result.htmlPath));
+  } finally {
+    if (previous === undefined) delete process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+    else process.env.EVAL_CLOUD_AGENT_SUBAGENT = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fatal suite error keeps earlier results and leaves later tasks pending', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-fatal-'));
+  const previous = process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+  process.env.EVAL_CLOUD_AGENT_SUBAGENT = '1';
+  try {
+    await assert.rejects(() => runProduct100('fatal', {
+      workDir: dir,
+      orchestrate: async (options) => {
+        if (options.taskId !== 'p1-chart-rush') throw new EvalError('EVAL_INTERNAL', 'injected task load failure');
+        return orchestrateEngines({ ...options, skipBuilder: true, prepare: ({ engine }) => {
+          const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+          return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+        }, runSubagent: finishReplayAndLooks });
+      },
+    }), /injected task load failure/);
+    const report = JSON.parse(fs.readFileSync(path.join(dir, 'fatal/PRODUCT_100.json'), 'utf8'));
+    assert.equal(report.status, 'FAILED');
+    assert.equal(report.tasks.filter((r) => r.product_100 === 100).length, 2);
+    assert.equal(report.tasks.filter((r) => r.primary === 'PENDING').length, 4);
+    assert.equal(report.winner, false);
+  } finally {
+    if (previous === undefined) delete process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+    else process.env.EVAL_CLOUD_AGENT_SUBAGENT = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('looks timeout retains trusted replay and the partner verdict', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'looks-isolation-'));
+  try {
+    const staged = await orchestrateEngines({
+      taskId: 'p1-chart-rush', runId: 'looks-timeout', isolateFailures: true, skipBuilder: true,
+      prepare: ({ engine }) => {
+        const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+      },
+      runSubagent: async (spec) => {
+        if (spec.role === 'looks' && spec.engine === 'onegame') throw new EvalError('LOOKS_TIMEOUT', 'injected verdict deadline');
+        return finishReplayAndLooks(spec);
+      },
+    });
+    const scored = scoreStagedPair('p1-chart-rush', staged);
+    assert.equal(scored.ogRow.G, 1);
+    assert.equal(scored.ogRow.product_100, null);
+    assert.equal(scored.ogRow.stage_error.primary, 'LOOKS_TIMEOUT');
+    assert.equal(scored.gdRow.product_100, 100);
+    assert.equal(staged.onegame.replay.primary, 'TRACE_OK');
+    assert.ok(fs.existsSync(path.join(dir, 'onegame/REPLAY.json')));
+    assert.ok(fs.existsSync(path.join(dir, 'godot/LOOKS.json')));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('build failure is returned to the builder before replay', async () => {
   const prompts = [];

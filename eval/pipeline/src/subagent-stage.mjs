@@ -16,6 +16,8 @@ import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
 import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
+import { stageTimeoutMs, stageProcessError } from './stage-timeout.mjs';
+import { writeReport } from './report.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
@@ -62,7 +64,7 @@ export async function defaultRunSubagent(spec) {
     }
     args = parsed;
   }
-  const timeoutMs = Number(process.env.EVAL_SUBAGENT_TIMEOUT_MS || 600_000);
+  const timeoutMs = stageTimeoutMs(spec.role);
   const result = spawnSync(cmd, args, {
     cwd: spec.workspace,
     env: process.env,
@@ -71,13 +73,7 @@ export async function defaultRunSubagent(spec) {
     timeout: timeoutMs,
     maxBuffer: 20 * 1024 * 1024,
   });
-  if (result.error) throw new EvalError('SUBAGENT_INVALID', result.error.message);
-  if (result.status !== 0) {
-    throw new EvalError(
-      'SUBAGENT_INVALID',
-      `subagent ${spec.role} ${spec.engine} exited ${result.status}\n${result.stderr || result.stdout}`.slice(0, 2000),
-    );
-  }
+  if (result.error || result.status !== 0) throw stageProcessError(spec, result);
   return result.stdout ?? '';
 }
 
@@ -362,77 +358,113 @@ export async function orchestrateEngines({
   loadTask = loadP1Task,
   skipBuilder = false,
   bootCheck = checkBuilderBoot,
+  isolateFailures = false,
 } = {}) {
   const bundle = loadTask(taskId);
   const prepped = {};
-  for (const engine of ['onegame', 'godot']) {
-    prepped[engine] = prepare({ engine, taskId, runId, instruction: bundle.instruction });
-  }
   const built = {};
+  const failures = [];
+  function recordFailure(engine, stage, err, prep) {
+    const failure = { engine, taskId, stage, primary: err.primary || 'EVAL_INTERNAL', message: String(err.message || err), ...err.extra };
+    failures.push(failure);
+    process.stderr.write(`stage failed ${taskId} ${engine} ${stage}: ${failure.primary}\n`);
+    if (prep?.outPath) writeReport(path.join(path.dirname(prep.outPath), 'STAGE_ERROR.json'), failure);
+    return failure;
+  }
+  for (const engine of ['onegame', 'godot']) {
+    try {
+      prepped[engine] = prepare({ engine, taskId, runId, instruction: bundle.instruction });
+    } catch (err) {
+      if (!isolateFailures) throw err;
+      const failure = recordFailure(engine, 'prepare', err);
+      built[engine] = { replay: unavailableReplay(taskId, engine, failure) };
+    }
+  }
   await Promise.all(
     ['onegame', 'godot'].map(async (engine) => {
       const prep = prepped[engine];
+      if (!prep) return;
       const token = randomBytes(16).toString('hex');
-      if (!skipBuilder) {
-        const builtOnce = await buildUntilBoot({
-          engine,
-          taskId,
-          prep,
-          instruction: bundle.instruction,
-          task: bundle.task,
-          runSubagent,
-          bootCheck,
-          attempts: builderBootAttempts(),
-        });
-        let debugRan = false;
-        if (builtOnce.boot?.ok) {
-          await runRole(
+      let stage = 'builder';
+      try {
+        if (!skipBuilder) {
+          const builtOnce = await buildUntilBoot({
+            engine,
+            taskId,
+            prep,
+            instruction: bundle.instruction,
+            task: bundle.task,
             runSubagent,
-            debugSpec({
-              engine,
-              taskId,
-              workspace: prep.workspace,
-              instruction: bundle.instruction,
-              task: bundle.task,
-            }),
+            bootCheck,
+            attempts: builderBootAttempts(),
+          });
+          let debugRan = false;
+          if (builtOnce.boot?.ok) {
+            stage = 'debug';
+            await runRole(
+              runSubagent,
+              debugSpec({
+                engine,
+                taskId,
+                workspace: prep.workspace,
+                instruction: bundle.instruction,
+                task: bundle.task,
+              }),
+            );
+            auditModelSubmission(prep.workspace, engine, taskId);
+            debugRan = true;
+          }
+          const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
+          fs.mkdirSync(path.dirname(stampPath), { recursive: true });
+          fs.writeFileSync(
+            stampPath,
+            `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null, debug: debugRan }, null, 2)}\n`,
           );
-          auditModelSubmission(prep.workspace, engine, taskId);
-          debugRan = true;
         }
-        const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
-        fs.mkdirSync(path.dirname(stampPath), { recursive: true });
-        fs.writeFileSync(
-          stampPath,
-          `${JSON.stringify({ source: 'subagent', taskId, engine, boot_attempts: builtOnce.attempts, boot_primary: builtOnce.boot?.primary ?? null, debug: debugRan }, null, 2)}\n`,
-        );
+        stage = 'replay';
+        await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
+        built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
+      } catch (err) {
+        if (!isolateFailures) throw err;
+        const failure = recordFailure(engine, stage, err, prep);
+        // This is orchestration state, never a substitute REPLAY.json.
+        built[engine] = { ...prep, token, replay: unavailableReplay(taskId, engine, failure) };
       }
-      await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
-      built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
     }),
   );
   const planned = planPair(built, bundle.rubric, bundle.task.sample_fps);
   await Promise.all(
     planned.run.map(async (engine) => {
-      const text = await runRole(
-        runSubagent,
-        looksSpec({
-          engine,
-          taskId,
-          workspace: built[engine].workspace,
-          instruction: bundle.instruction,
-          rubric: bundle.rubric,
-          plan: planned.plans[engine],
-        }),
-      );
-      if (!String(text).trim()) {
-        throw new EvalError('SUBAGENT_INVALID', `looks subagent ${engine} 没有给出逐条证据。`);
+      try {
+        const text = await runRole(
+          runSubagent,
+          looksSpec({
+            engine,
+            taskId,
+            workspace: built[engine].workspace,
+            instruction: bundle.instruction,
+            rubric: bundle.rubric,
+            plan: planned.plans[engine],
+          }),
+        );
+        if (!String(text).trim()) {
+          throw new EvalError('SUBAGENT_INVALID', `looks subagent ${engine} 没有给出逐条证据。`);
+        }
+        const accepted = acceptLooksText(text, { frames: planned.plans[engine].frames, rubric: bundle.rubric });
+        built[engine].looks = {
+          ...accepted,
+          sample_policy: planned.plans[engine].sample_policy,
+          jobs: planned.plans[engine].jobs,
+        };
+        writeReport(path.join(path.dirname(built[engine].outPath), 'LOOKS.json'), {
+          engine, taskId, token: built[engine].token, stdout: text,
+          ...built[engine].looks,
+        });
+      } catch (err) {
+        if (!isolateFailures) throw err;
+        const failure = recordFailure(engine, 'looks', err, built[engine]);
+        built[engine].looks = { looks_status: failure.primary, looks_source: 'subagent', failure };
       }
-      const accepted = acceptLooksText(text, { frames: planned.plans[engine].frames, rubric: bundle.rubric });
-      built[engine].looks = {
-        ...accepted,
-        sample_policy: planned.plans[engine].sample_policy,
-        jobs: planned.plans[engine].jobs,
-      };
     }),
   );
   return {
@@ -441,6 +473,15 @@ export async function orchestrateEngines({
     pair: planned.pair,
     onegame: built.onegame,
     godot: built.godot,
+    failures,
+  };
+}
+
+function unavailableReplay(taskId, engine, failure) {
+  return {
+    G: null, g0_ok: null, primary: failure.primary, failure,
+    stills: [], notes: [failure.message],
+    attempt: { id: taskId, engine, primary: failure.primary, g0_ok: null, stage_error: failure, notes: [failure.message] },
   };
 }
 

@@ -8,6 +8,8 @@ import {
   winnerOf,
   P0_TASKS,
   ORACLE_FLOOR,
+  pendingRow,
+  zeroRow,
 } from '../src/product-100.mjs';
 import { encodePngRgba, decodePng, nearestNeighborScale, toJudgeStill, STILL_W, STILL_H } from '../src/png-nn.mjs';
 import { heuristicFrame } from '../src/looks.mjs';
@@ -79,7 +81,8 @@ test('equal S with opposite dims is not a suite tie', () => {
   });
   assert.equal(og.product_100, 75);
   assert.equal(gd.product_100, 75);
-  const report = buildProduct100({ runId: 'dims', rows: [og, gd] });
+  const remaining = SUITE_TASKS.slice(1).flatMap((id) => ['onegame', 'godot'].map((engine) => zeroRow(id, engine, 'BOOT_FAIL')));
+  const report = buildProduct100({ runId: 'dims', rows: [og, gd, ...remaining] });
   assert.equal(report.winner_engine, 'godot');
   assert.match(report.winner_sentence, /不并列/);
 });
@@ -197,6 +200,20 @@ test('one live engine still needs a subagent score', () => {
 
 test('oracle floor is 80', () => {
   assert.equal(ORACLE_FLOOR, 80);
+});
+
+test('pending and infrastructure failures never become a scored zero or winner', () => {
+  const rows = SUITE_TASKS.flatMap((id) => ['onegame', 'godot'].map((engine) =>
+    scoreAttempt({ id, engine, G: 1, M: 1, D: 1, V: 1, A: 1, primary: 'TRACE_OK', looks_status: 'OK', looks_source: 'subagent' })));
+  rows[4] = pendingRow(SUITE_TASKS[2], 'onegame', 'REPLAY_TIMEOUT', { stage: 'replay', primary: 'REPLAY_TIMEOUT' });
+  const report = buildProduct100({ runId: 'timeout', rows });
+  assert.equal(report.comparable, false);
+  assert.equal(report.winner_engine, 'incomparable');
+  assert.deepEqual(report.product_100, { onegame: null, godot: null });
+  assert.equal(report.tasks.find((r) => r.primary === 'REPLAY_TIMEOUT').product_100, null);
+  const partial = buildProduct100({ runId: 'partial', rows: rows.slice(0, 2) });
+  assert.equal(partial.tasks.find((r) => r.id === SUITE_TASKS[1]).G, null);
+  assert.equal(partial.winner, false);
 });
 
 test('window lock 1280x720; 320x180 stills rejected', () => {

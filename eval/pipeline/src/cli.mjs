@@ -175,10 +175,10 @@ export async function main(argv = process.argv.slice(2)) {
       }
       const runId = argValue(argv, '--run-id') ?? `p100-${Date.now()}`;
       const { report, out, htmlPath } = await runProduct100(runId);
-      process.stdout.write(`${JSON.stringify({ product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, looks_phase: report.looks_phase, winner_sentence: report.winner_sentence }, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify({ status: report.status, product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, looks_phase: report.looks_phase, winner_sentence: report.winner_sentence }, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
-      process.exitCode = 0;
+      process.exitCode = report.status === 'FAILED' ? 1 : 0;
       return;
     }
     if (cmd === 'emit-scoreboard') {

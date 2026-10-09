@@ -7,7 +7,7 @@ export const PIPELINE_DIR = path.resolve(here, '..');
 export const EVAL_DIR = path.resolve(PIPELINE_DIR, '..');
 export const REPO_DIR = path.resolve(EVAL_DIR, '..');
 export const WORK_DIR = path.join(REPO_DIR, 'work');
-export const PIN = '1.21.0';
+export const PIN = '1.23.0';
 export const RECORD_REL = 'out/eval.1gamerecord';
 export const REQUIRED_ONEGAME = [
   '@1game/cli',
