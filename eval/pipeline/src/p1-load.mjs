@@ -19,7 +19,7 @@ export function loadP1Task(taskId) {
   const body = fs.readFileSync(path.join(dir, 'instruction.md'), 'utf8');
   const sharedPath = path.join(EVAL_DIR, 'tasks', '_shared', 'constraints.md');
   const shared = fs.readFileSync(sharedPath, 'utf8').trim();
-  const instruction = `${body.trim()}\n\n${shared}\n`;
+  const instruction = `${body.trim()}\n\n${shared}\n\n本题允许事件：${task.input.events.join("、")}。本题演示名：${task.scenarios.required.join("、")}，每个演示名恰好一条轨迹。\n`;
   const rubric = loadJson(path.join(dir, 'judge', 'rubric.json'));
   if (fs.existsSync(path.join(dir, 'judge', 'probe.json'))) {
     throw new EvalError('EVAL_INTERNAL', `${taskId} must not ship judge/probe.json`);

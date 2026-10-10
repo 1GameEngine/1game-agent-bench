@@ -13,6 +13,7 @@ import { checkGodotBoot } from '../src/p1-godot.mjs';
 import { auditModelSubmission } from '../src/model-builder.mjs';
 import { assertProductSubagent, runOracleGate, scoreStagedPair, runProduct100 } from '../src/product-run.mjs';
 import { EvalError } from '../src/util.mjs';
+import { stageResponseError } from '../src/stage-result.mjs';
 
 const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
 
@@ -121,6 +122,7 @@ test('cloud agent subagent fulfills a builder without EVAL_SUBAGENT_CMD', async 
     assert.equal(req.handoff.subagent_type, 'generalPurpose');
     assert.match(req.handoff.prompt, /写一个游戏/);
     assert.doesNotMatch(req.handoff.prompt, /rubric\.json/);
+    fs.writeFileSync(req.lifecycle.start_path, JSON.stringify({ id: req.id, started_at: new Date().toISOString() }));
     fs.mkdirSync(path.join(workspace, 'src'), { recursive: true });
     fs.writeFileSync(path.join(workspace, 'src', 'game.tsx'), 'export const game = 1;\n');
     const id = reqPath.replace(/\.request\.json$/, '');
@@ -256,7 +258,7 @@ test('main agent scores frame rubric without cross-item caps', async () => {
       assert.doesNotMatch(JSON.stringify(spec.stills), spec.engine === 'onegame' ? /godot/ : /onegame/);
       const scenarios = {};
       for (const [sc, frames] of Object.entries(spec.stills)) {
-        scenarios[sc] = {};
+        scenarios[sc] = { frame_contexts: Object.fromEntries(frames.map((f) => [f.id, 'play'])) };
         for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
           scenarios[sc][item.id] = looksItem(item, frames, item.id === 'V2' || item.id === 'A2' ? 0 : 1);
         }
@@ -332,7 +334,7 @@ test('oracle gate scores reference projects through the looks subagent', async (
         }
         const scenarios = {};
         for (const [sc, frames] of Object.entries(spec.stills)) {
-          scenarios[sc] = {};
+          scenarios[sc] = { frame_contexts: Object.fromEntries(frames.map((f) => [f.id, 'play'])) };
           for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
             scenarios[sc][item.id] = looksItem(item, frames, 1);
           }
@@ -482,7 +484,7 @@ function finishReplayAndLooks(spec) {
   }
   const scenarios = {};
   for (const [sc, frames] of Object.entries(spec.stills)) {
-    scenarios[sc] = {};
+    scenarios[sc] = { frame_contexts: Object.fromEntries(frames.map((f) => [f.id, 'play'])) };
     for (const item of spec.rubric_items.filter((row) => row.applies.includes(sc))) {
       scenarios[sc][item.id] = looksItem(item, frames, 1);
     }
@@ -636,6 +638,143 @@ test('build failure is returned to the builder before replay', async () => {
   assert.match(og[1].prompt, /构建 \/ 启动校验失败/);
   assert.doesNotMatch(og[1].prompt, /rubric\.json/);
   assert.equal(prompts.filter((spec) => spec.engine === 'godot').length, 1);
+});
+
+test('builder self-check failure still audits duplicate scenarios and requests repair', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'selfcheck-repair-'));
+  const calls = [];
+  try {
+    const staged = await orchestrateEngines({ taskId: 'p1-chart-rush', runId: 'selfcheck-repair', isolateFailures: true,
+      prepare: ({ engine }) => {
+        const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+      }, bootCheck: bootOk,
+      runSubagent: async (spec) => {
+        calls.push(spec);
+        if (spec.role === 'builder') {
+          writeSubmission(spec.workspace, spec.engine);
+          if (spec.engine === 'onegame' && spec.attempt === 1) {
+            fs.copyFileSync(path.join(spec.workspace, 'demo_outputs/04_clear.json'), path.join(spec.workspace, 'demo_outputs/05_ridge.json'));
+            throw stageResponseError(spec, { stdout: '', exitCode: 1, failure: { kind: 'validation_incomplete', message: 'Ridge 尚未自查' } });
+          }
+          if (spec.attempt === 2) {
+            assert.match(spec.prompt, /repeat scenario clear/);
+            fs.unlinkSync(path.join(spec.workspace, 'demo_outputs/05_ridge.json'));
+          }
+          assert.ok(spec.validation.argv.includes('validate-traces'));
+          return '';
+        }
+        return finishReplayAndLooks(spec);
+      },
+    });
+    assert.equal(staged.failures.length, 0);
+    assert.equal(staged.warnings.length, 1);
+    assert.equal(staged.warnings[0].primary, 'STAGE_VALIDATION_INCOMPLETE');
+    assert.equal(calls.filter((s) => s.engine === 'onegame' && s.role === 'builder').length, 2);
+    assert.equal(scoreStagedPair('p1-chart-rush', staged).ogRow.product_100, 100);
+    assert.ok(fs.existsSync(path.join(dir, 'onegame/STAGE_WARNINGS.json')));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+for (const primary of ['GAME_VALIDATION_FAILED', 'STAGE_VALIDATION_INCOMPLETE', 'SUBAGENT_INVALID', 'DEBUG_TIMEOUT', 'SUBAGENT_PROCESS_FAILED']) {
+  test(`debug ${primary} ${primary.includes('VALIDATION') ? 'is independently checked' : 'does not bypass the failure'}`, async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'selfcheck-debug-'));
+    const calls = [];
+    let ogBoots = 0;
+    const recover = ['GAME_VALIDATION_FAILED', 'STAGE_VALIDATION_INCOMPLETE'].includes(primary);
+    try {
+      const staged = await orchestrateEngines({ taskId: 'p1-chart-rush', runId: primary, isolateFailures: true,
+        prepare: ({ engine }) => {
+          const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+          return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+        }, bootCheck: async (spec) => { if (spec.engine === 'onegame') ogBoots++; return bootOk(); },
+        runSubagent: async (spec) => {
+          calls.push(`${spec.engine}:${spec.role}`);
+          if (spec.role === 'builder') { writeSubmission(spec.workspace, spec.engine); return ''; }
+          if (spec.role === 'debug' && spec.engine === 'onegame') throw new EvalError(primary, 'self-check outcome');
+          return finishReplayAndLooks(spec);
+        },
+      });
+      assert.equal(calls.includes('onegame:replay'), recover);
+      assert.equal(ogBoots, recover ? 2 : 1);
+      assert.equal(staged.warnings.length, recover ? 1 : 0);
+      assert.equal(staged.failures.length, recover ? 0 : 1);
+      assert.equal(scoreStagedPair('p1-chart-rush', staged).ogRow.product_100, recover ? 100 : null);
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+}
+
+test('a self-check warning cannot salvage a broken debug submission', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bad-selfcheck-'));
+  const calls = [];
+  try {
+    const staged = await orchestrateEngines({ taskId: 'p1-chart-rush', runId: 'bad-selfcheck', isolateFailures: true,
+      prepare: ({ engine }) => {
+        const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') };
+      }, bootCheck: bootOk, runSubagent: async (spec) => {
+        calls.push(`${spec.engine}:${spec.role}`);
+        if (spec.role === 'builder') { writeSubmission(spec.workspace, spec.engine); return ''; }
+        if (spec.role === 'debug' && spec.engine === 'onegame') {
+          fs.unlinkSync(path.join(spec.workspace, 'src/game.tsx'));
+          throw new EvalError('STAGE_VALIDATION_INCOMPLETE', 'unfinished');
+        }
+        return finishReplayAndLooks(spec);
+      },
+    });
+    assert.equal(calls.includes('onegame:replay'), false);
+    assert.equal(staged.failures[0].primary, 'BUILDER_INVALID');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('self-check warning cannot salvage a debug submission that no longer boots', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bad-selfcheck-boot-'));
+  const calls = []; let boots = 0;
+  try {
+    const staged = await orchestrateEngines({ taskId: 'p1-chart-rush', runId: 'bad-selfcheck-boot', isolateFailures: true,
+      prepare: ({ engine }) => { const workspace = path.join(dir, engine); fs.mkdirSync(workspace);
+        return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') }; },
+      bootCheck: async ({ engine }) => engine === 'onegame' && ++boots === 2
+        ? { ok: false, notes: ['parse error after edit'] } : bootOk(),
+      runSubagent: async (spec) => {
+        calls.push(`${spec.engine}:${spec.role}`);
+        if (spec.role === 'builder') { writeSubmission(spec.workspace, spec.engine); return ''; }
+        if (spec.role === 'debug' && spec.engine === 'onegame') throw new EvalError('GAME_VALIDATION_FAILED', 'wrong outcome');
+        return finishReplayAndLooks(spec);
+      },
+    });
+    assert.equal(calls.includes('onegame:replay'), false);
+    assert.equal(staged.failures[0].primary, 'BUILDER_INVALID');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a completed suite persists recovered self-check warnings without becoming FAILED', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-selfcheck-'));
+  const previous = process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+  process.env.EVAL_CLOUD_AGENT_SUBAGENT = '1';
+  try {
+    const result = await runProduct100('selfcheck', { workDir: dir,
+      orchestrate: (options) => orchestrateEngines({ ...options,
+        prepare: ({ engine, taskId }) => { const workspace = path.join(dir, taskId, engine); fs.mkdirSync(workspace, { recursive: true });
+          return { workspace, replayRunId: engine, outPath: path.join(workspace, 'REPLAY.json') }; },
+        bootCheck: bootOk, runSubagent: async (spec) => {
+          if (spec.role === 'builder') { writeSubmission(spec.workspace, spec.engine); return ''; }
+          if (spec.role === 'debug' && spec.engine === 'onegame') throw new EvalError('STAGE_VALIDATION_INCOMPLETE', 'not all self-checks ran');
+          return finishReplayAndLooks(spec);
+        },
+      }),
+    });
+    assert.equal(result.report.status, 'COMPLETE');
+    assert.equal(result.report.failures.length, 0);
+    assert.equal(result.report.stage_warnings.length, 3);
+    assert.equal(result.report.tasks.filter((r) => r.product_100 === 100).length, 6);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'selfcheck/RUN_STATE.json'))).stage_warnings.length, 3);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'selfcheck/tasks/p1-chart-rush/RESULT.json'))).stage_warnings.length, 1);
+  } finally {
+    if (previous === undefined) delete process.env.EVAL_CLOUD_AGENT_SUBAGENT;
+    else process.env.EVAL_CLOUD_AGENT_SUBAGENT = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('a debug edit that drops a required file stops before replay', async () => {

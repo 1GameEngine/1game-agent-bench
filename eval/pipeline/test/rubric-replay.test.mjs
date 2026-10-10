@@ -4,6 +4,9 @@ import { missingRequiredScenarios } from '../src/p1-trace.mjs';
 import { aggregateObserved, validateRubric } from '../src/rubric.mjs';
 import { loadP1Task, P1_TASKS } from '../src/p1-load.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, reqAgg } from '../src/looks-rubric.mjs';
+import { acceptLooksText, buildLooksStagePrompt } from '../src/subagent-stage.mjs';
+import { buildLooksJob } from '../src/looks-judge.mjs';
+import { buildLooksUserPrompt } from '../src/looks-rubric.mjs';
 
 const mini = {
   score_formula: 'G * (40*M + 10*D + 20*V + 30*A)',
@@ -27,7 +30,7 @@ test('headline rubrics are visible frame criteria', () => {
     for (const req of b.rubric.requirements) {
       if (req.dim === 'V') assert.equal(reqAgg(req), 'mean', `${id} ${req.id}`);
       else assert.equal(reqAgg(req), 'max', `${id} ${req.id}`);
-      if (req.dim === 'M' || req.dim === 'D') assert.match(req.description, /纯色块/);
+      if (req.dim === 'M' || req.dim === 'D') assert.doesNotMatch(req.description, /机制或种类成立|1 分要求正式素材/);
       if (req.dim === 'V') assert.match(req.description, /静帧平均/);
     }
   }
@@ -59,6 +62,67 @@ test('a visual item averages every still and rejects a best-frame score', () => 
   assert.equal(looksEvidenceComplete(omitted, rubric, ids), false);
   assert.equal(normalizeLooksScores(omitted, rubric, ids).V1, 0);
   assert.equal(reqAgg({ id: 'V9', dim: 'V' }), 'max');
+});
+
+test('gameplay readability excludes countdown but counts empty and unreadable play frames', () => {
+  const chart = loadP1Task('p1-chart-rush');
+  const rubric = { requirements: chart.rubric.requirements.filter((r) => r.id === 'V2') };
+  const ids = new Set(['loop_f0', 'loop_f40', 'loop_f80', 'loop_f104', 'loop_f128', 'loop_f152']);
+  const verdict = {
+    frame_contexts: { loop_f0: 'title', loop_f40: 'countdown', loop_f80: 'countdown', loop_f104: 'play', loop_f128: 'play', loop_f152: 'play' },
+    V2: { score: 1, frames: { loop_f0: 0, loop_f40: 0, loop_f80: 0, loop_f104: 1, loop_f128: 1, loop_f152: 1 }, evidence: ['loop_f104'] },
+  };
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), true);
+  assert.equal(normalizeLooksScores(verdict, rubric, ids).V2, 1);
+  const frames = { loop: [...ids].map((id) => ({ id })) };
+  assert.equal(acceptLooksText(JSON.stringify({ scenarios: { loop: verdict } }), { frames, rubric }).byScenario.loop.V2, 1);
+  // An empty play frame and an unreadable frame both stay in the denominator.
+  const bad = structuredClone(verdict);
+  bad.V2.frames.loop_f128 = 0;
+  bad.V2.frames.loop_f152 = 0;
+  bad.frame_contexts.loop_f152 = 'unreadable';
+  assert.equal(looksEvidenceComplete(bad, rubric, ids), false);
+  bad.V2.score = 0.5;
+  assert.equal(looksEvidenceComplete(bad, rubric, ids), true);
+  assert.equal(normalizeLooksScores(bad, rubric, ids).V2, 0.5);
+  bad.V2.frames.loop_f152 = 1;
+  assert.equal(looksEvidenceComplete(bad, rubric, ids), false);
+});
+
+test('no gameplay evidence cannot earn readability and cannot omit or mislabel frames', () => {
+  const chart = loadP1Task('p1-chart-rush');
+  const rubric = { requirements: chart.rubric.requirements.filter((r) => r.id === 'V2') };
+  const ids = new Set(['loop_f0', 'loop_f204']);
+  const verdict = {
+    frame_contexts: { loop_f0: 'title', loop_f204: 'title' },
+    V2: { score: 0, frames: { loop_f0: 0, loop_f204: 0 }, evidence: ['loop_f0'] },
+  };
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), true);
+  assert.equal(normalizeLooksScores(verdict, rubric, ids).V2, 0);
+  verdict.V2.score = 1;
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), false);
+  verdict.V2.score = 0;
+  delete verdict.frame_contexts.loop_f204;
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), false);
+  verdict.frame_contexts.loop_f204 = 'skip';
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), false);
+  verdict.frame_contexts.loop_f204 = 'play';
+  delete verdict.V2.frames.loop_f204;
+  assert.equal(looksEvidenceComplete(verdict, rubric, ids), false);
+});
+
+test('both looks entry points describe the same gameplay frame window', () => {
+  const chart = loadP1Task('p1-chart-rush');
+  const stills = [{ id: 'loop_f0', path: '/unused.png' }];
+  const job = buildLooksJob({ taskId: chart.task.id, instruction: chart.instruction, rubric: chart.rubric, scenario: 'loop', stills });
+  const direct = buildLooksUserPrompt(job);
+  const staged = buildLooksStagePrompt({ instruction: chart.instruction, frames: { loop: stills }, items: chart.rubric.requirements });
+  for (const prompt of [direct, staged]) {
+    assert.match(prompt, /frame_window=play/);
+    assert.match(prompt, /frame_contexts/);
+    assert.match(prompt, /unreadable/);
+    assert.match(prompt, /0\.75/);
+  }
 });
 
 test('empty fail events do not count as fail coverage', () => {

@@ -7,7 +7,8 @@ import { execFileOk } from './exec.mjs';
 import { mountAssetLibrary } from './assets.mjs';
 import { gameplayKeys, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { finalizeStill } from './capture.mjs';
-import { FRAME_MS, parseStillId } from './p1-trace.mjs';
+import { FRAME_MS, parseStillId, stillTimeMs } from './p1-trace.mjs';
+import { EvalError } from './util.mjs';
 
 export function godotBin() {
   return (
@@ -164,12 +165,15 @@ export function runGodotJob({ projectDir, job, outPath, timeoutMs }) {
     timeoutMs: 120_000,
     env,
   });
-  const user = ['--', `--job=${jobPath}`, `--out=${outPath}`];
+  // Native scene processing needs a fixed engine clock, not manual calls to
+  // script _process. Preserve the existing P0 clock/driver.
+  const user = [...(job.traces ? ['--fixed-fps', String(Math.round(1 / job.frame_dt))] : []),
+    '--', `--job=${jobPath}`, `--out=${outPath}`];
   const wantStills = Boolean(job.stills_dir);
   const runTimeout = timeoutMs ?? (wantStills ? 90_000 : 60_000);
   let proc;
-  if (wantStills) {
-    proc = runGodotStills(bin, projectDir, user, runTimeout, env);
+  if (wantStills || job.traces) {
+    proc = runGodotStills(bin, projectDir, user, runTimeout, env, Boolean(job.traces));
   } else {
     proc = execFileOk(bin, ['--headless', '--rendering-driver', 'opengl3', '--path', projectDir, ...user], {
       cwd: projectDir,
@@ -201,7 +205,7 @@ export function runGodotJob({ projectDir, job, outPath, timeoutMs }) {
   };
 }
 
-function runGodotStills(bin, projectDir, user, timeoutMs, env) {
+function runGodotStills(bin, projectDir, user, timeoutMs, env, nativeFrames = false) {
   const glArgs = ['--rendering-driver', 'opengl3', '--path', projectDir, ...user];
   const xvfb = spawnSync('which', ['xvfb-run'], { encoding: 'utf8' });
   if (xvfb.status === 0) {
@@ -210,6 +214,10 @@ function runGodotStills(bin, projectDir, user, timeoutMs, env) {
       ['-a', '-s', '-screen 0 1280x720x24', bin, '--display-driver', 'x11', ...glArgs],
       { cwd: projectDir, timeoutMs, env },
     );
+  }
+  if (nativeFrames) {
+    if (env.DISPLAY) return execFileOk(bin, ['--display-driver', 'x11', ...glArgs], { cwd: projectDir, timeoutMs, env });
+    throw new EvalError('EVAL_INTERNAL', 'Godot native trace frames require xvfb-run or an X11 DISPLAY');
   }
   return execFileOk(bin, ['--headless', ...glArgs], { cwd: projectDir, timeoutMs, env });
 }
@@ -233,7 +241,7 @@ export function makeTraceJob({ traces, stillsDir, sampleEvery: every = 8, maxFra
     stills_dir: stillsDir ?? '',
     sample_every: every,
     max_frames: maxFrames,
-    frame_dt: 0.033,
+    frame_dt: FRAME_MS / 1000,
     probe_keys: [],
   };
 }
@@ -255,7 +263,7 @@ export function judgeTraceEvents(events, stillsDir) {
   if (!g0) return { primary: 'BOOT_FAIL', notes: ['no g0'], g0_ok: 0, stills };
   for (const ev of events.filter((e) => e.event === 'still')) {
     const parsed = parseStillId(ev.id);
-    const meta = { scenario: parsed.scenario, frame: parsed.frame, t_ms: parsed.frame * FRAME_MS };
+    const meta = { scenario: parsed.scenario, frame: parsed.frame, t_ms: stillTimeMs(parsed.frame) };
     const rawPath = stillsDir ? path.join(stillsDir, `${ev.id}.png`) : ev.path;
     if (rawPath && fs.existsSync(rawPath)) {
       const cap = finalizeStill(rawPath);

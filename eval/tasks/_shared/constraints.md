@@ -3,6 +3,7 @@
 - 画面逻辑尺寸 1280×720，恰好一个场景。
 - 禁止随机。禁止用物理引擎决定对错。
 - 不要实现评测探测接口。不要读取评测仓或官方操作表。
-- 提交物放在 `demo_outputs`。每条轨迹的 scenario 必须是题面列出的演示名之一，30fps，视口 1280×720。
+- 提交物放在 `demo_outputs`。每条轨迹的 scenario 必须是题面列出的演示名之一，每个演示名恰好一条轨迹，不得新增重复场景文件；30fps，视口 1280×720。
+- 每帧推进 1/30 秒；frame=N 的输入在第 N 帧推进前注入，同帧输入按 events 顺序执行。点击和按键本身不推进仿真时间，点击在同帧按下并松开。静帧在该帧推进后截取，其 t_ms 为 (frame+1)×1000/30。
 - 单条演示不超过题面给出的时长上限。
-- 事件只有 keydown、keyup、click。同一按键在 keyup 之前不能再 keydown；keyup 必须对应已经按下的键。轨迹结束时键仍可处于按下。
+- 允许事件以本题 input.events 列表为准：键盘事件使用 code，click 以及允许的 mouse_down、mouse_move、mouse_up 使用 x/y；mouse_down 表示按下，mouse_move 表示移动，mouse_up 表示松开。同一按键在 keyup 之前不能再 keydown；keyup 必须对应已经按下的键。轨迹结束时键仍可处于按下。

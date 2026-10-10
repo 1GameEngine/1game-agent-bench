@@ -13,6 +13,8 @@ import { runOracleGate, runProduct100 } from './product-run.mjs';
 import { writeScoreboardFromRun } from './scoreboard.mjs';
 import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
 import { runStageReplay } from './stage-replay.mjs';
+import { validateTraces, validateStageTraces } from './validate-traces.mjs';
+import { publishStageResponse } from './stage-close.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -147,6 +149,23 @@ export async function main(argv = process.argv.slice(2)) {
       process.exitCode = report.checkpoints_ok === report.attempts ? 0 : 1;
       return;
     }
+    if (cmd === 'validate-traces') {
+      const options = { engine: argValue(argv, '--engine'), taskId: argValue(argv, '--task'),
+        workspace: argValue(argv, '--workspace'), scenario: argValue(argv, '--scenario'), timingPath: argValue(argv, '--stage-timing') };
+      const report = options.timingPath ? await validateStageTraces(options) : validateTraces(options);
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      process.exitCode = report.ok ? 0 : 1;
+      return;
+    }
+    if (cmd === 'publish-stage-response') {
+      const input = argValue(argv, '--input');
+      const timingPath = argValue(argv, '--stage-timing');
+      if (!input || !timingPath) throw new EvalError('SUBAGENT_INVALID', '--input and --stage-timing are required');
+      const result = publishStageResponse({ timingPath, data: JSON.parse(fs.readFileSync(input, 'utf8')),
+        archivePath: argValue(argv, '--archive') });
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      return;
+    }
     if (cmd === 'stage-replay') {
       const engine = argValue(argv, '--engine');
       const taskId = argValue(argv, '--task');
@@ -218,7 +237,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | validate-traces --engine <onegame|godot> --task <id> --workspace <dir> [--scenario <name>] [--stage-timing <json>] | publish-stage-response --stage-timing <json> --input <json> [--archive <json>] | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {

@@ -552,8 +552,8 @@ test('tower defense task: spec text and hidden rubric agree', () => {
   assert.equal(byId.V2.agg, 'mean');
   assert.equal(byId.D1.agg, 'max');
   assert.equal(byId.A5.agg, 'max');
-  assert.match(byId.M1.description, /纯色块/);
-  assert.match(byId.D1.description, /纯色块/);
+  assert.doesNotMatch(byId.M1.description, /机制或种类成立|正式素材/);
+  assert.doesNotMatch(byId.D1.description, /机制或种类成立|正式素材/);
   assert.match(byId.V1.description, /静帧平均/);
   assert.match(byId.D1.description, /flyer/);
   const start = b.instruction.match(/Start 矩形 \((\d+),(\d+),(\d+),(\d+)\)/);

@@ -31,13 +31,20 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
   if (!token || !outPath || !workspace || !runId || !taskId) {
     throw new EvalError('EVAL_INTERNAL', 'stage-replay needs engine, task, workspace, out, token, and run-id');
   }
+  const { task } = loadP1Task(taskId);
+  const replay = runTraceReplay({ engine, taskId, workspace, runId, task });
+  return writeDoc(outPath, { via: 'stage-replay', token, ...replay });
+}
+
+// Shared execution only: this path reads no rubric and issues no trusted receipt.
+export function runTraceReplay({ engine, taskId, workspace, runId, task, capture = true, finalOnly = false } = {}) {
+  if (!workspace || !runId || !taskId || !task) {
+    throw new EvalError('EVAL_INTERNAL', 'trace replay needs engine, task, workspace, run-id, and public task metadata');
+  }
   if (engine !== 'onegame' && engine !== 'godot') {
     throw new EvalError('EVAL_INTERNAL', `stage-replay engine must be onegame or godot, got ${engine}`);
   }
-  const bundle = loadP1Task(taskId);
   const base = {
-    via: 'stage-replay',
-    token,
     engine,
     taskId,
     notes: [],
@@ -51,17 +58,18 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
 
   if (engine === 'onegame') {
     const hyg = scanHygiene({ gameDir: workspace });
-    const stillsDir = path.join(WORK_DIR, runId, 'stills');
-    const policy = tracePolicy(bundle.task);
+    const stillsDir = capture ? path.join(WORK_DIR, runId, 'stills') : undefined;
+    const policy = tracePolicy(task);
     const replay = runOnegameTraces({
       gameDir: workspace,
       stillsDir,
       policy,
+      sampleEveryOverride: finalOnly ? policy.maxFrames + 1 : undefined,
     });
     const primary = hyg.ok ? replay.primary : 'HYGIENE_FAIL';
     const replayed = replay.replayed_scenarios ?? [];
     const G = replay.g0_ok === 1 && hyg.ok && replayed.length > 0;
-    return writeDoc(outPath, {
+    return {
       ...base,
       G,
       primary,
@@ -74,29 +82,29 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
       replayed_scenarios: replay.replayed_scenarios ?? [],
       missing_scenarios: replay.missing_scenarios ?? [],
       attempt: { id: taskId, engine, primary, g0_ok: replay.g0_ok ?? 0, notes: replay.notes ?? [] },
-    });
+    };
   }
 
   const staged = stageGodotProject({ taskId, runId, srcDir: workspace });
   if (staged.tamper || staged.leak?.length) {
     const primary = staged.tamper ? 'INJECT_TAMPER' : 'HARNESS_LEAK';
     const notes = staged.tamper ? ['EvalProbe tamper'] : staged.leak;
-    return writeDoc(outPath, {
+    return {
       ...base,
       G: false,
       primary,
       g0_ok: 0,
       notes,
       attempt: { id: taskId, engine, primary, g0_ok: 0, notes },
-    });
+    };
   }
-  const stillsDir = path.join(WORK_DIR, runId, 'stills');
-  const policy = tracePolicy(bundle.task);
+  const stillsDir = capture ? path.join(WORK_DIR, runId, 'stills') : undefined;
+  const policy = tracePolicy(task);
   const traces = readTraces(path.join(staged.dest, 'demo_outputs'), policy);
   const duplicates = duplicateScenarioNames(traces);
   if (duplicates.length) {
     const notes = [`duplicate scenario ${[...new Set(duplicates)].join(', ')}`];
-    return writeDoc(outPath, {
+    return {
       ...base,
       G: false,
       primary: 'TRACE_INVALID',
@@ -105,14 +113,14 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
       traces,
       scenarios: traces.map((t) => t.trace?.scenario).filter(Boolean),
       attempt: { id: taskId, engine, primary: 'TRACE_INVALID', g0_ok: 0, notes },
-    });
+    };
   }
   const jobRun = runGodotJob({
     projectDir: staged.dest,
     job: makeTraceJob({
       traces,
       stillsDir,
-      sampleEvery: sampleEvery(policy.sampleFps),
+      sampleEvery: finalOnly ? policy.maxFrames + 1 : sampleEvery(policy.sampleFps),
       maxFrames: policy.maxFrames,
     }),
     outPath: path.join(WORK_DIR, runId, 'traces.jsonl'),
@@ -129,7 +137,7 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     allowEmpty: policy.allowEmpty,
     replayedScenarios: judged.replayed_scenarios,
   });
-  return writeDoc(outPath, {
+  return {
     ...base,
     G,
     primary: judged.primary,
@@ -142,5 +150,5 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     replayed_scenarios: judged.replayed_scenarios ?? [],
     missing_scenarios: missing,
     attempt: { id: taskId, engine, primary: judged.primary, g0_ok: judged.g0_ok ?? 0, notes: judged.notes ?? [] },
-  });
+  };
 }

@@ -8,12 +8,14 @@ import { orchestrateEngines } from './subagent-stage.mjs';
 export async function runP1Compare(suiteRunId = `p1-${Date.now()}`) {
   const attempts = [];
   const failures = [];
+  const warnings = [];
   const dir = path.join(WORK_DIR, suiteRunId);
   const out = path.join(dir, 'COMPARE_SCALAR.json');
   const checkpoint = (status) => {
     const report = buildCompareScalar({ runId: suiteRunId, attempts });
     report.status = status;
     report.failures = failures;
+    report.stage_warnings = warnings;
     writeReport(out, report);
     return { report, out };
   };
@@ -23,6 +25,7 @@ export async function runP1Compare(suiteRunId = `p1-${Date.now()}`) {
       process.stderr.write(`P1 staged ${taskId}\n`);
       const staged = await orchestrateEngines({ taskId, runId: `${suiteRunId}-${taskId}`, isolateFailures: true });
       failures.push(...staged.failures);
+      warnings.push(...(staged.warnings ?? []));
       for (const engine of ['onegame', 'godot']) {
         const replay = staged[engine].replay;
         const attempt = replay.attempt ?? {

@@ -22,6 +22,8 @@
 
 工作区有只读 Kenney CC0 图库 `asset-library/`。本题方向键图在工程 `assets/arrow-left.png`、`arrow-down.png`、`arrow-up.png`、`arrow-right.png`（来自 `input-prompts-pixel`）。四条轨道和落下的音符用对应方向的键帽图。
 
+判定反馈、分数、连击倍率和结算信息可以用文字与几何图形表达，不要求这些字段使用图片；判定档仍须用不同颜色和形状区分。
+
 ## 验收会看的玩法
 
 未开始的标题（Start + 四轨键帽）、循环里音符从轨道中段落到判定区并且能看到不同判定档、连击倍率和长按尾巴、空放漏击把血打空后失败（Chart miss）、打完通关（Chart clear，带分数、连击、准确率和四档次数）。只有底栏没有下落物，不算把谱面画出来。

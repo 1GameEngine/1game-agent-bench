@@ -19,6 +19,7 @@ import { loadSuite } from '../src/load.mjs';
 test('suite winner is product_100', () => {
   const suite = loadSuite();
   assert.equal(suite.headline_track, 'product_100');
+  assert.equal(suite.scoring.policy_revision, 'product-100/2');
   assert.equal(SUITE_TASKS.length, 3);
   assert.deepEqual(SUITE_TASKS, ['p1-chart-rush', 'p1-depot-skirmish', 'p1-tower-defense']);
   assert.equal(P0_TASKS.length, 0);
@@ -104,6 +105,7 @@ test('buildProduct100 rows and winner sentence', () => {
   assert.doesNotThrow(() => assertNoForbiddenScoreKeys(report));
   assert.equal(winnerOf(10, 10), 'tie');
   assert.equal(report.still.replay_fps, 30);
+  assert.equal(report.scoring_policy_revision, 'product-100/2');
   assert.equal(report.still.traces, 'submitted');
 });
 

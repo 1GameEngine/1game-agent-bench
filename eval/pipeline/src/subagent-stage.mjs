@@ -18,8 +18,13 @@ import { EvalError } from './util.mjs';
 import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
 import { stageTimeoutMs, stageProcessError } from './stage-timeout.mjs';
 import { writeReport } from './report.mjs';
+import { isValidationFailure } from './stage-result.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
+
+export function validationSpec({ engine, taskId, workspace }) {
+  return { argv: [process.execPath, CLI, 'validate-traces', '--engine', engine, '--task', taskId, '--workspace', workspace] };
+}
 
 export function defaultPrepare({ engine, taskId, runId, instruction }) {
   if (engine === 'onegame') {
@@ -102,11 +107,13 @@ export function buildLooksStagePrompt({ instruction, frames, items }) {
     .map(([sc, list]) => `${sc}: ${list.map((s) => s.id).join(', ')}`)
     .join('\n');
   const lines = items
-    .map((item) => `- ${item.id}（${item.dim}，场景 ${(item.applies ?? []).join('/')}）：${item.description}`)
+    .map((item) => `- ${item.id}（${item.dim}，场景 ${(item.applies ?? []).join('/')}${item.frame_window === 'play' ? '，frame_window=play' : ''}）：${item.description}`)
     .join('\n');
   let text = `你只看这一边提交的静帧。M、D、V、A 都按画面打，不要读内部状态字段，不要看另一边，不要改计分公式。
 每条分数必须引用该场景列表里的静帧 id。score 只能是 0、0.5 或 1。
-V 条目按该场景全部静帧平均：frames 必须给列表里的每一个静帧 id 打 0、0.5 或 1，空画面按 0。score 等于这些帧的平均再收成 0、0.5 或 1。漏帧或 score 对不上平均，整条作废。
+M/D 按题面要求的可见行为评分，不因使用文字或几何图形统一封顶；只有题面明确要求素材的对象，才按对应素材条目检查。
+V 条目的 frames 必须给列表里的每一个静帧 id 打 0、0.5 或 1，空画面按 0。默认对全部静帧取平均；带 frame_window=play 的条目只对 play 和 unreadable 帧取平均。均值 >=0.75 收成 1，>=0.25 收成 0.5，否则为 0。没有有效帧时得 0。漏帧或 score 对不上平均，整条作废。
+含 frame_window=play 条目的场景必须额外提供一份共享 frame_contexts，覆盖每一个静帧 id，值只能是 title、countdown、play、result、unreadable。按可见画面分类：只有清楚的标题、倒计时或结算画面可以排除；空白、遮挡、无法确认阶段的画面记 unreadable，仍进分母且帧分必须为 0。打谱中暂时没有音符仍记 play，不能当非游玩帧排除。不要依据内部字段或预期帧号分类。始终停在标题不能获得玩法可读性分。
 M、D、A 不填 frames。只输出一个 JSON 对象，形状：
 {"scenarios":{"intro":{"V1":{"score":0.5,"frames":{"某静帧id":0,"另一静帧id":1},"evidence":["某静帧id"]},"M1":{"score":0,"evidence":["某静帧id"]}}}}
 
@@ -201,6 +208,7 @@ function rubricItems(rubric) {
     applies: req.applies,
     scope: req.scope === 'persistent' ? 'persistent' : 'scenario',
     agg: reqAgg(req),
+    ...(req.frame_window ? { frame_window: req.frame_window } : {}),
   }));
 }
 
@@ -234,6 +242,7 @@ ${detail}
     workspace,
     prompt,
     attempt: repair?.attempt ?? 1,
+    validation: validationSpec({ engine, taskId, workspace }),
   };
 }
 
@@ -244,6 +253,7 @@ function debugSpec({ engine, taskId, workspace, instruction, task }) {
     taskId,
     workspace,
     prompt: buildDebugPrompt({ instruction, task }),
+    validation: validationSpec({ engine, taskId, workspace }),
   };
 }
 
@@ -317,21 +327,28 @@ export function defaultPrepareOracle() {
   throw new EvalError('NO_REFERENCE', '本仓不提供参考作。oracle gate 不再重放内置成品，headline 必须由 builder 按题面重写。');
 }
 
-async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts }) {
+async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts, warn }) {
   let repair = null;
   let boot = { ok: false, primary: 'BOOT_FAIL', notes: ['boot check did not run'] };
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    await runRole(
-      runSubagent,
-      builderSpec({
-        engine,
-        taskId,
-        workspace: prep.workspace,
-        instruction,
-        task,
-        repair,
-      }),
-    );
+    let validationError;
+    try {
+      await runRole(
+        runSubagent,
+        builderSpec({
+          engine,
+          taskId,
+          workspace: prep.workspace,
+          instruction,
+          task,
+          repair,
+        }),
+      );
+    } catch (err) {
+      if (!isValidationFailure(err)) throw err;
+      validationError = err;
+      warn(engine, 'builder', err, prep);
+    }
     try {
       auditModelSubmission(prep.workspace, engine, taskId);
     } catch (err) {
@@ -341,6 +358,9 @@ async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSuba
     }
     boot = await bootCheck({ engine, workspace: prep.workspace, taskId });
     if (boot?.ok) return { boot, attempts: attempt };
+    if (validationError && attempt === attempts) {
+      throw new EvalError('BUILDER_INVALID', `self-check failed and independent boot check did not pass: ${(boot?.notes ?? []).join('\n')}`);
+    }
     repair = {
       attempt: attempt + 1,
       primary: boot?.primary || 'BOOT_FAIL',
@@ -364,6 +384,13 @@ export async function orchestrateEngines({
   const prepped = {};
   const built = {};
   const failures = [];
+  const warnings = [];
+  function recordWarning(engine, stage, err, prep) {
+    const warning = { engine, taskId, stage, primary: err.primary, message: String(err.message || err), ...err.extra };
+    warnings.push(warning);
+    process.stderr.write(`self-check warning ${taskId} ${engine} ${stage}: ${warning.primary}\n`);
+    if (prep?.outPath) writeReport(path.join(path.dirname(prep.outPath), 'STAGE_WARNINGS.json'), warnings.filter((w) => w.engine === engine));
+  }
   function recordFailure(engine, stage, err, prep) {
     const failure = { engine, taskId, stage, primary: err.primary || 'EVAL_INTERNAL', message: String(err.message || err), ...err.extra };
     failures.push(failure);
@@ -397,21 +424,33 @@ export async function orchestrateEngines({
             runSubagent,
             bootCheck,
             attempts: builderBootAttempts(),
+            warn: recordWarning,
           });
           let debugRan = false;
           if (builtOnce.boot?.ok) {
             stage = 'debug';
-            await runRole(
-              runSubagent,
-              debugSpec({
-                engine,
-                taskId,
-                workspace: prep.workspace,
-                instruction: bundle.instruction,
-                task: bundle.task,
-              }),
-            );
+            let validationError;
+            try {
+              await runRole(
+                runSubagent,
+                debugSpec({
+                  engine,
+                  taskId,
+                  workspace: prep.workspace,
+                  instruction: bundle.instruction,
+                  task: bundle.task,
+                }),
+              );
+            } catch (err) {
+              if (!isValidationFailure(err)) throw err;
+              validationError = err;
+              recordWarning(engine, 'debug', err, prep);
+            }
             auditModelSubmission(prep.workspace, engine, taskId);
+            if (validationError) {
+              const checked = await bootCheck({ engine, workspace: prep.workspace, taskId });
+              if (!checked?.ok) throw new EvalError('BUILDER_INVALID', `debug self-check failed and independent boot check did not pass: ${(checked?.notes ?? []).join('\n')}`);
+            }
             debugRan = true;
           }
           const stampPath = path.join(path.dirname(prep.outPath), `builder-${engine}.json`);
@@ -474,6 +513,7 @@ export async function orchestrateEngines({
     onegame: built.onegame,
     godot: built.godot,
     failures,
+    warnings,
   };
 }
 

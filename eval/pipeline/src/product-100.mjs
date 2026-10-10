@@ -6,6 +6,7 @@ export const P1_TASKS = ['p1-chart-rush', 'p1-depot-skirmish', 'p1-tower-defense
 export const SUITE_TASKS = [...P1_TASKS];
 
 export const WEIGHTS = { M: 15, D: 35, V: 15, A: 35 };
+export const SCORING_POLICY_REVISION = 'product-100/2';
 export const ORACLE_FLOOR = 80;
 
 export function hasDepth(_taskId) {
@@ -143,6 +144,7 @@ export function buildProduct100({ runId, rows }) {
   return {
     schema: 'eval.product-100/1',
     suite_id: 'eval-spec/1',
+    scoring_policy_revision: SCORING_POLICY_REVISION,
     report_id: `P100_${runId}`,
     headline_track: 'product_100',
     winner: comparable,

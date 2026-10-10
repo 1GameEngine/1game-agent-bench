@@ -25,6 +25,7 @@ compare_tasks:
   - p1-depot-skirmish
   - p1-tower-defense
 scoring:
+  policy_revision: product-100/2
   dimensions: [create_ok, replay_ok, store_match, argv_ok, hygiene_ok]
   overall: forbidden
   product_100: required

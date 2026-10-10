@@ -274,10 +274,11 @@ async function pairAndRows(taskId, og, gd) {
   };
 }
 
-function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, status = 'COMPLETE', failures = [], workDir = WORK_DIR }) {
+function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, status = 'COMPLETE', failures = [], warnings = [], workDir = WORK_DIR }) {
   const report = buildProduct100({ runId: suiteRunId, rows });
   report.status = status;
   report.failures = failures;
+  report.stage_warnings = warnings;
   report.completed_task_count = new Set(rows.map((row) => row.id)).size;
   assertNoForbiddenScoreKeys(report);
   const dir = path.join(workDir, suiteRunId);
@@ -288,9 +289,10 @@ function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, st
   writeReport(path.join(dir, 'P0_report.json'), p0);
   const cmp = buildCompareScalar({ runId: suiteRunId, attempts: p1attempts });
   cmp.status = status;
+  cmp.stage_warnings = warnings;
   writeReport(path.join(dir, 'COMPARE_SCALAR.json'), cmp);
   const html = writeScoreboard({ dir, report, rows, packs });
-  writeReport(path.join(dir, 'RUN_STATE.json'), { runId: suiteRunId, status, completed_task_count: report.completed_task_count, failures });
+  writeReport(path.join(dir, 'RUN_STATE.json'), { runId: suiteRunId, status, completed_task_count: report.completed_task_count, failures, stage_warnings: warnings });
   return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
 }
 
@@ -315,8 +317,9 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchest
   const p1attempts = [];
   const packs = [];
   const failures = [];
+  const warnings = [];
   let currentTask;
-  const checkpoint = (status) => writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, failures, status, workDir });
+  const checkpoint = (status) => writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, failures, warnings, status, workDir });
   checkpoint('RUNNING');
   try {
     for (const taskId of P0_TASKS) {
@@ -347,6 +350,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchest
       rows.push(paired.ogRow, paired.gdRow);
       p1attempts.push(staged.onegame.replay.attempt, staged.godot.replay.attempt);
       failures.push(...(staged.failures ?? []));
+      warnings.push(...(staged.warnings ?? []));
       packs.push({
         id: taskId,
         bundle: {
@@ -359,6 +363,7 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchest
       });
       writeReport(path.join(workDir, suiteRunId, 'tasks', taskId, 'RESULT.json'), {
         taskId, pair: staged.pair, rows: [paired.ogRow, paired.gdRow], failures: staged.failures ?? [],
+        stage_warnings: staged.warnings ?? [],
         og: serializeReplay(staged.onegame.replay), gd: serializeReplay(staged.godot.replay),
         looks: { onegame: staged.onegame.looks, godot: staged.godot.looks },
       });

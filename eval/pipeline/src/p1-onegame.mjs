@@ -8,7 +8,7 @@ import { projectDump, validateDump, checkpointMatch } from './p1-schema.mjs';
 import { captureOnegameStill } from './capture.mjs';
 import { loadArgvRules } from './load.mjs';
 import { allowedClickCenters } from './argv-audit.mjs';
-import { FRAME_MS, duplicateScenarioNames, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet } from './p1-trace.mjs';
+import { FRAME_MS, duplicateScenarioNames, eventsByFrame, missingRequiredScenarios, readTraces, sampleEvery, scenarioSet, stillTimeMs } from './p1-trace.mjs';
 
 function gp(cwd, argv) {
   return runOnegameCli(cwd, argv);
@@ -93,8 +93,13 @@ function tickFrames(cwd, n) {
 
 export function traceEventArgv(recordRel, ev) {
   if (ev.type === 'click') {
-    const coord = `${Math.round(Number(ev.x))},${Math.round(Number(ev.y))}`;
-    return ['1gameplay', 'step', recordRel, '--click', coord];
+    // The CLI's --click macro advances 200ms. A trace event must consume no
+    // simulation time; the shared frame tick advances the clock exactly once.
+    const event = JSON.stringify({
+      type: 'click',
+      data: { x: Math.round(Number(ev.x)), y: Math.round(Number(ev.y)), ms: 0 },
+    });
+    return ['1gameplay', 'step', recordRel, '--ms', '0', '--event', event];
   }
   const pointer = { mouse_down: 'pointer.down', mouse_move: 'pointer.move', mouse_up: 'pointer.up' };
   if (pointer[ev.type]) {
@@ -192,7 +197,7 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
 }
 
-export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy }) {
+export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sampleEveryOverride }) {
   const notes = [];
   const stills = [];
   const samples = [];
@@ -243,7 +248,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy }) {
   }
 
   const rules = loadArgvRules();
-  const every = sampleEvery(policy?.sampleFps);
+  const every = sampleEveryOverride ?? sampleEvery(policy?.sampleFps);
   let primary = 'TRACE_OK';
   const replayed_scenarios = [];
 
@@ -288,7 +293,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy }) {
           rules,
           allowedClicks: [],
         });
-        const meta = { scenario: item.trace.scenario, frame: last, t_ms: last * FRAME_MS };
+        const meta = { scenario: item.trace.scenario, frame: last, t_ms: stillTimeMs(last) };
         stills.push({
           id,
           dump_ok: 1,

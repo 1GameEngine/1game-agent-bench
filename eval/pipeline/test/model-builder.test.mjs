@@ -68,6 +68,17 @@ test('debug prompt only names requirements and trace cases', () => {
   assert.doesNotMatch(prompt, /构建 \/ 启动校验失败/);
 });
 
+test('all tower prompts explicitly allow dragging and forbid duplicate scenarios', () => {
+  const { instruction, task } = loadP1Task('p1-tower-defense');
+  const prompts = [buildDebugPrompt({ instruction, task }), ...['onegame', 'godot'].map((engine) => buildBuilderPrompt({ engine, instruction, task }))];
+  for (const prompt of prompts) {
+    assert.match(prompt, /mouse_down、mouse_move、mouse_up/);
+    assert.match(prompt, /每个.*恰好一条轨迹/);
+    assert.doesNotMatch(prompt, /事件只有 keydown[、 /]+keyup[、 /]+click/);
+    assert.match(prompt, /统一验证入口/);
+  }
+});
+
 test('each model call writes that reply and refuses a missing model', async () => {
   const task = loadP1Task('p1-chart-rush');
   const prevCmd = process.env.EVAL_BUILDER_CMD;

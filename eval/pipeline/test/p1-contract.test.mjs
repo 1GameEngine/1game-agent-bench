@@ -45,7 +45,11 @@ test('chart rush looks isolate falling notes from receptor caps', () => {
   assert.match(byId.V2.description, /下落/);
   assert.match(byId.A2.description, /底栏/);
   assert.match(byId.D2.description, /方向键图/);
-  assert.match(byId.M1.description, /纯色块/);
+  assert.doesNotMatch(byId.M1.description, /纯色块|正式素材/);
+  assert.equal(byId.V2.frame_window, 'play');
+  assert.equal(byId.V3.frame_window, 'play');
+  assert.equal(byId.V1.frame_window, undefined);
+  assert.match(b.instruction, /文字与几何图形/);
   assert.equal(byId.V2.agg, 'mean');
   assert.equal(byId.D1.agg, 'max');
   assert.match(b.instruction, /只有底栏没有下落物/);

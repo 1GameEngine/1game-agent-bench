@@ -74,6 +74,9 @@ export function validateRubric(rubric, opts = {}) {
     if (req.id && dim && req.id[0] !== dim) issues.push(`id-prefix ${req.id}`);
     if (req.scope !== 'scenario' && req.scope !== 'persistent') issues.push(`scope ${req.id}`);
     if (req.agg != null && req.agg !== 'max' && req.agg !== 'mean') issues.push(`agg ${req.id}`);
+    if (req.frame_window != null && (req.frame_window !== 'play' || dim !== 'V' || reqAgg(req) !== 'mean')) {
+      issues.push(`frame-window ${req.id}`);
+    }
     if (!req.description) issues.push(`desc ${req.id}`);
     const description = String(req.description ?? '');
     if (/phase|cursor|clockMs|remainMs/.test(description)) issues.push(`hidden-field ${req.id}`);

@@ -100,14 +100,24 @@ export function reqAgg(req) {
   return 'max';
 }
 
-export function quantizedFrameMean(frames) {
+export function quantizedFrameMean(frames, ids = null) {
   if (!frames || typeof frames !== 'object' || Array.isArray(frames)) return null;
-  const vals = Object.values(frames).map((n) => Number(n));
-  if (!vals.length || vals.some((n) => n !== 0 && n !== 0.5 && n !== 1)) return null;
+  const vals = ids ? [...ids].map((id) => frames[id]) : Object.values(frames);
+  if (vals.some((n) => n !== 0 && n !== 0.5 && n !== 1)) return null;
+  // A demo that never entered play provides no gameplay readability evidence.
+  if (!vals.length) return 0;
   return quantizeLooks(vals.reduce((a, b) => a + b, 0) / vals.length);
 }
 
-export function visualFramesMatch(raw, stillIds) {
+export const FRAME_CONTEXTS = ['title', 'countdown', 'play', 'result', 'unreadable'];
+
+function frameContextsComplete(contexts, stillIds) {
+  if (!contexts || typeof contexts !== 'object' || Array.isArray(contexts)) return false;
+  if (Object.keys(contexts).length !== stillIds.size) return false;
+  return [...stillIds].every((id) => FRAME_CONTEXTS.includes(contexts[id]));
+}
+
+export function visualFramesMatch(raw, stillIds, req = {}, contexts) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !stillIds?.size) return false;
   const frames = raw.frames;
   if (!frames || typeof frames !== 'object' || Array.isArray(frames)) return false;
@@ -116,7 +126,18 @@ export function visualFramesMatch(raw, stillIds) {
   for (const id of stillIds) {
     if (!Object.prototype.hasOwnProperty.call(frames, id)) return false;
   }
-  const mean = quantizedFrameMean(frames);
+  if (quantizedFrameMean(frames) == null) return false;
+  let eligible = stillIds;
+  if (req.frame_window === 'play') {
+    if (!frameContextsComplete(contexts, stillIds)) return false;
+    // Unreadable / blank frames are failures, not an excuse to shrink the
+    // denominator. Only visibly identifiable non-play states are excluded.
+    if ([...stillIds].some((id) => contexts[id] === 'unreadable' && frames[id] !== 0)) return false;
+    eligible = new Set([...stillIds].filter((id) => ['play', 'unreadable'].includes(contexts[id])));
+  }
+  const mean = quantizedFrameMean(frames, eligible);
+  if (req.frame_window === 'play' && mean > 0 &&
+      (!Array.isArray(raw.evidence) || !raw.evidence.some((id) => eligible.has(id) && frames[id] > 0))) return false;
   return mean != null && mean === quantizeLooks(raw.score);
 }
 
@@ -152,7 +173,7 @@ export function normalizeLooksScores(scores, rubric, stillIds) {
   for (const req of reqs) {
     const id = req.id;
     if (evidenceIds && reqAgg(req) === 'mean') {
-      out[id] = visualFramesMatch(scores?.[id], evidenceIds) ? quantizeLooks(scores[id].score) : 0;
+      out[id] = visualFramesMatch(scores?.[id], evidenceIds, req, scores?.frame_contexts) ? quantizeLooks(scores[id].score) : 0;
     } else {
       out[id] = readLooksItem(scores?.[id], evidenceIds);
     }
@@ -170,7 +191,7 @@ export function looksEvidenceComplete(scores, rubric, stillIds) {
         ? raw.evidence.map(String)
         : [];
     if (!evidence.some((id) => stillIds.has(id))) return false;
-    if (reqAgg(req) === 'mean' && !visualFramesMatch(raw, stillIds)) return false;
+    if (reqAgg(req) === 'mean' && !visualFramesMatch(raw, stillIds, req, scores?.frame_contexts)) return false;
   }
   return true;
 }
@@ -209,14 +230,21 @@ export function buildLooksUserPrompt(job) {
   const rubricReqs = job.rubric?.requirements ?? [];
   const reqs = (
     rubricReqs.length
-      ? rubricReqs.map((i) => `- ${i.id}: ${i.description}`)
+      ? rubricReqs.map((i) => `- ${i.id}${i.frame_window === 'play' ? ' [frame_window=play]' : ''}: ${i.description}`)
       : LOOKS_ITEMS.map((i) => `- ${i.id}: ${i.description}`)
   ).join('\n');
   const ids = rubricReqs.length ? rubricReqs.map((r) => r.id) : LOOKS_ITEMS.map((i) => i.id);
   const exampleId = job.stills?.[0]?.id || 'frame_id';
-  const shape = rubricReqs.length
-    ? `{${ids.map((id) => `"${id}":{"score":0,"evidence":["${exampleId}"]}`).join(',')}}`
-    : `{${ids.map((id) => `"${id}":0`).join(',')}}`;
+  const hasPlayWindow = rubricReqs.some((r) => r.frame_window === 'play');
+  const exampleScores = rubricReqs.length
+    ? Object.fromEntries(rubricReqs.map((r) => [r.id, {
+        score: 0,
+        ...(reqAgg(r) === 'mean' ? { frames: { [exampleId]: 0 } } : {}),
+        evidence: [exampleId],
+      }]))
+    : Object.fromEntries(ids.map((id) => [id, 0]));
+  if (hasPlayWindow) exampleScores.frame_contexts = { [exampleId]: 'title' };
+  const shape = JSON.stringify(exampleScores);
   const scenario = job.scenario || 'play';
   return [
     'You are a strict but fair evaluator of observed play. Score only what is visible in the attached 1280x720 replay stills.',
@@ -226,6 +254,11 @@ export function buildLooksUserPrompt(job) {
     'Each rubric item needs evidence: freeze_id values from this job. An item with no evidence, or evidence that is not one of these stills, is 0. Do not copy one impression onto every item.',
     `This job is scenario="${scenario}". If this scenario is fail and no failure state is visible, fail-related items must be 0. If this scenario is clear and no clear state is visible, clear-related items must be 0.`,
     'Mechanical items must be evidenced by these stills, not by guessing hidden state or HUD field names.',
+    'Do not cap mechanical or depth scores solely because a behavior uses text or geometric shapes. Enforce artwork requirements only where the task explicitly requires those objects to use artwork.',
+    'Mean items require frames: a 0, 0.5 or 1 score for EVERY attached still id. Quantize the mean: >=0.75 is 1; >=0.25 is 0.5; otherwise 0.',
+    ...(hasPlayWindow ? [
+      'For frame_window=play, include a shared frame_contexts map inside scores, covering EVERY still id with title, countdown, play, result or unreadable, classified from visible pixels only. Exclude only clearly identifiable title/countdown/result frames from the mean. Include play AND unreadable frames; unreadable frames must score 0. A temporarily empty playfield remains play, not an excluded frame. No eligible frames means score 0. Positive scores must cite an eligible positive frame. The example below shows one id; include all attached ids.',
+    ] : []),
     '',
     'Task instruction (playable spec only):',
     job.instruction || '(none)',

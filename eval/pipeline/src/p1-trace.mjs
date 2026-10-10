@@ -5,7 +5,7 @@ export const TRACE_SCHEMA = 'eval.trace/1';
 export const REPLAY_FPS = 30;
 export const SAMPLE_FPS = 2;
 export const MAX_DEMO_SECONDS = 20;
-export const FRAME_MS = 33;
+export const FRAME_MS = 1000 / REPLAY_FPS;
 export const LOOKS_MAX_FRAMES = 40;
 
 export const TRACE_KEYS = [
@@ -158,7 +158,12 @@ export function stillPlayMeta(still) {
   const parsed = parseStillId(still?.id);
   const frame = Number.isInteger(still?.dump?.frame) ? still.dump.frame : parsed.frame;
   const scenario = still?.dump?.scenario || parsed.scenario;
-  return { scenario, frame, t_ms: frame * FRAME_MS };
+  return { scenario, frame, t_ms: stillTimeMs(frame) };
+}
+
+// Stills are captured after advancing the indexed frame, not at its input time.
+export function stillTimeMs(frame) {
+  return (frame + 1) * FRAME_MS;
 }
 
 export function groupStillsByScenario(stills) {
