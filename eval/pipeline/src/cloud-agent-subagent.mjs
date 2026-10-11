@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,6 +6,10 @@ import { WORK_DIR } from './paths.mjs';
 import { EvalError } from './util.mjs';
 import { stageTimeoutMs, stageDispatchTimeoutMs, stageProcessError } from './stage-timeout.mjs';
 import { stageResponseError } from './stage-result.mjs';
+import { runProcess } from './process-supervisor.mjs';
+import { stageOutcome } from './stage-records.mjs';
+import { EXECUTION_POLICY_REVISION } from './execution-policy.mjs';
+import { resultMetadata } from './execution-adapter.mjs';
 
 export function cloudTaskDir(env = process.env) {
   return env.EVAL_CLOUD_TASK_DIR || path.join(WORK_DIR, '.cloud-agent-tasks');
@@ -131,7 +134,8 @@ export function readStageStart(record, startPath, { now = Date.now, publicationT
 }
 
 export async function waitCloudModel(spec, { env = process.env, now = Date.now, sleep = delay,
-  publicationTime = receiptPublishedAt } = {}) {
+  publicationTime = receiptPublishedAt, onLifecycle = spec._onLifecycle, signal = spec._signal } = {}) {
+  if (signal?.aborted) throw new EvalError('SUBAGENT_PROCESS_FAILED', 'cloud stage interrupted before dispatch');
   const timeoutMs = stageTimeoutMs(spec.role, env);
   const dispatchMs = stageDispatchTimeoutMs(env);
   const dir = cloudTaskDir(env);
@@ -153,12 +157,15 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
   };
   const record = {
     schema: 'eval.cloud-stage-timing/1', id, role: spec.role, engine: spec.engine, taskId: spec.taskId,
+    stage_id: spec.stage_id ?? null, execution_policy_revision: EXECUTION_POLICY_REVISION,
+    execution_status: 'QUEUED', self_check_status: 'UNAVAILABLE', evidence_status: 'NOT_APPLICABLE',
     state: 'QUEUED', queued_at: iso(queuedAt), ...lifecycle,
     started_at: null, execution_deadline_at: null, wrap_up_at: null, queue_wait_ms: null, execution_elapsed_ms: null,
   };
   writeJsonAtomic(timingPath, record);
-  const timedSpec = spec.validation ? { ...spec, validation: { ...spec.validation,
-    argv: [...spec.validation.argv, '--stage-timing', timingPath] } } : spec;
+  const { _onLifecycle, _signal, ...publicSpec } = spec;
+  const timedSpec = spec.validation ? { ...publicSpec, validation: { ...spec.validation,
+    argv: [...spec.validation.argv, '--stage-timing', timingPath] } } : publicSpec;
   const payload = { id, spec: timedSpec, lifecycle, handoff: cloudTaskHandoff(timedSpec, lifecycle) };
   writeJsonAtomic(reqPath, payload);
   process.stderr.write(`cloud-agent subagent ${spec.role} ${spec.engine} ${spec.taskId} -> ${reqPath}\n`);
@@ -173,16 +180,19 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
         timeout_ms: phase === 'dispatch' ? dispatchMs : timeoutMs, timing_path: timingPath });
   }
   try {
+    onLifecycle?.({ ...record });
     while (true) {
+      if (signal?.aborted) throw new EvalError('SUBAGENT_PROCESS_FAILED', 'cloud stage interrupted');
       let time = now();
       if (startedAt === null && fs.existsSync(startPath)) {
         const stamp = readStageStart(record, startPath, { now, publicationTime });
         time = now();
         startedAt = stamp;
-        Object.assign(record, { state: 'RUNNING', started_at: iso(stamp),
+        Object.assign(record, { state: 'RUNNING', execution_status: 'RUNNING', started_at: iso(stamp),
           execution_deadline_at: iso(stamp + timeoutMs),
           wrap_up_at: iso(stamp + timeoutMs - lifecycle.closing_reserve_ms), queue_wait_ms: stamp - queuedAt });
         writeJsonAtomic(timingPath, record);
+        onLifecycle?.({ ...record });
       }
       const deadline = startedAt === null ? queuedAt + dispatchMs : startedAt + timeoutMs;
       if (fs.existsSync(resPath)) {
@@ -199,8 +209,9 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
         Object.assign(record, { response_published_at: iso(responsePublishedAt), response_observed_at: iso(time) });
         const responseError = stageResponseError(spec, data);
         if (responseError) throw responseError;
-        Object.assign(record, { state: 'COMPLETE', finished_at: iso(responsePublishedAt), execution_elapsed_ms: responsePublishedAt - startedAt });
+        Object.assign(record, stageOutcome({ role: spec.role }), { state: 'COMPLETE', finished_at: iso(responsePublishedAt), execution_elapsed_ms: responsePublishedAt - startedAt });
         writeJsonAtomic(timingPath, record);
+        onLifecycle?.({ ...record });
         for (const file of [reqPath, resPath, startPath]) fs.rmSync(file, { force: true });
         return data.stdout;
       }
@@ -209,28 +220,30 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
     }
   } catch (err) {
     const finishedAt = responsePublishedAt ?? now();
-    Object.assign(record, { state: 'FAILED', finished_at: iso(finishedAt), primary: err.primary ?? 'EVAL_INTERNAL',
+    Object.assign(record, stageOutcome({ role: spec.role, error: err }), { state: 'FAILED', finished_at: iso(finishedAt), primary: err.primary ?? 'EVAL_INTERNAL',
       timeout_phase: err.extra?.timeout_phase ?? null,
       queue_wait_ms: startedAt === null ? finishedAt - queuedAt : startedAt - queuedAt,
       execution_elapsed_ms: startedAt === null ? null : finishedAt - startedAt });
     writeJsonAtomic(timingPath, record);
+    onLifecycle?.({ ...record });
     throw err;
   }
 }
 
-function runReplayArgv(spec) {
+async function runReplayArgv(spec) {
   const argv = spec.replay?.argv;
   if (!Array.isArray(argv) || argv.length === 0) {
     throw new EvalError('SUBAGENT_INVALID', 'replay spec 缺少 argv');
   }
   const timeoutMs = stageTimeoutMs(spec.role);
-  const result = spawnSync(argv[0], argv.slice(1), {
-    encoding: 'utf8',
-    env: process.env,
-    timeout: timeoutMs,
-    maxBuffer: 20 * 1024 * 1024,
+  const startedAt = Date.now();
+  spec._onLifecycle?.({ state: 'RUNNING', started_at: new Date(startedAt).toISOString(),
+    execution_deadline_at: new Date(startedAt + timeoutMs).toISOString() });
+  const result = await runProcess(argv, { deadline: startedAt + timeoutMs, signal: spec._signal });
+  spec._onLifecycle?.({ state: 'RUNNING', process_result: resultMetadata(result) });
+  if (result.stopped || result.status !== 0) throw stageProcessError(spec, {
+    ...result, error: result.stopped ? { code: 'ETIMEDOUT', message: 'replay execution deadline passed' } : null,
   });
-  if (result.error || result.status !== 0) throw stageProcessError(spec, result);
   return result.stdout ?? '';
 }
 

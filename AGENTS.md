@@ -17,7 +17,8 @@
 - 每阶段实际完成后，将真实结果 JSON 写进自己的文件，执行交接里的 `response_publish_argv` 并追加 `--input <结果JSON路径>`；需要额外归档时加 `--archive <路径>`。入口先原子归档，再发布同名 `.response.json`，拒绝过期、无效及重复发布。builder/debug 成功为 `{"stdout":"","exitCode":0}`；looks 的 `stdout` 是真实裁决 JSON 的字符串。自查未完成或玩法自查失败使用非零 `exitCode` 和 `failure:{kind:"validation_incomplete"|"game_validation_failed",message:"具体问题"}`；环境或工具错误使用非零退出码和 stderr。回报前停止并等待其他可能改动提交或证据的后台进程。不得伪造完成响应。
 - 回执是否按时以文件实际原子发布时刻判断，不以轮询读到的时刻判断；实际迟到仍超时。计时记录保留 `response_published_at` 和 `response_observed_at`，`finished_at` 与执行耗时按发布时刻计算。真实结果归档不会随成功回执清理而删除。
 - builder/debug 的明确自查失败保留为警告，框架独立审计与启动检查；合法可启动提交才继续正式重放，不把自查当成评分裁决。非法 builder 提交仍交回同一 builder 修正；协议、环境与超时异常不得按自查失败绕过。
-- 重放由现有适配器调用 `stage-replay`。不手写或修改 `REPLAY.json`，不用 worker、heuristic 或参考作代替正式出码与裁决。
+- 重放由现有适配器调用 `stage-replay`。不手写或修改 `REPLAY.json`，不用内置模型 worker、heuristic 或参考作代替正式出码与裁决。执行工作进程可承载既有审计、启动和重放命令，不代替 builder、debug 或 looks 模型代理。
 - 遇到环境、构建、交接问题，先自主排查并在规格允许的阶段修正后继续。不得修改评分标准或绕过证据检查；真实运行失败也应如实保留，不为提高分数擅自重跑。
 - 跑完后核验进程退出状态、当前 run-id 的 `PRODUCT_100.json`、`COMPARE_SCALAR.json` 与成绩页，检查题目数量、裁决证据、可比性及平均分。证据不全或结果不可比时明确报告，不能宣称有效胜者。实际子代理不可用时明确说明阻塞，不能只设置标志冒充已接入。
+- 新运行另外核对 `execution_policy_revision`、有效执行策略及阶段记录；`SUBMISSION.json` 仅关联版本，不作为新增拒收或成功依据。验证 session 的 `PROGRESS.json` 和事件记录关联候选提交及实际进程清理；阶段失活引发的验证取消是执行异常，不能改报自查警告。报告投影损坏可执行 `rebuild-product-reports --run-id <本次ID>` 从已提交检查点及按哈希归档的静帧重建，不读取可变游戏工作区；证据损坏应报错。这不是续评，不能补派代理、延长截止或重放旧提交。保留旧运行的分数与协议标签，旧运行只重出 HTML。
 - 最后给出逐题分数、三题平均分、本次结果与成绩页路径。不要只给计划或测试通过数量；测试通过不代表完成正式跑分。

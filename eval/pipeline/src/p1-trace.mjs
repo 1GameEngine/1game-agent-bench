@@ -50,6 +50,12 @@ export function projectedSampleCount(maxDemoSeconds, sampleFps) {
 
 export function auditTrace(trace, policy = null) {
   const issues = [];
+  const describe = (value) => {
+    try { return String(value); } catch { return '<invalid value>'; }
+  };
+  const coordinate = (value) => {
+    try { return Number(value); } catch { return NaN; }
+  };
   const events = policy?.events ?? TRACE_EVENT_TYPES;
   const keys = policy?.keys ?? TRACE_KEYS;
   const maxFrames = policy?.maxFrames ?? MAX_DEMO_SECONDS * REPLAY_FPS;
@@ -62,14 +68,20 @@ export function auditTrace(trace, policy = null) {
   if (!Array.isArray(trace?.events)) issues.push('events');
   let last = -1;
   const held = new Set();
-  for (const ev of trace?.events ?? []) {
-    if (!Number.isInteger(ev.frame) || ev.frame < 0) issues.push(`frame ${ev.frame}`);
+  for (const ev of Array.isArray(trace?.events) ? trace.events : []) {
+    if (!ev || typeof ev !== 'object' || Array.isArray(ev)) {
+      issues.push('event must be an object');
+      continue;
+    }
+    if (!Number.isInteger(ev.frame) || ev.frame < 0) issues.push(`frame ${describe(ev.frame)}`);
     else if (Number.isInteger(trace?.duration_frames) && ev.frame >= trace.duration_frames) issues.push(`frame ${ev.frame} past duration`);
-    if (ev.frame < last) issues.push('events must be nondecreasing in frame');
-    last = ev.frame;
-    if (!events.includes(ev.type)) issues.push(`type ${ev.type}`);
+    if (Number.isInteger(ev.frame)) {
+      if (ev.frame < last) issues.push('events must be nondecreasing in frame');
+      last = ev.frame;
+    }
+    if (!events.includes(ev.type)) issues.push(`type ${describe(ev.type)}`);
     if (ev.type === 'keydown' || ev.type === 'keyup') {
-      if (!keys.includes(ev.code)) issues.push(`key ${ev.code}`);
+      if (!keys.includes(ev.code)) issues.push(`key ${describe(ev.code)}`);
       else if (ev.type === 'keydown') {
         if (held.has(ev.code)) issues.push(`key repeat without keyup ${ev.code}`);
         else held.add(ev.code);
@@ -77,8 +89,8 @@ export function auditTrace(trace, policy = null) {
       else held.delete(ev.code);
     }
     if (ev.type === 'click' || ev.type === 'mouse_down' || ev.type === 'mouse_move' || ev.type === 'mouse_up') {
-      const x = Number(ev.x);
-      const y = Number(ev.y);
+      const x = coordinate(ev.x);
+      const y = coordinate(ev.y);
       if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1280 || y < 0 || y > 720) {
         issues.push(`${ev.type} ${x},${y}`);
       }

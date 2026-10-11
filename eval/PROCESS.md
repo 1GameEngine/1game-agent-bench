@@ -19,6 +19,10 @@ Cursor **没有** ACL。同一 Linux 用户、同一 VM **不是**密封。P0 �
 
 编排器 LLM / Cursor Cloud **不是** 确定性 Judge。
 
+`eval.execution/2` 的执行工作进程仅隔离阻塞操作并接受进程组监管，不是替代 Builder、Debug 或 Looks 的内置模型 worker，也不增加 ACL。阶段事件及终态用于追踪真实执行；`SUBMISSION.json` 的源码、轨迹和资产摘要只关联观测版本，不是安全签名、原子冻结或密封证明。任意外部链接不遍历，约定的凭据文件不纳入清单，未覆盖或读取期间变化的内容保留诊断；同一用户仍有上述残余访问能力。当前没有跨套件资源隔离或 CPU、内存配额，不应声称已实现独占资源公平。
+
+报告存储按内容哈希归档已评分静帧，重建前核验全部证据并只使用归档字节，不从可变游戏工作区补图或重新执行。它保护报告投影的版本一致性，不提供跨用户隔离、数字签名或对同用户篡改的安全证明。旧运行仅由已有分数重出 HTML，不能借重建重新裁决或追加新执行协议。
+
 M、D、V、A 都由每个引擎的 looks subagent 按该题 `sample_fps` 抽帧打出（每段最多 40 张）。裁决必须逐条带静帧 id；没有证据则该题百分制留空。单场景条目取最高，贯穿条目对缺场景按 0 取平均。**百分制只在 `looks_source=subagent` 时出现**。G 要求能启动且至少一条轨迹重放成功。题目不带 `probe.json`。`EVAL_LOOKS_ALLOW_WORKER=1` 和 `EVAL_LOOKS_BACKEND=heuristic` 不能写出百分制。Cloud Agent（`CURSOR_AGENT=1`）默认把 builder / looks 交给当前 subagent，不需要 `EVAL_SUBAGENT_CMD`。既不是 Cloud Agent、也没有 `EVAL_SUBAGENT_CMD` → `SUBAGENT_REQUIRED`。
 
 两引擎都 `G=1` 时，抽帧必须成对且均为 **1280×720**；缺一侧则 `INCOMPARABLE_VISUAL`。Godot 用 SubViewport 出图；禁止 Xvfb 视频与 napi-canvas 静帧混成同一视觉分。

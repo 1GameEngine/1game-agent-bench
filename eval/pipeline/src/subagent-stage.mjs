@@ -1,24 +1,26 @@
-import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WORK_DIR } from './paths.mjs';
-import { bootstrap } from './bootstrap.mjs';
 import { loadP1Task } from './p1-load.mjs';
-import { auditModelSubmission, buildBuilderPrompt, buildDebugPrompt } from './model-builder.mjs';
+import { buildBuilderPrompt, buildDebugPrompt } from './model-builder.mjs';
 import { checkOnegameBoot } from './p1-onegame.mjs';
 import { checkGodotBoot } from './p1-godot.mjs';
 import { stillsComplete, scenarioStillsMap } from './looks-pair.mjs';
 import { requirementsForScenario } from './rubric.mjs';
 import { capLooksStills } from './p1-trace.mjs';
-import { mountAssetLibrary } from './assets.mjs';
 import { looksEvidenceComplete, normalizeLooksScores, promptHasBannedWords, reqAgg, stripInstruction } from './looks-rubric.mjs';
 import { EvalError } from './util.mjs';
 import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
 import { stageTimeoutMs, stageProcessError } from './stage-timeout.mjs';
 import { writeReport } from './report.mjs';
 import { isValidationFailure } from './stage-result.mjs';
+import { runProcess } from './process-supervisor.mjs';
+import { resultMetadata } from './execution-adapter.mjs';
+import { StageRecorder } from './stage-records.mjs';
+import { executeAction } from './execution-worker.mjs';
+import { runAgentStage as runRole, runFrameworkStage as runFrameworkAction, settleStages } from './stage-runner.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
@@ -27,29 +29,7 @@ export function validationSpec({ engine, taskId, workspace }) {
 }
 
 export function defaultPrepare({ engine, taskId, runId, instruction }) {
-  if (engine === 'onegame') {
-    const boot = bootstrap({
-      taskId,
-      runId: `${runId}-og`,
-      instruction,
-      oracle: false,
-    });
-    return {
-      workspace: boot.gameDir,
-      replayRunId: `${runId}-og`,
-      outPath: path.join(WORK_DIR, `${runId}-og`, 'REPLAY.json'),
-    };
-  }
-  const workspace = path.join(WORK_DIR, `${runId}-gd-generated`, 'godot');
-  fs.rmSync(workspace, { recursive: true, force: true });
-  fs.mkdirSync(workspace, { recursive: true });
-  fs.writeFileSync(path.join(workspace, 'instruction.md'), instruction);
-  mountAssetLibrary(workspace, taskId);
-  return {
-    workspace,
-    replayRunId: `${runId}-gd`,
-    outPath: path.join(WORK_DIR, `${runId}-gd`, 'REPLAY.json'),
-  };
+  return executeAction({ action: 'prepare', engine, taskId, runId, instruction });
 }
 
 export async function defaultRunSubagent(spec) {
@@ -70,15 +50,17 @@ export async function defaultRunSubagent(spec) {
     args = parsed;
   }
   const timeoutMs = stageTimeoutMs(spec.role);
-  const result = spawnSync(cmd, args, {
-    cwd: spec.workspace,
-    env: process.env,
-    encoding: 'utf8',
-    input: JSON.stringify(spec),
-    timeout: timeoutMs,
-    maxBuffer: 20 * 1024 * 1024,
+  const { _onLifecycle, _signal, ...publicSpec } = spec;
+  const startedAt = Date.now();
+  _onLifecycle?.({ state: 'RUNNING', started_at: new Date(startedAt).toISOString(),
+    execution_deadline_at: new Date(startedAt + timeoutMs).toISOString() });
+  const result = await runProcess([cmd, ...args], {
+    cwd: spec.workspace, input: JSON.stringify(publicSpec), deadline: startedAt + timeoutMs, signal: _signal,
   });
-  if (result.error || result.status !== 0) throw stageProcessError(spec, result);
+  _onLifecycle?.({ state: 'RUNNING', process_result: resultMetadata(result) });
+  if (result.stopped || result.status !== 0) throw stageProcessError(spec, {
+    ...result, error: result.stopped ? { code: 'ETIMEDOUT', message: 'subagent execution deadline passed' } : null,
+  });
   return result.stdout ?? '';
 }
 
@@ -290,14 +272,6 @@ function looksSpec({ engine, taskId, workspace, instruction, rubric, plan }) {
   };
 }
 
-async function runRole(runSubagent, spec) {
-  const out = await runSubagent(spec);
-  if (out != null && typeof out !== 'string') {
-    throw new EvalError('SUBAGENT_INVALID', 'subagent 只能返回标准输出文本。主进程不接收代写的源码对象。');
-  }
-  return out ?? '';
-}
-
 function planPair(built, rubric, sampleFps) {
   const og = built.onegame.replay;
   const gd = built.godot.replay;
@@ -327,7 +301,7 @@ export function defaultPrepareOracle() {
   throw new EvalError('NO_REFERENCE', '本仓不提供参考作。oracle gate 不再重放内置成品，headline 必须由 builder 按题面重写。');
 }
 
-async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, attempts, warn }) {
+async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSubagent, bootCheck, auditSubmission, attempts, warn, context }) {
   let repair = null;
   let boot = { ok: false, primary: 'BOOT_FAIL', notes: ['boot check did not run'] };
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -343,6 +317,7 @@ async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSuba
           task,
           repair,
         }),
+        context,
       );
     } catch (err) {
       if (!isValidationFailure(err)) throw err;
@@ -350,13 +325,16 @@ async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSuba
       warn(engine, 'builder', err, prep);
     }
     try {
-      auditModelSubmission(prep.workspace, engine, taskId);
+      await runFrameworkAction('audit', { engine, workspace: prep.workspace, taskId, attempt },
+        { ...context, implementation: auditSubmission });
     } catch (err) {
+      if (err.primary !== 'BUILDER_INVALID') throw err;
       repair = { attempt: attempt + 1, primary: err.primary || 'BUILDER_INVALID', notes: [String(err.message || err)] };
       if (attempt === attempts) throw err;
       continue;
     }
-    boot = await bootCheck({ engine, workspace: prep.workspace, taskId });
+    boot = await runFrameworkAction('boot', { engine, workspace: prep.workspace, taskId, attempt },
+      { ...context, implementation: bootCheck });
     if (boot?.ok) return { boot, attempts: attempt };
     if (validationError && attempt === attempts) {
       throw new EvalError('BUILDER_INVALID', `self-check failed and independent boot check did not pass: ${(boot?.notes ?? []).join('\n')}`);
@@ -373,18 +351,22 @@ async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSuba
 export async function orchestrateEngines({
   taskId,
   runId,
-  prepare = defaultPrepare,
+  prepare,
   runSubagent = defaultRunSubagent,
   loadTask = loadP1Task,
   skipBuilder = false,
-  bootCheck = checkBuilderBoot,
+  bootCheck,
+  auditSubmission,
   isolateFailures = false,
+  signal,
+  onStageEvent,
 } = {}) {
   const bundle = loadTask(taskId);
   const prepped = {};
   const built = {};
   const failures = [];
   const warnings = [];
+  const contexts = {};
   function recordWarning(engine, stage, err, prep) {
     const warning = { engine, taskId, stage, primary: err.primary, message: String(err.message || err), ...err.extra };
     warnings.push(warning);
@@ -400,19 +382,34 @@ export async function orchestrateEngines({
   }
   for (const engine of ['onegame', 'godot']) {
     try {
-      prepped[engine] = prepare({ engine, taskId, runId, instruction: bundle.instruction });
+      if (signal?.aborted) throw new EvalError('SUBAGENT_PROCESS_FAILED', 'engine preparation interrupted');
+      if (prepare) {
+        prepped[engine] = await prepare({ engine, taskId, runId, instruction: bundle.instruction });
+        contexts[engine] = { signal, publicTask: bundle.task, recorder: new StageRecorder({ dir: path.dirname(prepped[engine].outPath),
+          runId, taskId, engine, onEvent: onStageEvent }) };
+      } else {
+        if (typeof runId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(runId)) {
+          throw new EvalError('SUBAGENT_INVALID', 'prepare requires a safe unique run-id');
+        }
+        contexts[engine] = { signal, publicTask: bundle.task, recorder: new StageRecorder({
+          dir: path.join(WORK_DIR, `${runId}-${engine === 'onegame' ? 'og' : 'gd'}`),
+          runId, taskId, engine, onEvent: onStageEvent }) };
+        prepped[engine] = await runFrameworkAction('prepare', { engine, taskId, runId, instruction: bundle.instruction }, contexts[engine]);
+      }
     } catch (err) {
       if (!isolateFailures) throw err;
       const failure = recordFailure(engine, 'prepare', err);
       built[engine] = { replay: unavailableReplay(taskId, engine, failure) };
     }
   }
-  await Promise.all(
+  await settleStages(
     ['onegame', 'godot'].map(async (engine) => {
       const prep = prepped[engine];
       if (!prep) return;
+      const context = contexts[engine];
       const token = randomBytes(16).toString('hex');
       let stage = 'builder';
+      let evidence;
       try {
         if (!skipBuilder) {
           const builtOnce = await buildUntilBoot({
@@ -423,8 +420,10 @@ export async function orchestrateEngines({
             task: bundle.task,
             runSubagent,
             bootCheck,
+            auditSubmission,
             attempts: builderBootAttempts(),
             warn: recordWarning,
+            context,
           });
           let debugRan = false;
           if (builtOnce.boot?.ok) {
@@ -440,15 +439,18 @@ export async function orchestrateEngines({
                   instruction: bundle.instruction,
                   task: bundle.task,
                 }),
+                context,
               );
             } catch (err) {
               if (!isValidationFailure(err)) throw err;
               validationError = err;
               recordWarning(engine, 'debug', err, prep);
             }
-            auditModelSubmission(prep.workspace, engine, taskId);
+            await runFrameworkAction('audit', { engine, workspace: prep.workspace, taskId },
+              { ...context, implementation: auditSubmission });
             if (validationError) {
-              const checked = await bootCheck({ engine, workspace: prep.workspace, taskId });
+              const checked = await runFrameworkAction('boot', { engine, workspace: prep.workspace, taskId },
+                { ...context, implementation: bootCheck });
               if (!checked?.ok) throw new EvalError('BUILDER_INVALID', `debug self-check failed and independent boot check did not pass: ${(checked?.notes ?? []).join('\n')}`);
             }
             debugRan = true;
@@ -461,9 +463,14 @@ export async function orchestrateEngines({
           );
         }
         stage = 'replay';
-        await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }));
+        await runRole(runSubagent, replaySpec({ engine, taskId, prep, token }), context);
+        evidence = context.recorder.begin('replay-evidence');
         built[engine] = { ...prep, token, replay: readReplay(prep.outPath, { token, engine, taskId }) };
+        context.recorder.finish(evidence, { evidenceStatus: 'AVAILABLE',
+          submissionId: built[engine].replay.submission_id, manifestPath: built[engine].replay.manifest_path,
+          artifactPath: prep.outPath });
       } catch (err) {
+        if (evidence && !evidence.terminal) context.recorder.finish(evidence, { error: err, evidenceStatus: 'UNAVAILABLE' });
         if (!isolateFailures) throw err;
         const failure = recordFailure(engine, stage, err, prep);
         // This is orchestration state, never a substitute REPLAY.json.
@@ -472,8 +479,9 @@ export async function orchestrateEngines({
     }),
   );
   const planned = planPair(built, bundle.rubric, bundle.task.sample_fps);
-  await Promise.all(
+  await settleStages(
     planned.run.map(async (engine) => {
+      let evidence;
       try {
         const text = await runRole(
           runSubagent,
@@ -485,7 +493,9 @@ export async function orchestrateEngines({
             rubric: bundle.rubric,
             plan: planned.plans[engine],
           }),
+          contexts[engine],
         );
+        evidence = contexts[engine].recorder.begin('looks-evidence');
         if (!String(text).trim()) {
           throw new EvalError('SUBAGENT_INVALID', `looks subagent ${engine} 没有给出逐条证据。`);
         }
@@ -497,9 +507,15 @@ export async function orchestrateEngines({
         };
         writeReport(path.join(path.dirname(built[engine].outPath), 'LOOKS.json'), {
           engine, taskId, token: built[engine].token, stdout: text,
+          submission_id: built[engine].replay.submission_id ?? null,
+          manifest_path: built[engine].replay.manifest_path ?? null,
           ...built[engine].looks,
         });
+        contexts[engine].recorder.finish(evidence, { evidenceStatus: accepted.looks_status === 'OK' ? 'AVAILABLE' : 'INCOMPLETE',
+          submissionId: built[engine].replay.submission_id, manifestPath: built[engine].replay.manifest_path,
+          artifactPath: path.join(path.dirname(built[engine].outPath), 'LOOKS.json') });
       } catch (err) {
+        if (evidence && !evidence.terminal) contexts[engine].recorder.finish(evidence, { error: err, evidenceStatus: 'INCOMPLETE' });
         if (!isolateFailures) throw err;
         const failure = recordFailure(engine, 'looks', err, built[engine]);
         built[engine].looks = { looks_status: failure.primary, looks_source: 'subagent', failure };

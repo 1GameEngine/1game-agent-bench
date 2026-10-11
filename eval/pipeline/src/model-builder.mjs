@@ -174,7 +174,14 @@ export function assertSubmission(dest, engine, task) {
     throw new EvalError('BUILDER_INVALID', 'model submission must not implement EvalProbe');
   }
   const policy = tracePolicy(task);
-  const traces = readTraces(path.join(dest, 'demo_outputs'), policy);
+  let traces;
+  try { traces = readTraces(path.join(dest, 'demo_outputs'), policy); }
+  catch (err) {
+    // Malformed author JSON is a repairable submission error. Filesystem and
+    // environment failures retain their infrastructure classification.
+    if (!(err instanceof SyntaxError)) throw err;
+    throw new EvalError('BUILDER_INVALID', `model trace JSON is invalid: ${err.message}`.slice(0, 2000));
+  }
   if (!traces.length || traces.some((t) => !t.audit.ok)) {
     const issues = traces.flatMap((t) => t.audit.issues.map((issue) => `${t.file}: ${issue}`));
     throw new EvalError('BUILDER_INVALID', `model traces failed audit: ${issues.join('; ') || 'none'}`);

@@ -6,10 +6,11 @@ import { loadP0GodotTask } from './p0-godot.mjs';
 import { stageGodotProject, runGodotJob, makeJob, judgeGodotEvents } from './p1-godot.mjs';
 import { scorePairedLooks } from './looks-pair.mjs';
 import { P0_TASKS, P1_TASKS, scoreAttempt, buildProduct100, zeroRow, pendingRow } from './product-100.mjs';
-import { buildReport, writeReport } from './report.mjs';
+import { buildReport } from './report.mjs';
 import { buildCompareScalar } from './p1-report.mjs';
 import { assertNoForbiddenScoreKeys, EvalError } from './util.mjs';
-import { writeScoreboard } from './scoreboard.mjs';
+import { initializeReportStore, commitReportCheckpoint, createSuiteProgressWriter } from './report-store.mjs';
+import { executionPolicy, EXECUTION_POLICY_REVISION } from './execution-policy.mjs';
 import { aggregateObserved } from './rubric.mjs';
 import { orchestrateEngines, orchestrateOracle } from './subagent-stage.mjs';
 import { cloudAgentSubagentEnabled } from './cloud-agent-subagent.mjs';
@@ -227,6 +228,9 @@ function serializeReplay(replay) {
     replayed_scenarios: replay.replayed_scenarios,
     missing_scenarios: replay.missing_scenarios,
     samples: replay.samples,
+    submission_id: replay.submission_id,
+    manifest_path: replay.manifest_path,
+    snapshot_kind: replay.snapshot_kind,
     jobDir: undefined,
   });
 }
@@ -242,6 +246,7 @@ function serializeMech(mech) {
       ok: Boolean(s.ok && s.path && fs.existsSync(s.path)),
       path: s.path,
       status: s.status,
+      sha256: s.sha256,
     })),
     primary: mech.primary,
     g0_ok: mech.g0_ok,
@@ -253,6 +258,9 @@ function serializeMech(mech) {
     replayed_scenarios: mech.replayed_scenarios,
     missing_scenarios: mech.missing_scenarios,
     samples: mech.samples ?? [],
+    submission_id: mech.submission_id,
+    manifest_path: mech.manifest_path,
+    snapshot_kind: mech.snapshot_kind,
   };
 }
 
@@ -274,7 +282,7 @@ async function pairAndRows(taskId, og, gd) {
   };
 }
 
-function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, status = 'COMPLETE', failures = [], warnings = [], workDir = WORK_DIR }) {
+function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, taskResults = {}, status = 'COMPLETE', failures = [], warnings = [], workDir = WORK_DIR }) {
   const report = buildProduct100({ runId: suiteRunId, rows });
   report.status = status;
   report.failures = failures;
@@ -282,18 +290,18 @@ function writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, st
   report.completed_task_count = new Set(rows.map((row) => row.id)).size;
   assertNoForbiddenScoreKeys(report);
   const dir = path.join(workDir, suiteRunId);
-  fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, 'PRODUCT_100.json');
-  writeReport(out, report);
   const p0 = buildReport({ runId: suiteRunId, taskRows: p0taskRows });
-  writeReport(path.join(dir, 'P0_report.json'), p0);
   const cmp = buildCompareScalar({ runId: suiteRunId, attempts: p1attempts });
   cmp.status = status;
   cmp.stage_warnings = warnings;
-  writeReport(path.join(dir, 'COMPARE_SCALAR.json'), cmp);
-  const html = writeScoreboard({ dir, report, rows, packs });
-  writeReport(path.join(dir, 'RUN_STATE.json'), { runId: suiteRunId, status, completed_task_count: report.completed_task_count, failures, stage_warnings: warnings });
-  return { report, out, p0, compare: cmp, htmlPath: html.htmlPath };
+  const record = commitReportCheckpoint(suiteRunId, { workDir,
+    input: { rows, p0taskRows, p1attempts, packs }, taskResults,
+    reports: { 'PRODUCT_100.json': report, 'P0_report.json': p0, 'COMPARE_SCALAR.json': cmp,
+      'RUN_STATE.json': { runId: suiteRunId, status, completed_task_count: report.completed_task_count, failures, stage_warnings: warnings } },
+  });
+  return { report: record.reports['PRODUCT_100.json'], out, p0: record.reports['P0_report.json'],
+    compare: record.reports['COMPARE_SCALAR.json'], htmlPath: path.join(dir, 'report', 'index.html'), generationId: record.generation_id };
 }
 
 export async function runOracleGate({ taskId, runId = `oracle-${taskId}`, runSubagent, prepare } = {}) {
@@ -310,19 +318,23 @@ export async function runOracleGate({ taskId, runId = `oracle-${taskId}`, runSub
   return { scored, rows, floor: ORACLE_FLOOR };
 }
 
-export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchestrate = orchestrateEngines, workDir = WORK_DIR } = {}) {
+export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchestrate = orchestrateEngines, workDir = WORK_DIR, signal, onStageEvent } = {}) {
   assertProductSubagent();
+  initializeReportStore(suiteRunId, { workDir, kind: 'product', executionPolicy: { ...executionPolicy(), revision: EXECUTION_POLICY_REVISION } });
+  const recordProgress = createSuiteProgressWriter(suiteRunId, { workDir });
   const rows = [];
   const p0taskRows = [];
   const p1attempts = [];
   const packs = [];
   const failures = [];
   const warnings = [];
+  const taskResults = {};
   let currentTask;
-  const checkpoint = (status) => writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, failures, warnings, status, workDir });
+  const checkpoint = (status) => writeSuiteReports(suiteRunId, { rows, p0taskRows, p1attempts, packs, taskResults, failures, warnings, status, workDir });
   checkpoint('RUNNING');
   try {
     for (const taskId of P0_TASKS) {
+      if (signal?.aborted) throw new EvalError('SUBAGENT_PROCESS_FAILED', 'suite interrupted');
       process.stderr.write(`product P0 pair ${taskId}\n`);
       const og = await mechP0Onegame(taskId, `${suiteRunId}-${taskId}`);
       const gd = await mechP0Godot(taskId, `${suiteRunId}-${taskId}`);
@@ -344,8 +356,10 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchest
 
     for (const taskId of P1_TASKS) {
       currentTask = taskId;
+      if (signal?.aborted) throw new EvalError('SUBAGENT_PROCESS_FAILED', 'suite interrupted');
       process.stderr.write(`product P1 pair ${taskId}\n`);
-      const staged = await orchestrate({ taskId, runId: `${suiteRunId}-${taskId}`, isolateFailures: true });
+      const staged = await orchestrate({ taskId, runId: `${suiteRunId}-${taskId}`, isolateFailures: true, signal,
+        onStageEvent: (event) => { recordProgress(event); onStageEvent?.(event); } });
       const paired = scoreStagedPair(taskId, staged);
       rows.push(paired.ogRow, paired.gdRow);
       p1attempts.push(staged.onegame.replay.attempt, staged.godot.replay.attempt);
@@ -361,12 +375,12 @@ export async function runProduct100(suiteRunId = `p100-${Date.now()}`, { orchest
         og: serializeReplay(staged.onegame.replay),
         gd: serializeReplay(staged.godot.replay),
       });
-      writeReport(path.join(workDir, suiteRunId, 'tasks', taskId, 'RESULT.json'), {
+      taskResults[taskId] = {
         taskId, pair: staged.pair, rows: [paired.ogRow, paired.gdRow], failures: staged.failures ?? [],
         stage_warnings: staged.warnings ?? [],
         og: serializeReplay(staged.onegame.replay), gd: serializeReplay(staged.godot.replay),
         looks: { onegame: staged.onegame.looks, godot: staged.godot.looks },
-      });
+      };
       checkpoint('RUNNING');
     }
     return checkpoint(failures.length ? 'FAILED' : 'COMPLETE');

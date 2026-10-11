@@ -15,6 +15,7 @@ import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks
 import { runStageReplay } from './stage-replay.mjs';
 import { validateTraces, validateStageTraces } from './validate-traces.mjs';
 import { publishStageResponse } from './stage-close.mjs';
+import { rebuildProductReports } from './report-store.mjs';
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
@@ -23,6 +24,18 @@ function argValue(argv, name) {
 
 function hasFlag(argv, name) {
   return argv.includes(name);
+}
+
+async function withCancellation(run) {
+  const controller = new AbortController();
+  const stop = () => controller.abort();
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
+  try { return await run(controller.signal); }
+  finally {
+    process.removeListener('SIGTERM', stop);
+    process.removeListener('SIGINT', stop);
+  }
 }
 
 export function runTask({ taskId, runId, oracle = false, builderLog }) {
@@ -143,7 +156,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     if (cmd === 'run-p1-compare') {
-      const { report, out } = await runP1Compare(argValue(argv, '--run-id') ?? `p1-${Date.now()}`);
+      const { report, out } = await withCancellation(signal => runP1Compare(argValue(argv, '--run-id') ?? `p1-${Date.now()}`, { signal }));
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       process.exitCode = report.checkpoints_ok === report.attempts ? 0 : 1;
@@ -193,17 +206,26 @@ export async function main(argv = process.argv.slice(2)) {
         throw new EvalError('EVAL_INTERNAL', 'run-product-100 一次跑完。不支持 --looks / --mech，也不保存机械结果供续评。');
       }
       const runId = argValue(argv, '--run-id') ?? `p100-${Date.now()}`;
-      const { report, out, htmlPath } = await runProduct100(runId);
+      const { report, out, htmlPath } = await withCancellation(signal => runProduct100(runId, { signal }));
       process.stdout.write(`${JSON.stringify({ status: report.status, product_100: report.product_100, winner_engine: report.winner_engine, comparable: report.comparable, looks_phase: report.looks_phase, winner_sentence: report.winner_sentence }, null, 2)}\n`);
       process.stderr.write(`wrote ${out}\n`);
       if (htmlPath) process.stderr.write(`wrote ${htmlPath}\n`);
       process.exitCode = report.status === 'FAILED' ? 1 : 0;
       return;
     }
+    if (cmd === 'rebuild-product-reports') {
+      const runId = argValue(argv, '--run-id');
+      if (!runId) throw new EvalError('EVAL_INTERNAL', '--run-id required');
+      const { report, out, htmlPath, generationId, legacy } = rebuildProductReports(runId);
+      process.stdout.write(`${JSON.stringify({ status: report.status, out, htmlPath, generation_id: generationId, legacy }, null, 2)}\n`);
+      return;
+    }
     if (cmd === 'emit-scoreboard') {
       const runId = argValue(argv, '--run-id');
       if (!runId) throw new EvalError('EVAL_INTERNAL', '--run-id required');
-      const { htmlPath } = writeScoreboardFromRun(path.join(WORK_DIR, runId));
+      const runDir = path.join(WORK_DIR, runId);
+      const { htmlPath } = fs.existsSync(path.join(runDir, '.report-store'))
+        ? rebuildProductReports(runId) : writeScoreboardFromRun(runDir);
       process.stdout.write(`${JSON.stringify({ htmlPath }, null, 2)}\n`);
       process.stderr.write(`wrote ${htmlPath}\n`);
       return;
@@ -237,7 +259,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | validate-traces --engine <onegame|godot> --task <id> --workspace <dir> [--scenario <name>] [--stage-timing <json>] | publish-stage-response --stage-timing <json> --input <json> [--archive <json>] | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | validate-traces --engine <onegame|godot> --task <id> --workspace <dir> [--scenario <name>] [--stage-timing <json>] | publish-stage-response --stage-timing <json> --input <json> [--archive <json>] | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | rebuild-product-reports --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {

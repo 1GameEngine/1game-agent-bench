@@ -7,6 +7,7 @@ import { stageGodotProject, runGodotJob, makeTraceJob, judgeTraceEvents } from '
 import { scanHygiene } from './hygiene.mjs';
 import { duplicateScenarioNames, missingRequiredScenarios, readTraces, sampleEvery, tracePolicy } from './p1-trace.mjs';
 import { EvalError } from './util.mjs';
+import { createSubmissionManifest, writeSubmissionManifest } from './submission-manifest.mjs';
 
 function publicStill(still) {
   return {
@@ -32,8 +33,11 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
     throw new EvalError('EVAL_INTERNAL', 'stage-replay needs engine, task, workspace, out, token, and run-id');
   }
   const { task } = loadP1Task(taskId);
+  const submission = writeSubmissionManifest(path.join(path.dirname(outPath), 'SUBMISSION.json'), createSubmissionManifest({
+    workspace, engine, taskId, runId, snapshotKind: 'observed_workspace', publicTask: task,
+  }));
   const replay = runTraceReplay({ engine, taskId, workspace, runId, task });
-  return writeDoc(outPath, { via: 'stage-replay', token, ...replay });
+  return writeDoc(outPath, { via: 'stage-replay', token, ...replay, ...submission });
 }
 
 // Shared execution only: this path reads no rubric and issues no trusted receipt.

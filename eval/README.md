@@ -88,6 +88,7 @@ pnpm run test-negatives   # P0 负例
 pnpm run run-p1-compare   # headline × 两引擎：builder / debug / replay / looks，再写 COMPARE_SCALAR.json
 pnpm run run-product-100 -- --run-id <id>          # 同上。主进程套公式。Cloud Agent 内默认用当前 subagent 当 builder / debug / looks
 node src/cli.mjs emit-scoreboard --run-id <id>     # 只用 PRODUCT_100.json 重出分数页（模板固定，加题加引擎只扩数据）
+node src/cli.mjs rebuild-product-reports --run-id <id> # 从已提交检查点重建报告；不派代理、不重放、不续评
 # 禁止用内置 worker 冒充 subagent。EVAL_LOOKS_ALLOW_WORKER=1 仅调试。EVAL_LOOKS_BACKEND=heuristic 仅调试。
 node src/cli.mjs looks-prompt --job work/<run>/looks/looks-request.json
 node src/cli.mjs apply-looks --verdict work/<run>/looks/looks-verdict.json
@@ -124,6 +125,24 @@ Godot headline 使用完整原生固定帧，物理与脚本各推进一次，Ti
 `run-product-100` 在启动时生成 `PRODUCT_100.json`、`COMPARE_SCALAR.json`、`RUN_STATE.json` 和成绩页，`status` 为 `RUNNING`；每题结束后原子更新这些文件，并保存 `tasks/<taskId>/RESULT.json`。结束时状态为 `COMPLETE`；发生阶段异常时记录 `FAILED`，命令退出码为 1。单侧阶段异常被隔离，另一侧和后续题继续执行。各引擎输出目录保存真实裁决 `LOOKS.json` 和阶段错误 `STAGE_ERROR.json`；`REPLAY.json` 仍只由 `stage-replay` 写出。
 
 未执行、超时或未通过重放可信性检查的项，`G` 和题分为 `null`，不按游戏的 `G=0` 计零分。可信重放证明的启动失败或无成功轨迹仍遵循既有 G=0 规则。任一题证据未齐或结果不可比时，两侧套件平均分均留空，不宣布胜者。文件是同一次执行的进度记录，不提供补跑、自动重试或续评入口。`run-p1-compare` 同样逐题保存过程报告并隔离阶段异常。
+
+### 执行协议与报告重建
+
+新运行记录独立的 `execution_policy_revision: "eval.execution/2"` 和有效 `execution_policy`，计分修订仍为 `product-100/2`。开工握手、真实回执发布时间、模型阶段预算、自查占用模型预算、构建修正次数和失败计分规则保持原约定。`stage-runner.mjs` 负责代理与框架阶段的交接、记录和收尾。准备、独立启动检查、审计和阶段后的清单观测使用异步监管的执行工作进程，重放与外部阶段命令同样受进程组监管，避免阻塞模型回执轮询；清单扫描与哈希不在主监管循环执行。执行工作进程只调用已有适配器，不生成游戏、不充当 looks 模型；它与禁止代替正式模型的内置 worker 不是同一入口。新增框架操作外层上限：准备 30 分钟、独立启动检查 10 分钟、审计和清单观测各 2 分钟；异常清理仍最多使用 5 秒 TERM 加 2 秒 KILL/reap。模型预算没有因此延长。
+
+每引擎目录的 `STAGE_EVENTS.jsonl` 记录准备、模型和框架操作的阶段变化，`STAGE_STATE.json` 表示最近阶段状态，`STAGES/*.json` 保存不可重复发布的终态。`execution_status` 与 `self_check_status`、`evidence_status` 分开：真实自查未完成或玩法自查失败的回执可记为执行完成，分别标注 `INCOMPLETE` 或 `REPORTED_FAIL`，仍需独立检查才继续；`REPORTED_PASS` 仅表示代理的自查声明。超时、环境和交接异常不因此成为自查警告。接受回执的阶段结束时间仍以 `response_published_at` 为准，观察时间另存，不以事件日志或代理自填时间替代发布验收。
+
+验证副本和正式重放输出旁新增 `SUBMISSION.json`，阶段记录关联提交摘要与产物路径。清单记录源码、轨迹、资产摘要、依赖版本及运行环境，并保留无法读取、外部链接或读取期间变化等诊断。清单是版本关联观测，不是原子冻结、安全隔离或新拒收条件；跳过约定的凭据文件，不遍历任意外部链接，也不把旧验证替代正式重放。
+
+带阶段计时的验证在同一个 session 目录保存 `PROGRESS.json`、`VALIDATION_EVENTS.jsonl`、候选副本清单和 `VALIDATION.json`。进度关联 session、阶段与候选提交 ID，记录复制、审计、重放及收尾，最终保存实际进程开工、退出和进程组清理时间；诊断尚未生成候选清单时不伪填提交 ID。阶段失活、身份变化或计时记录不可用会自动取消并等待整个验证进程组，按执行异常处理，不冒充 `validation_incomplete` 自查警告；正常收尾预留触发的停止仍按既有自查未完成协议处理。这些进度产物不构成正式重放或评分回执。
+
+新运行拒绝复用已经存在的 run-id。报告存储的 `.report-store/generations/<generation>/CHECKPOINT.json` 保存完整一代数据，`.report-store/LATEST.json` 在投影完成后发布并带摘要；读取完整一致的一代应使用检查点，根目录 JSON 与 HTML 是兼容投影，不构成多文件事务。静帧按 SHA256 归档在 `.report-store/evidence/<sha256>.png`，检查点保存证据清单。投影前先检查全部归档图片的身份、路径和哈希，再使用已验证字节重建报告与成绩页副本；证据缺失或损坏会报错，不回退到可变工作区。
+
+报告写入和重建使用 Linux `flock` 命令取得内核互斥锁，环境须提供该命令。`.report-store/projection.lock` 是永久保留的锁文件，不按 PID 或文件内容判断占用，也不通过删除文件接管锁；进程退出或崩溃后由内核释放，因此空锁文件不妨碍重建。已有持锁者时返回 `EVAL_REPORT_BUSY`，锁工具不可用时明确报错。执行监管在进程组清理后也限制输出管道关闭等待，并复用清理的 reap 余量；脱离进程组的后台进程若仍持有管道，会作为清理异常返回，保留未完成清理标记，不生成自查未完成警告或成功回执。
+
+`rebuild-product-reports` 只从最近已提交检查点及归档静帧重建投影，不读取游戏工作区或现场重放静帧，不运行模型或引擎，不重新裁决、不修改阶段终态、不把 `RUNNING` 改成完成，也不恢复执行。旧运行没有该存储时，仅按已有 `PRODUCT_100.json` 重出 HTML 成绩页，不改历史 JSON 或追加新协议标签。
+
+当前执行协议记录两引擎管线并发为 2，准备和题目顺序仍串行；未限制跨套件并发、验证并发、CPU 或内存。这是可观测的运行安排，不等于独占资源或严格资源公平。更改模型预算、将自查移出预算、自动封存超时目录或新增续评须另行修改执行协议；计分权重、聚合或胜负政策变更另设计分修订，不能混入兼容重构。
 
 ## 计分
 
