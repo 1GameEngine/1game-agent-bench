@@ -1,7 +1,7 @@
 import { stageTimeoutMs, stageDispatchTimeoutMs } from './stage-timeout.mjs';
 
 // Execution changes are versioned independently from product-100/2.
-export const EXECUTION_POLICY_REVISION = 'eval.execution/2';
+export const EXECUTION_POLICY_REVISION = 'eval.execution/3';
 
 export function executionPolicy(env = process.env) {
   const budgets = Object.fromEntries(['builder', 'debug', 'replay', 'looks'].map(role => [role, stageTimeoutMs(role, env)]));
@@ -28,12 +28,17 @@ export function executionPolicy(env = process.env) {
       engine_pipeline_concurrency: 2,
       supervisor: 'asynchronous_linux_process_groups',
       adapter_execution: 'synchronous_inside_execution_process',
-      validation_concurrency_limit: null,
+      validation_concurrency_limit: 1,
+      validation_concurrency_scope: 'per_model_stage',
       cross_suite_concurrency_limit: null,
       cpu_limit: null,
       memory_limit_bytes: null,
     },
     recovery: 'reports_only_no_stage_resume',
     submission_policy: 'observational_manifests_no_new_acceptance_gate',
+    self_check_policy: { revision: 'eval.self-check/1', diagnostics: 'submitted_trace_prefix_and_checkpoints',
+      success_evidence: 'current_candidate_full_validation_and_model_visual_review',
+      cancellation: 'owned_session_request_and_confirmed_process_group_cleanup',
+      budget_planning: 'observed_full_duration_plus_review_and_safety_reserves' },
   };
 }

@@ -10,6 +10,8 @@ import { runProcess } from './process-supervisor.mjs';
 import { stageOutcome } from './stage-records.mjs';
 import { EXECUTION_POLICY_REVISION } from './execution-policy.mjs';
 import { resultMetadata } from './execution-adapter.mjs';
+import { selfCheckEvidenceError } from './self-check-evidence.mjs';
+import { validationIndexPath } from './validation-control.mjs';
 
 export function cloudTaskDir(env = process.env) {
   return env.EVAL_CLOUD_TASK_DIR || path.join(WORK_DIR, '.cloud-agent-tasks');
@@ -51,10 +53,18 @@ export function cloudTaskHandoff(spec, lifecycle) {
 ${JSON.stringify(lifecycle.response_publish_argv)}
 该入口先原子归档，再原子发布相同回执，检查请求仍有效并拒绝覆盖；可加 --archive <交接要求的额外归档路径>。不读取这个工具的实现。工具不会替你判断或伪造验证成功。
 ` : '';
-  const validation = spec.validation ? `\n## 统一验证入口\n\n只执行以下 argv，不读取其评测实现：\n${JSON.stringify(spec.validation.argv)}\n可加 --scenario <演示名> 单独排查；最终自查应验证全部演示。它复用正式重放的输入与时序，在独立副本运行，仅输出公开运行信息和起止静帧，不写正式 REPLAY.json、不读取隐藏量表、不打分。运行成功只说明轨迹可执行；对照题面检查画面是否真的到了对应局面。不要抽取内部 host API、另写输入注入器或把手算当作引擎验证。\n` : '';
+  const validation = spec.validation ? `\n## 统一验证入口\n\n只执行以下 argv，不读取其评测实现：\n${JSON.stringify(spec.validation.argv)}\n可加 --scenario <演示名> 单独排查，配合 --until-frame <包含的末帧> 和 --checkpoints <逗号分隔的帧号> 查看原轨迹前缀和关键帧。诊断不能替代最终全量验证，未加诊断参数的完整运行才是 full 模式。它复用正式输入、30fps和点击时序，不写正式 REPLAY.json、不读隐藏量表、不打分。运行成功只说明轨迹可执行；必须实际查看静帧，按公开题面确认每个场景和关键操作。不要抽取内部 host API、另写输入注入器或把手算当作引擎验证。
+验证开工立即在 stderr 输出 session、进度/反馈路径与预算建议。当前阶段 session 索引：${spec.validation.sessions_path ?? '入口开工输出的 sessions_path'}。
+每场景完成和关键帧截图会即时输出反馈。在同一阶段只能运行一个验证；不要仅 Ctrl-C 外层 shell，使用取消入口并等待返回真实清理终态，再启动新的验证。
+取消 argv（追加 --session <本人session_id>）：${JSON.stringify(spec.validation.cancel_argv ?? [])}
+预算查询 argv：${JSON.stringify(spec.validation.budget_argv ?? [])}
+先完成依赖/构建/类型/素材检查，读取本侧 builder 已发现的问题，针对失败场景诊断并修复回归。尤其检查“普通点击→拖放→再次普通点击”是否仍能响应。随后停止修改候选，启动一次最终完整验证并查看全部起止图；必要修改之后必须重新验证新候选。预算建议按已测全量耗时+45秒看图+30秒安全余量计算最晚全量启动时间，不是只预留最后一分钟。没有足够时间就如实报告未完成，不能延长预算。
+` : '';
+  const context = spec.debug_context ? `\n## 本侧 builder 自查交接\n${JSON.stringify(spec.debug_context)}\n仅属于本侧本题；旧候选的通过结果不能作为当前候选的成功依据。\n` : '';
+  const proof = spec.self_check_contract ? `\n成功回执另需 self_check：{"session_id":"最终session","submission_id":"该验证候选摘要","reviewed_still_ids":["全部最终静帧ID"],"preflight":{"passed":true,"checks":["真实完成的依赖、类型、构建、素材检查"]},"scenarios":{"每个必需场景":{"passed":true,"checks":[{"requirement":"公开题面的具体行为","passed":true,"evidence":["本场景静帧ID"]}]}}}。框架检查完整性与候选匹配，不代替你看图或判断玩法。缺少最终证据不能声明成功；负回执仍使用真实 failure。\n` : '';
   const prompt = `你是当前 Cloud Agent 拉起的 subagent，只做这一阶段（role=${spec.role}，engine=${spec.engine}，task=${spec.taskId}）。
 工作目录是 ${spec.workspace}。不要读评测仓，不要读另一边引擎，不要读隐藏量表文件。
-${timing}${validation}
+${timing}${validation}${context}${proof}
 
 ${spec.prompt}
 
@@ -163,9 +173,12 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
     started_at: null, execution_deadline_at: null, wrap_up_at: null, queue_wait_ms: null, execution_elapsed_ms: null,
   };
   writeJsonAtomic(timingPath, record);
-  const { _onLifecycle, _signal, ...publicSpec } = spec;
+  const { _onLifecycle, _signal, _onSelfCheck, ...publicSpec } = spec;
   const timedSpec = spec.validation ? { ...publicSpec, validation: { ...spec.validation,
-    argv: [...spec.validation.argv, '--stage-timing', timingPath] } } : publicSpec;
+    argv: [...spec.validation.argv, '--stage-timing', timingPath],
+    sessions_path: validationIndexPath(timingPath),
+    cancel_argv: [process.execPath, fileURLToPath(new URL('./cli.mjs',import.meta.url)), 'cancel-validation','--stage-timing',timingPath],
+    budget_argv: [process.execPath, fileURLToPath(new URL('./cli.mjs',import.meta.url)), 'validation-budget','--stage-timing',timingPath] } } : publicSpec;
   const payload = { id, spec: timedSpec, lifecycle, handoff: cloudTaskHandoff(timedSpec, lifecycle) };
   writeJsonAtomic(reqPath, payload);
   process.stderr.write(`cloud-agent subagent ${spec.role} ${spec.engine} ${spec.taskId} -> ${reqPath}\n`);
@@ -207,8 +220,11 @@ export async function waitCloudModel(spec, { env = process.env, now = Date.now, 
         if (publishedAt >= deadline) throw timeout('execution');
         responsePublishedAt = Math.max(startedAt, publishedAt);
         Object.assign(record, { response_published_at: iso(responsePublishedAt), response_observed_at: iso(time) });
-        const responseError = stageResponseError(spec, data);
+        const shapeError = stageResponseError(spec, data);
+        const responseError = shapeError?.primary === 'SUBAGENT_INVALID' ? shapeError
+          : selfCheckEvidenceError(spec, data, { stageId:id,timingPath }) ?? shapeError;
         if (responseError) throw responseError;
+        spec._onSelfCheck?.(data.self_check);
         Object.assign(record, stageOutcome({ role: spec.role }), { state: 'COMPLETE', finished_at: iso(responsePublishedAt), execution_elapsed_ms: responsePublishedAt - startedAt });
         writeJsonAtomic(timingPath, record);
         onLifecycle?.({ ...record });

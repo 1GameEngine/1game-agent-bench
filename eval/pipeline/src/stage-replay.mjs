@@ -41,7 +41,8 @@ export function runStageReplay({ engine, taskId, workspace, outPath, token, runI
 }
 
 // Shared execution only: this path reads no rubric and issues no trusted receipt.
-export function runTraceReplay({ engine, taskId, workspace, runId, task, capture = true, finalOnly = false } = {}) {
+export function runTraceReplay({ engine, taskId, workspace, runId, task, capture = true, finalOnly = false,
+  tracesOverride, sampleFrames = [], feedbackPath, onFeedback } = {}) {
   if (!workspace || !runId || !taskId || !task) {
     throw new EvalError('EVAL_INTERNAL', 'trace replay needs engine, task, workspace, run-id, and public task metadata');
   }
@@ -69,6 +70,7 @@ export function runTraceReplay({ engine, taskId, workspace, runId, task, capture
       stillsDir,
       policy,
       sampleEveryOverride: finalOnly ? policy.maxFrames + 1 : undefined,
+      tracesOverride, sampleFrames, onFeedback,
     });
     const primary = hyg.ok ? replay.primary : 'HYGIENE_FAIL';
     const replayed = replay.replayed_scenarios ?? [];
@@ -104,7 +106,7 @@ export function runTraceReplay({ engine, taskId, workspace, runId, task, capture
   }
   const stillsDir = capture ? path.join(WORK_DIR, runId, 'stills') : undefined;
   const policy = tracePolicy(task);
-  const traces = readTraces(path.join(staged.dest, 'demo_outputs'), policy);
+  const traces = tracesOverride ?? readTraces(path.join(staged.dest, 'demo_outputs'), policy);
   const duplicates = duplicateScenarioNames(traces);
   if (duplicates.length) {
     const notes = [`duplicate scenario ${[...new Set(duplicates)].join(', ')}`];
@@ -126,6 +128,7 @@ export function runTraceReplay({ engine, taskId, workspace, runId, task, capture
       stillsDir,
       sampleEvery: finalOnly ? policy.maxFrames + 1 : sampleEvery(policy.sampleFps),
       maxFrames: policy.maxFrames,
+      sampleFrames, feedbackPath,
     }),
     outPath: path.join(WORK_DIR, runId, 'traces.jsonl'),
     timeoutMs: 300_000,

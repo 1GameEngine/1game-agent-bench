@@ -113,6 +113,9 @@ func _run_traces() -> void:
 	var sample_every := int(_job.get("sample_every", 15))
 	var max_frames := int(_job.get("max_frames", 600))
 	var dt := float(_job.get("frame_dt", 1.0 / 30.0))
+	var extra_samples := {}
+	for frame in _job.get("sample_frames", []):
+		extra_samples[int(frame)] = true
 	# Advance the engine itself: script callbacks, timers, tweens and input edge
 	# state must all observe the same fixed frame, regardless of capture cadence.
 	Engine.physics_ticks_per_second = int(round(1.0 / dt))
@@ -148,7 +151,7 @@ func _run_traces() -> void:
 				_emit({"event": "error", "code": err, "scenario": scenario, "frame": f})
 				get_tree().quit(5)
 				return
-			if sample_every > 0 and (f % sample_every == 0 or f == n - 1):
+			if (sample_every > 0 and (f % sample_every == 0 or f == n - 1)) or extra_samples.has(f):
 				await _snapshot("%s_f%s" % [scenario, f])
 		_emit({"event": "trace_done", "scenario": scenario, "frames": n})
 	get_tree().paused = true
@@ -432,3 +435,13 @@ func _emit(obj: Dictionary) -> void:
 		f.seek_end()
 	f.store_line(JSON.stringify(obj))
 	f.flush()
+	var feedback := String(_job.get("feedback_path", ""))
+	if feedback != "" and obj.get("event", "") in ["still", "still_fail", "trace_done", "error"]:
+		var live := FileAccess.open(feedback, FileAccess.READ_WRITE)
+		if live == null:
+			live = FileAccess.open(feedback, FileAccess.WRITE)
+		else:
+			live.seek_end()
+		if live != null:
+			live.store_line(JSON.stringify(obj))
+			live.flush()

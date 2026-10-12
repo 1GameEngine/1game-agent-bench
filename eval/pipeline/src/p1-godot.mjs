@@ -234,7 +234,7 @@ export function makeJob({ bundle, steps, stillsDir }) {
   };
 }
 
-export function makeTraceJob({ traces, stillsDir, sampleEvery: every = 8, maxFrames = 300 }) {
+export function makeTraceJob({ traces, stillsDir, sampleEvery: every = 8, maxFrames = 300, sampleFrames = [], feedbackPath }) {
   const valid = (traces ?? []).filter((t) => t.audit?.ok);
   return {
     traces: valid.map((t) => t.trace),
@@ -243,6 +243,8 @@ export function makeTraceJob({ traces, stillsDir, sampleEvery: every = 8, maxFra
     max_frames: maxFrames,
     frame_dt: FRAME_MS / 1000,
     probe_keys: [],
+    ...(sampleFrames.length ? { sample_frames: sampleFrames } : {}),
+    ...(feedbackPath ? { feedback_path: feedbackPath } : {}),
   };
 }
 

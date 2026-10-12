@@ -118,8 +118,8 @@ function applyTraceEvent(cwd, ev) {
   return { ok: proc.status === 0, proc };
 }
 
-function nextBarrier(i, n, every, by) {
-  if (shouldSample(i, n, every)) return i + 1;
+function nextBarrier(i, n, every, by, extraFrames = []) {
+  if (shouldSample(i, n, every, extraFrames)) return i + 1;
   let stop = n;
   const nextSample = Math.ceil((i + 1) / every) * every;
   if (nextSample < stop) stop = nextSample;
@@ -127,11 +127,12 @@ function nextBarrier(i, n, every, by) {
     if (frame > i && frame < stop) stop = frame;
   }
   if (n - 1 > i && n - 1 < stop) stop = n - 1;
+  for (const frame of extraFrames) if (frame > i && frame < stop) stop = frame;
   return Math.max(i + 1, stop);
 }
 
-function shouldSample(i, n, every) {
-  return i % every === 0 || i === n - 1;
+function shouldSample(i, n, every, extraFrames = []) {
+  return i % every === 0 || i === n - 1 || extraFrames.includes(i);
 }
 
 export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
@@ -197,12 +198,12 @@ export function runOnegamePlayplan({ gameDir, bundle, steps, stillsDir }) {
   return { primary, g0_ok: 1, notes, sliceScores, sliceIds, stills };
 }
 
-export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sampleEveryOverride }) {
+export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sampleEveryOverride, tracesOverride, sampleFrames = [], onFeedback }) {
   const notes = [];
   const stills = [];
   const samples = [];
   const dir = tracesDir ?? path.join(gameDir, 'demo_outputs');
-  const submitted = readTraces(dir, policy);
+  const submitted = tracesOverride ?? readTraces(dir, policy);
   const valid = submitted.filter((t) => t.audit.ok);
   const missOpts = {
     required: policy?.scenarios ?? [],
@@ -275,7 +276,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sample
         }
       }
       if (failed) break;
-      const stop = nextBarrier(i, n, every, by);
+      const stop = nextBarrier(i, n, every, by, sampleFrames);
       const run = Math.max(1, stop - i);
       const ticked = tickFrames(gameDir, run);
       if (!ticked.ok) {
@@ -285,7 +286,7 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sample
         break;
       }
       const last = i + run - 1;
-      if (stillsDir && shouldSample(last, n, every)) {
+      if (stillsDir && shouldSample(last, n, every, sampleFrames)) {
         const id = `${item.trace.scenario}_f${last}`;
         const cap = captureOnegameStill({
           gameDir,
@@ -304,11 +305,13 @@ export function runOnegameTraces({ gameDir, stillsDir, tracesDir, policy, sample
           scenario: item.trace.scenario,
           frame: last,
         });
+        onFeedback?.({ event: 'still', scenario: item.trace.scenario, ...stills.at(-1) });
       }
       i += run;
     }
     if (failed) break;
     replayed_scenarios.push(item.trace.scenario);
+    onFeedback?.({ event: 'trace_done', scenario: item.trace.scenario, frames: n });
   }
 
   return {

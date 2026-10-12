@@ -13,8 +13,9 @@ import { runOracleGate, runProduct100 } from './product-run.mjs';
 import { writeScoreboardFromRun } from './scoreboard.mjs';
 import { aggregateLooks, buildLooksUserPrompt, parseLooksVerdict } from './looks-rubric.mjs';
 import { runStageReplay } from './stage-replay.mjs';
-import { validateTraces, validateStageTraces } from './validate-traces.mjs';
-import { publishStageResponse } from './stage-close.mjs';
+import { validateTraces, validateStageTraces, cancelStageValidation } from './validate-traces.mjs';
+import { publishStageResponse, readStageContext } from './stage-close.mjs';
+import { validationBudget } from './validation-control.mjs';
 import { rebuildProductReports } from './report-store.mjs';
 
 function argValue(argv, name) {
@@ -163,12 +164,25 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     if (cmd === 'validate-traces') {
+      for (const flag of ['--scenario','--until-frame','--checkpoints','--stage-timing','--stage-id']) {
+        if (hasFlag(argv,flag) && (argValue(argv,flag) == null || argValue(argv,flag).startsWith('--'))) throw new EvalError('SUBAGENT_INVALID',`${flag} requires a value`);
+      }
       const options = { engine: argValue(argv, '--engine'), taskId: argValue(argv, '--task'),
-        workspace: argValue(argv, '--workspace'), scenario: argValue(argv, '--scenario'), timingPath: argValue(argv, '--stage-timing') };
+        workspace: argValue(argv, '--workspace'), scenario: argValue(argv, '--scenario'), timingPath: argValue(argv, '--stage-timing'),
+        untilFrame: argValue(argv, '--until-frame'), checkpoints: argValue(argv, '--checkpoints'), stageId: argValue(argv,'--stage-id') };
       const report = options.timingPath ? await validateStageTraces(options) : validateTraces(options);
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
       process.exitCode = report.ok ? 0 : 1;
       return;
+    }
+    if (cmd === 'cancel-validation') {
+      const report = await cancelStageValidation({ timingPath: argValue(argv,'--stage-timing'), sessionId: argValue(argv,'--session') });
+      process.stdout.write(`${JSON.stringify(report)}\n`); return;
+    }
+    if (cmd === 'validation-budget') {
+      const ctx = readStageContext(argValue(argv,'--stage-timing'));
+      if (!['builder','debug'].includes(ctx.timing.role)) throw new EvalError('SUBAGENT_INVALID','budget planning belongs to a builder/debug stage');
+      process.stdout.write(`${JSON.stringify(validationBudget(ctx,ctx.timing.taskId))}\n`); return;
     }
     if (cmd === 'publish-stage-response') {
       const input = argValue(argv, '--input');
@@ -259,7 +273,7 @@ export async function main(argv = process.argv.slice(2)) {
       return;
     }
     process.stderr.write(
-      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | validate-traces --engine <onegame|godot> --task <id> --workspace <dir> [--scenario <name>] [--stage-timing <json>] | publish-stage-response --stage-timing <json> --input <json> [--archive <json>] | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | rebuild-product-reports --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
+      `Usage: node src/cli.mjs run-oracles | run-task --task <id> [--oracle] | test-negatives | run-p1-compare | run-product-100 | run-oracle-gate --task <id> | validate-traces --engine <onegame|godot> --task <id> --workspace <dir> [--scenario <name>] [--until-frame <inclusive-frame>] [--checkpoints <frame,...>] [--stage-timing <json>] | cancel-validation --stage-timing <json> --session <id> | validation-budget --stage-timing <json> | publish-stage-response --stage-timing <json> --input <json> [--archive <json>] | stage-replay --engine <onegame|godot> --task <id> --workspace <dir> --out <REPLAY.json> --token <token> --run-id <id> | emit-scoreboard --run-id <id> | rebuild-product-reports --run-id <id> | looks-prompt --job <json> | apply-looks --verdict <json>\n`,
     );
     process.exitCode = 2;
   } catch (err) {

@@ -7,7 +7,9 @@ import { EvalError } from './util.mjs';
 // the agent's deadline, or manufactures a response for an unfinished stage.
 export async function runAgentStage(runSubagent, spec, { recorder, signal, publicTask } = {}) {
   const handle = recorder?.begin(spec.role, { attempt: spec.attempt ?? 1 });
+  let selfCheck;
   const timedSpec = { ...spec, _signal: signal,
+    _onSelfCheck: evidence => { selfCheck = evidence; },
     ...(handle ? { stage_id: handle.id, _onLifecycle: event => recorder.lifecycle(handle, event) } : {}) };
   const observeSubmission = async () => handle && ['builder', 'debug'].includes(spec.role)
     ? runFrameworkStage('manifest', { workspace: spec.workspace, engine: spec.engine, taskId: spec.taskId,
@@ -31,7 +33,12 @@ export async function runAgentStage(runSubagent, spec, { recorder, signal, publi
       throw observationError;
     }
   }
-  recorder?.finish(handle, { error: agentError, submissionId: submission?.submission_id, manifestPath: submission?.manifest_path });
+  if (!agentError && selfCheck && submission?.submission_id !== selfCheck.submission_id) {
+    agentError = new EvalError('STAGE_VALIDATION_INCOMPLETE', 'submission changed after the validated success receipt', { self_check_session_id: selfCheck.session_id });
+  }
+  recorder?.finish(handle, { error: agentError, submissionId: submission?.submission_id, manifestPath: submission?.manifest_path,
+    result: selfCheck ? { self_check: { session_id:selfCheck.session_id,submission_id:selfCheck.submission_id,
+      reviewed_still_ids:selfCheck.reviewed_still_ids }, gameplay_review:'model_declaration' } : null });
   if (agentError) throw agentError;
   return out ?? '';
 }

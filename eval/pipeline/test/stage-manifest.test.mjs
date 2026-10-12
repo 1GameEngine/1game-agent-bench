@@ -62,7 +62,8 @@ test('self-check records the candidate actually replayed without reading a hidde
   const manifest = JSON.parse(fs.readFileSync(report.manifest_path, 'utf8'));
   assert.equal(report.submission_id, manifest.submission_id);
   assert.equal(verifySubmissionManifest(manifest), true);
-  assert.deepEqual(manifest.files.filter((file) => file.kind === 'trace').map((file) => file.path), ['demo_outputs/02_loop.json']);
+  assert.equal(manifest.files.filter((file) => file.kind === 'trace').length, 4, 'diagnostics retain the full candidate identity');
+  assert.equal(report.validation_mode, 'diagnostic');
   const progress = JSON.parse(fs.readFileSync(report.progress_path, 'utf8'));
   assert.equal(progress.state, 'COMPLETE');
   assert.equal(progress.submission_id, report.submission_id);

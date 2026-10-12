@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { EvalError } from './util.mjs';
 import { stageResponseError } from './stage-result.mjs';
 import { readStageStart } from './cloud-agent-subagent.mjs';
+import { selfCheckEvidenceError } from './self-check-evidence.mjs';
 
 // Read only public lifecycle metadata, never a rubric or a game state.
 export function readStageContext(timingPath, expected = {}, now = Date.now) {
@@ -50,6 +51,8 @@ export function publishStageResponse({ timingPath, data, archivePath }, { now = 
   const ctx = readStageContext(timingPath, {}, now);
   const malformed = stageResponseError(ctx.request.spec, data);
   if (malformed?.primary === 'SUBAGENT_INVALID') throw malformed;
+  const evidenceError = selfCheckEvidenceError(ctx.request.spec, data, { stageId: ctx.timing.id, timingPath, checkWorkspace: true });
+  if (evidenceError) throw evidenceError;
   const responsePath = ctx.request.lifecycle.response_path;
   const archives = [...new Set([ctx.request.lifecycle.archive_response_path, archivePath].filter(Boolean).map(p => path.resolve(p)))];
   if (!archives.length || archives.includes(path.resolve(responsePath))) {

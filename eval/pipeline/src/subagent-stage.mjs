@@ -15,12 +15,14 @@ import { EvalError } from './util.mjs';
 import { cloudAgentSubagentEnabled, runCloudAgentSubagent } from './cloud-agent-subagent.mjs';
 import { stageTimeoutMs, stageProcessError } from './stage-timeout.mjs';
 import { writeReport } from './report.mjs';
-import { isValidationFailure } from './stage-result.mjs';
+import { isValidationFailure, stageResponseError } from './stage-result.mjs';
 import { runProcess } from './process-supervisor.mjs';
 import { resultMetadata } from './execution-adapter.mjs';
 import { StageRecorder } from './stage-records.mjs';
 import { executeAction } from './execution-worker.mjs';
 import { runAgentStage as runRole, runFrameworkStage as runFrameworkAction, settleStages } from './stage-runner.mjs';
+import { readValidationIndex, validationIndexPath } from './validation-control.mjs';
+import { selfCheckEvidenceError } from './self-check-evidence.mjs';
 
 const CLI = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 
@@ -50,17 +52,49 @@ export async function defaultRunSubagent(spec) {
     args = parsed;
   }
   const timeoutMs = stageTimeoutMs(spec.role);
-  const { _onLifecycle, _signal, ...publicSpec } = spec;
+  const { _onLifecycle, _signal, _onSelfCheck, ...publicSpec } = spec;
   const startedAt = Date.now();
+  const externalId = `${startedAt}-${process.pid}-${randomBytes(4).toString('hex')}`;
+  const externalDir = path.join(WORK_DIR,'.external-agent-tasks');
+  fs.mkdirSync(externalDir,{recursive:true});
+  const timingPath = path.join(externalDir,`${externalId}.timing.json`);
+  const lifecycle = { timing_path:timingPath, execution_timeout_ms:timeoutMs, closing_reserve_ms:Math.min(60000,Math.floor(timeoutMs/10)) };
+  const externalSpec = publicSpec.validation ? { ...publicSpec, validation: { ...publicSpec.validation,
+    argv:[...publicSpec.validation.argv,'--stage-timing',timingPath],sessions_path:validationIndexPath(timingPath),
+    cancel_argv:[process.execPath,CLI,'cancel-validation','--stage-timing',timingPath],
+    budget_argv:[process.execPath,CLI,'validation-budget','--stage-timing',timingPath] } } : publicSpec;
+  const timing = { schema:'eval.cloud-stage-timing/1',id:externalId,role:spec.role,engine:spec.engine,taskId:spec.taskId,
+    state:'RUNNING',started_at:new Date(startedAt).toISOString(),execution_timeout_ms:timeoutMs,
+    execution_deadline_at:new Date(startedAt+timeoutMs).toISOString(),closing_reserve_ms:lifecycle.closing_reserve_ms };
+  writeReport(timingPath,timing);
+  writeReport(path.join(externalDir,`${externalId}.request.json`),{id:externalId,spec:externalSpec,lifecycle});
   _onLifecycle?.({ state: 'RUNNING', started_at: new Date(startedAt).toISOString(),
-    execution_deadline_at: new Date(startedAt + timeoutMs).toISOString() });
-  const result = await runProcess([cmd, ...args], {
-    cwd: spec.workspace, input: JSON.stringify(publicSpec), deadline: startedAt + timeoutMs, signal: _signal,
-  });
+    execution_deadline_at: new Date(startedAt + timeoutMs).toISOString(),timing_path:timingPath,id:externalId });
+  let result;
+  try { result = await runProcess([cmd, ...args], {
+    cwd: spec.workspace, input: JSON.stringify(externalSpec), deadline: startedAt + timeoutMs, signal: _signal,
+  }); } catch(err) { writeReport(timingPath,{...timing,state:'FAILED'});throw err; }
   _onLifecycle?.({ state: 'RUNNING', process_result: resultMetadata(result) });
-  if (result.stopped || result.status !== 0) throw stageProcessError(spec, {
+  if (result.stopped || result.status !== 0) { writeReport(timingPath,{...timing,state:'FAILED'});throw stageProcessError(spec, {
     ...result, error: result.stopped ? { code: 'ETIMEDOUT', message: 'subagent execution deadline passed' } : null,
-  });
+  }); }
+  if (['builder','debug'].includes(spec.role) && spec.self_check_contract) {
+    let data;
+    try { data = JSON.parse(result.stdout); }
+    catch {
+      writeReport(timingPath,{...timing,state:'FAILED'});
+      throw new EvalError(result.stdout?.trim() ? 'SUBAGENT_INVALID' : 'STAGE_VALIDATION_INCOMPLETE',
+        result.stdout?.trim() ? 'external agent result is not valid JSON' : 'external agent success needs a structured self_check result');
+    }
+    const shapeError = stageResponseError(spec,data);
+    const error = shapeError?.primary === 'SUBAGENT_INVALID' ? shapeError
+      : selfCheckEvidenceError(spec,data,{stageId:externalId,timingPath,checkWorkspace:true}) ?? shapeError;
+    writeReport(timingPath,{...timing,state:error?'FAILED':'COMPLETE'});
+    if (error) throw error;
+    spec._onSelfCheck?.(data.self_check);
+    return data.stdout ?? '';
+  }
+  writeReport(timingPath,{...timing,state:'COMPLETE'});
   return result.stdout ?? '';
 }
 
@@ -225,10 +259,11 @@ ${detail}
     prompt,
     attempt: repair?.attempt ?? 1,
     validation: validationSpec({ engine, taskId, workspace }),
+    self_check_contract: 'eval.self-check/1',
   };
 }
 
-function debugSpec({ engine, taskId, workspace, instruction, task }) {
+function debugSpec({ engine, taskId, workspace, instruction, task, debugContext }) {
   return {
     role: 'debug',
     engine,
@@ -236,7 +271,40 @@ function debugSpec({ engine, taskId, workspace, instruction, task }) {
     workspace,
     prompt: buildDebugPrompt({ instruction, task }),
     validation: validationSpec({ engine, taskId, workspace }),
+    self_check_contract: 'eval.self-check/1',
+    debug_context: debugContext,
   };
+}
+
+export function builderDiagnosticContext(recorder, error) {
+  const context = { schema: 'eval.debug-context/1', scope: 'this_engine_this_task_builder_only',
+    issues: error ? [{ primary: error.primary, message: String(error.message).slice(0,2000) }] : [], validations: [],
+    meaning: 'Previous candidate observations only. Verify the current candidate after every necessary repair.' };
+  if (!recorder) return context;
+  const records = fs.readdirSync(path.join(recorder.dir,'STAGES')).filter(n=>n.endsWith('.json'))
+    .map(n=>JSON.parse(fs.readFileSync(path.join(recorder.dir,'STAGES',n),'utf8')))
+    .filter(r=>r.schema==='eval.stage-record/1' && r.role==='builder' && r.engine===recorder.engine && r.task_id===recorder.taskId)
+    .sort((a,b)=>Date.parse(b.finished_at)-Date.parse(a.finished_at));
+  const latest = records[0];
+  if (!latest) return context;
+  context.submission_id = latest.submission_id;
+  context.self_check_status = latest.self_check_status;
+  if (latest.timing_path) {
+    for (const entry of readValidationIndex(latest.timing_path, latest.transport_request_id).sessions) {
+      const progress = JSON.parse(fs.readFileSync(entry.progress_path,'utf8'));
+      if (progress.engine!==recorder.engine || progress.taskId!==recorder.taskId || progress.stage_id!==latest.transport_request_id) throw new EvalError('SUBAGENT_INVALID','builder diagnostic context identity mismatch');
+      let report;
+      try { report = JSON.parse(fs.readFileSync(path.join(entry.artifact_dir,'VALIDATION.json'),'utf8')); }
+      catch (err) { if (err.code!=='ENOENT') throw err; }
+      context.validations.push({ session_id: entry.session_id, taskId: recorder.taskId, submission_id: progress.submission_id,
+        state: progress.state, validation_mode: progress.validation_mode,
+        elapsed_ms: progress.process_started_at && progress.cleanup_finished_at ? Date.parse(progress.cleanup_finished_at)-Date.parse(progress.process_started_at) : null,
+        artifact_dir: entry.artifact_dir, progress_path: entry.progress_path, primary: report?.primary, ok: report?.ok,
+        completed_full_replay: report?.validation_mode === 'full' && report?.ok === true,
+        stills: (report?.stills ?? []).map(s=>({id:s.id,path:s.path,sha256:s.sha256,ok:s.ok})) });
+    }
+  }
+  return context;
 }
 
 function replaySpec({ engine, taskId, prep, token }) {
@@ -335,7 +403,7 @@ async function buildUntilBoot({ engine, taskId, prep, instruction, task, runSuba
     }
     boot = await runFrameworkAction('boot', { engine, workspace: prep.workspace, taskId, attempt },
       { ...context, implementation: bootCheck });
-    if (boot?.ok) return { boot, attempts: attempt };
+    if (boot?.ok) return { boot, attempts: attempt, debugContext: builderDiagnosticContext(context?.recorder, validationError) };
     if (validationError && attempt === attempts) {
       throw new EvalError('BUILDER_INVALID', `self-check failed and independent boot check did not pass: ${(boot?.notes ?? []).join('\n')}`);
     }
@@ -438,6 +506,7 @@ export async function orchestrateEngines({
                   workspace: prep.workspace,
                   instruction: bundle.instruction,
                   task: bundle.task,
+                  debugContext: builtOnce.debugContext,
                 }),
                 context,
               );

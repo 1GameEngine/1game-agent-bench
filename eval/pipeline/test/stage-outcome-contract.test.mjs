@@ -97,14 +97,17 @@ test('terminal stage records preserve accepted publication time and cannot be re
 
 test('execution policy describes existing budgets and explicitly disclaims resource isolation', () => {
   const policy = executionPolicy({});
-  assert.equal(policy.revision, 'eval.execution/2');
+  assert.equal(policy.revision, 'eval.execution/3');
   assert.deepEqual(policy.stage_budgets_ms, { builder: 600000, debug: 600000, replay: 1800000, looks: 600000 });
   assert.equal(policy.dispatch_budget_ms, 600000);
   assert.equal(policy.timing.self_validation, 'inside_model_budget');
   assert.equal(policy.timing.model_completion, 'atomic_response_publication');
   assert.equal(policy.recovery, 'reports_only_no_stage_resume');
   assert.equal(policy.submission_policy, 'observational_manifests_no_new_acceptance_gate');
-  for (const key of ['validation_concurrency_limit', 'cross_suite_concurrency_limit', 'cpu_limit', 'memory_limit_bytes']) {
+  assert.equal(policy.scheduling.validation_concurrency_limit,1);
+  assert.equal(policy.scheduling.validation_concurrency_scope,'per_model_stage');
+  assert.equal(policy.self_check_policy.revision,'eval.self-check/1');
+  for (const key of ['cross_suite_concurrency_limit', 'cpu_limit', 'memory_limit_bytes']) {
     assert.equal(policy.scheduling[key], null);
   }
   const customized = executionPolicy({ EVAL_SUBAGENT_TIMEOUT_MS: '10000', EVAL_BUILDER_TIMEOUT_MS: '2000' });

@@ -26,14 +26,15 @@ function signalGroup(pgid, signal) {
 // this child's process group, without blocking deadline timers or agent polling.
 export async function runProcess(argv, { deadline, stopAt = deadline, deadlineReason = 'timeout',
   graceMs = 5000, reapMs = 2000, now = Date.now, cwd, env = process.env,
-  maxBytes = 20 * 1024 * 1024, input, signal } = {}) {
+  maxBytes = 20 * 1024 * 1024, input, signal, inheritedFd } = {}) {
   if (process.platform !== 'linux') throw new EvalError('EVAL_INTERNAL', 'bounded execution requires Linux process groups');
   if (!Array.isArray(argv) || !argv.length || !argv[0] || argv.some(v => typeof v !== 'string') ||
       (input != null && typeof input !== 'string' && !(input instanceof Uint8Array)) ||
       !Number.isFinite(deadline) || !Number.isFinite(stopAt) ||
       !['timeout', 'closing_reserve'].includes(deadlineReason) ||
       !Number.isSafeInteger(graceMs) || graceMs < 0 || !Number.isSafeInteger(reapMs) || reapMs < 1 ||
-      !Number.isSafeInteger(maxBytes) || maxBytes < 1) {
+      !Number.isSafeInteger(maxBytes) || maxBytes < 1 ||
+      (inheritedFd !== undefined && (!Number.isInteger(inheritedFd) || inheritedFd < 0))) {
     throw new EvalError('SUBAGENT_INVALID', 'invalid bounded process request');
   }
   const cutoff = Math.min(deadline, stopAt);
@@ -48,7 +49,7 @@ export async function runProcess(argv, { deadline, stopAt = deadline, deadlineRe
   let child;
   try {
     child = spawn(argv[0], argv.slice(1), { cwd, env, detached: true,
-      stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
+      stdio: [input == null ? 'ignore' : 'pipe', 'pipe', 'pipe', ...(inheritedFd === undefined ? [] : [inheritedFd])] });
   } catch (err) { throw new EvalError('SUBAGENT_PROCESS_FAILED', err.message, {
     process_result: { status: null, signal: null, stopped: false, reason: 'spawn_error', descendants_cleaned: false,
       started_at: null, finished_at: null, cleanup_finished_at: stamp() },

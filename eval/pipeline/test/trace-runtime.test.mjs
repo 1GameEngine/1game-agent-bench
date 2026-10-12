@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { FRAME_MS, REPLAY_FPS, stillPlayMeta } from '../src/p1-trace.mjs';
-import { checkOnegameBoot, traceEventArgv } from '../src/p1-onegame.mjs';
+import { checkOnegameBoot, traceEventArgv, runOnegameTraces } from '../src/p1-onegame.mjs';
 import { runOnegameCli } from '../src/onegame-cli.mjs';
 import { parseCliJson, readStoreState } from '../src/util.mjs';
 import { godotBin, makeTraceJob, runGodotJob, stageGodotProject } from '../src/p1-godot.mjs';
@@ -61,6 +61,18 @@ renderGame(() => <Game />, { bindStore });
     const ticks = runOnegameCli(dir, ['1gameplay', 'step', record, '--ms', String(FRAME_MS), '--repeat', '300']);
     assert.equal(ticks.status, 0, ticks.stderr || ticks.stdout);
     assert.ok(Math.abs(state().elapsed - initial.elapsed - 10) < 1e-8, JSON.stringify(state()));
+    fs.mkdirSync(path.join(dir,'demo_outputs'));
+    fs.writeFileSync(path.join(dir,'demo_outputs/loop.json'),JSON.stringify({schema:'eval.trace/1',scenario:'loop',duration_frames:60,
+      viewport:{w:1280,h:720},events:[{frame:0,type:'click',x:640,y:225},{frame:1,type:'mouse_down',x:640,y:225},
+        {frame:2,type:'mouse_move',x:900,y:500},{frame:3,type:'mouse_up',x:900,y:500},{frame:4,type:'click',x:640,y:225}]}));
+    const feedback=[];
+    const replay=runOnegameTraces({gameDir:dir,stillsDir:path.join(dir,'stills'),
+      policy:{scenarios:['loop'],allowEmpty:[],maxFrames:60},sampleEveryOverride:61,sampleFrames:[3,4],onFeedback:e=>feedback.push(e)});
+    assert.equal(replay.primary,'TRACE_OK',JSON.stringify(replay.notes));
+    assert.deepEqual(replay.stills.map(s=>s.id),['loop_f0','loop_f3','loop_f4','loop_f59']);
+    assert.equal(state().clicks,2,'a normal click after dragging must still reach the game');
+    assert.ok(Math.abs(state().elapsed-2)<1e-8,'diagnostic captures changed the fixed-frame clock');
+    assert.ok(feedback.some(e=>e.event==='trace_done'&&e.scenario==='loop'));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -146,10 +158,16 @@ func _draw():
     };
     const hold = { ...trace, scenario: 'hold', duration_frames: 1, events: [{ frame: 0, type: 'keydown', code: 'KeyA' }] };
     const reset = { ...trace, scenario: 'reset', duration_frames: 1, events: [] };
-    const job = makeTraceJob({ traces: [trace, hold, reset].map((trace) => ({ audit: { ok: true }, trace })), stillsDir: path.join(dir, 'stills'), sampleEvery: 100 });
+    const feedbackPath = path.join(dir,'feedback.jsonl');
+    const job = makeTraceJob({ traces: [trace, hold, reset].map((trace) => ({ audit: { ok: true }, trace })), stillsDir: path.join(dir, 'stills'), sampleEvery: 100,
+      sampleFrames: [3,4], feedbackPath });
     job.probe_keys = ['tick_count', 'elapsed', 'root_clicks', 'child_clicks', 'gui_clicks', 'unhandled_keys', 'mouse_in_rect', 'key_down_seen', 'key_up_seen', 'initial_key_down'];
     const result = runGodotJob({ projectDir: staged.dest, job, outPath: path.join(dir, 'events.jsonl') });
     assert.equal(result.ok, true, JSON.stringify(result));
+    const feedback = fs.readFileSync(feedbackPath,'utf8').trim().split('\n').map(JSON.parse);
+    assert.ok(feedback.some(e=>e.event==='still'&&e.id==='input_f3'));
+    assert.ok(feedback.some(e=>e.event==='still'&&e.id==='input_f4'));
+    assert.ok(feedback.some(e=>e.event==='trace_done'&&e.scenario==='input'));
     const final = result.events.find((e) => e.event === 'probe' && e.id === 'input_f299')?.state;
     assert.ok(final, JSON.stringify(result.events));
     assert.equal(final.tick_count, 300);

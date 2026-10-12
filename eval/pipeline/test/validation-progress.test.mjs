@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { validateStageTraces } from '../src/validate-traces.mjs';
+import { validateStageTraces, cancelStageValidation } from '../src/validate-traces.mjs';
 
 function alive(pid) {
   try { return fs.readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ')[1][0] !== 'Z'; }
@@ -37,6 +37,7 @@ function fixture(t, remainingMs) {
       fs.writeFileSync(path.join(progress.artifact_dir, 'pids.json'), JSON.stringify([process.pid, child.pid]));
       Object.assign(progress, {state:'REPLAYING', submission_id:'test-candidate', manifest_path:path.join(progress.artifact_dir,'SUBMISSION.json'), snapshot_kind:'candidate_snapshot'});
       fs.writeFileSync(file, JSON.stringify(progress));
+      fs.appendFileSync(path.join(progress.artifact_dir,'FEEDBACK.jsonl'),JSON.stringify({event:'trace_done',scenario:'intro',frames:1})+String.fromCharCode(10));
       setInterval(()=>{},1000);
     `;
     return [process.execPath, '-e', script];
@@ -63,6 +64,25 @@ test('automatic validation stop keeps the same candidate and reports cleanup tim
   const progress = JSON.parse(fs.readFileSync(report.progress_path));
   assert.equal(progress.state, 'INCOMPLETE');
   assert.equal(progress.submission_id, report.submission_id);
+});
+
+test('owned cancellation waits for group cleanup, live feedback arrives early, and overlapping validation is refused', async t=>{
+  const f=fixture(t,20000),events=[];
+  const validating=validateStageTraces({...f.spec,timingPath:f.timingPath},{workerArgv:f.workerArgv,notify:e=>events.push(e)});
+  assert.equal(events[0].event,'session_started');
+  assert.ok(events[0].progress_path);
+  const end=Date.now()+3000;
+  while(!events.some(e=>e.event==='trace_done')&&Date.now()<end)await delay(20);
+  assert.ok(events.some(e=>e.event==='trace_done'), 'scenario feedback was delayed until worker exit');
+  await assert.rejects(validateStageTraces({...f.spec,timingPath:f.timingPath},{workerArgv:f.workerArgv,notify:()=>{}}),e=>e.primary==='VALIDATION_BUSY');
+  await assert.rejects(cancelStageValidation({timingPath:f.timingPath,sessionId:'validation-1-not-owned'}),e=>e.primary==='SUBAGENT_INVALID');
+  const stopped=await cancelStageValidation({timingPath:f.timingPath,sessionId:events[0].session_id});
+  const report=await validating;
+  assert.equal(stopped.state,'CANCELLED');
+  assert.equal(report.primary,'VALIDATION_CANCELLED');
+  assert.equal(report.ok,false);
+  assert.ok(stopped.cleanup_finished_at);
+  assert.ok(JSON.parse(fs.readFileSync(path.join(f.artifact,'pids.json'))).every(pid=>!alive(pid)));
 });
 
 test('an inactive stage cancels its validation group instead of becoming a self-check warning', async (t) => {
